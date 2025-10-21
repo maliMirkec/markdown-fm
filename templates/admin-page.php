@@ -74,7 +74,7 @@ if (!defined('ABSPATH')) {
     <div class="markdown-fm-schema-examples">
     <h2><?php _e('Schema Example', 'markdown-fm'); ?></h2>
     <p><?php _e('Here\'s an example schema in YAML format:', 'markdown-fm'); ?></p>
-    <pre><code>fields:
+    <pre>fields:
   - name: title
     label: Page Title
     type: string
@@ -107,18 +107,18 @@ if (!defined('ABSPATH')) {
       - name: hero
         label: Hero Section
         fields:
-      - name: title
-        label: Hero Title
-        type: string
-      - name: content
-        label: Hero Content
-        type: rich-text
+          - name: hero-title
+            label: Hero Title
+            type: string
+          - name: content
+            label: Hero Content
+            type: rich-text
       - name: text
         label: Text Block
         fields:
-      - name: content
-        label: Content
-        type: rich-text</code></pre>
+          - name: content
+            label: Content
+            type: rich-text</pre>
 
     <h3><?php _e('Supported Field Types', 'markdown-fm'); ?></h3>
     <ul>

@@ -13,6 +13,7 @@ Website: https://www.silvestar.codes
 ```
 wp-content/plugins/markdown-fm/
 ├── markdown-fm.php (main plugin file)
+├── composer.json
 ├── assets/
 │   ├── admin.css
 │   └── admin.js
@@ -20,13 +21,24 @@ wp-content/plugins/markdown-fm/
     └── admin-page.php
 ```
 
-2. Copy the files to their respective locations:
-   - `markdown-fm.php` → root of plugin folder
-   - `admin.css` → `assets/admin.css`
-   - `admin.js` → `assets/admin.js`
-   - `admin-page.php` → `templates/admin-page.php`
+2. Install dependencies with Composer:
+```bash
+cd wp-content/plugins/markdown-fm
+composer install
+```
 
-3. Activate the plugin from WordPress Admin → Plugins
+This will install Symfony YAML component in the `vendor/` directory.
+
+3. Copy the files to their respective locations:
+  - `markdown-fm.php` → root of plugin folder
+  - `composer.json` → root of plugin folder
+  - `admin.css` → `assets/admin.css`
+  - `admin.js` → `assets/admin.js`
+  - `admin-page.php` → `templates/admin-page.php`
+
+4. Activate the plugin from WordPress Admin → Plugins
+
+**Note:** The plugin requires Composer dependencies to be installed. If you see an error message about running `composer install`, navigate to the plugin directory and run that command.
 
 ## Features
 
@@ -421,9 +433,10 @@ fields:
 
 ### Schemas Not Appearing
 
-1. **Check template is enabled**: Ensure the YAML toggle is ON for your template
-2. **Verify template selection**: Make sure the correct template is selected for your page/post
-3. **Check schema format**: Validate your YAML syntax (indentation matters!)
+1. **Check Composer dependencies**: Run `composer install` in the plugin directory
+2. **Check template is enabled**: Ensure the YAML toggle is ON for your template
+3. **Verify template selection**: Make sure the correct template is selected for your page/post
+4. **Check schema format**: Validate your YAML syntax (indentation matters!)
 
 ### Fields Not Saving
 
@@ -433,15 +446,16 @@ fields:
 
 ### YAML Parsing Issues
 
-If you don't have the PHP YAML extension installed, the plugin uses a simple parser. For complex schemas, consider installing the PHP YAML extension:
+The plugin uses Symfony YAML Component for robust YAML parsing. If you encounter parsing errors:
 
-```bash
-# Ubuntu/Debian
-sudo apt-get install php-yaml
-
-# CentOS/RHEL
-sudo yum install php-yaml
-```
+1. **Check YAML syntax**: Use an online YAML validator to verify your schema
+2. **Check indentation**: YAML is indentation-sensitive (use 2 spaces consistently)
+3. **View error logs**: Check WordPress debug logs for detailed parsing error messages
+4. **Common issues**:
+  - Mixed tabs and spaces (use spaces only)
+  - Incorrect indentation levels
+  - Missing colons after keys
+  - Unquoted special characters in values
 
 ## Uninstallation
 
@@ -502,8 +516,13 @@ $sections = get_markdown_fm_field('sections');
 
 - WordPress 5.0 or higher
 - PHP 7.0 or higher
+- Composer (for installing dependencies)
 - jQuery (included with WordPress)
 - WordPress Media Library
+
+## Dependencies
+
+- **Symfony YAML Component** (^5.4|^6.0|^7.0) - Robust YAML parsing
 
 ## Support
 
