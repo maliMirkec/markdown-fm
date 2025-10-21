@@ -1,0 +1,359 @@
+/**
+ * Markdown FM Admin Styles
+ * File: assets/admin.css
+ */
+
+.markdown-fm-admin-container {
+  max-width: 1200px;
+  margin: 20px 0;
+}
+
+.markdown-fm-intro {
+  background: #fff;
+  border-left: 4px solid #2271b1;
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.markdown-fm-intro p {
+  margin: 10px 0;
+}
+
+/* Toggle Switch */
+.markdown-fm-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.markdown-fm-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.markdown-fm-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.markdown-fm-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+.markdown-fm-switch input:checked + .markdown-fm-slider {
+  background-color: #2271b1;
+}
+
+.markdown-fm-switch input:checked + .markdown-fm-slider:before {
+  transform: translateX(26px);
+}
+
+/* Schema Examples */
+.markdown-fm-schema-examples {
+  background: #fff;
+  padding: 20px;
+  margin-top: 30px;
+  box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.markdown-fm-schema-examples pre {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 15px;
+  overflow-x: auto;
+  border-radius: 3px;
+}
+
+.markdown-fm-schema-examples code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.markdown-fm-schema-examples ul {
+  list-style: disc;
+  margin-left: 30px;
+}
+
+.markdown-fm-schema-examples ul li {
+  margin: 8px 0;
+}
+
+/* Modal Styles */
+.markdown-fm-modal {
+  position: fixed;
+  z-index: 999999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.6);
+}
+
+.markdown-fm-modal-content {
+  background-color: #fff;
+  margin: 5% auto;
+  padding: 0;
+  width: 80%;
+  max-width: 900px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  border-radius: 4px;
+}
+
+.markdown-fm-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #ddd;
+  position: relative;
+}
+
+.markdown-fm-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.markdown-fm-modal-close {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  font-size: 28px;
+  font-weight: bold;
+  color: #666;
+  background: none;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+}
+
+.markdown-fm-modal-close:hover {
+  color: #000;
+}
+
+.markdown-fm-modal-body {
+  padding: 20px;
+}
+
+.markdown-fm-modal-footer {
+  padding: 15px 20px;
+  border-top: 1px solid #ddd;
+  background: #f9f9f9;
+  text-align: right;
+}
+
+.markdown-fm-modal-footer .button {
+  margin-left: 10px;
+}
+
+#markdown-fm-schema-editor {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  width: 100%;
+  border: 1px solid #ddd;
+  padding: 10px;
+}
+
+/* Meta Box Fields */
+.markdown-fm-fields {
+  margin-top: 15px;
+}
+
+.markdown-fm-field {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.markdown-fm-field:last-child {
+  border-bottom: none;
+}
+
+.markdown-fm-field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #1d2327;
+}
+
+.markdown-fm-field input[type="text"],
+.markdown-fm-field input[type="number"],
+.markdown-fm-field input[type="date"],
+.markdown-fm-field input[type="datetime-local"],
+.markdown-fm-field textarea,
+.markdown-fm-field select {
+  width: 100%;
+  max-width: 600px;
+}
+
+.markdown-fm-field input[type="checkbox"] {
+  width: auto;
+  margin-right: 5px;
+}
+
+.markdown-fm-field textarea.code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  background: #f5f5f5;
+}
+
+/* Image and File Upload */
+.markdown-fm-image-preview {
+  margin-top: 10px;
+}
+
+.markdown-fm-image-preview img {
+  border: 1px solid #ddd;
+  padding: 5px;
+  background: #fff;
+}
+
+.markdown-fm-file-name {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* Object Fields */
+.markdown-fm-object {
+  margin-left: 20px;
+  padding-left: 20px;
+  border-left: 3px solid #2271b1;
+}
+
+/* Block/Repeater Fields */
+.markdown-fm-block-container {
+  border: 1px solid #ddd;
+  padding: 15px;
+  background: #fafafa;
+  border-radius: 3px;
+}
+
+.markdown-fm-block-list {
+  margin-bottom: 15px;
+}
+
+.markdown-fm-block-item {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 3px;
+}
+
+.markdown-fm-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.markdown-fm-block-header strong {
+  font-size: 14px;
+  color: #1d2327;
+}
+
+.markdown-fm-remove-block {
+  color: #b32d2e;
+  border-color: #b32d2e;
+}
+
+.markdown-fm-remove-block:hover {
+  background: #b32d2e;
+  color: #fff;
+  border-color: #b32d2e;
+}
+
+.markdown-fm-block-fields {
+  margin-top: 10px;
+}
+
+.markdown-fm-block-fields .markdown-fm-field {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+}
+
+.markdown-fm-block-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.markdown-fm-block-type-select {
+  flex: 1;
+  max-width: 300px;
+}
+
+/* Loading State */
+.markdown-fm-loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Success/Error Messages */
+.markdown-fm-message {
+  padding: 12px 15px;
+  margin: 15px 0;
+  border-radius: 3px;
+}
+
+.markdown-fm-message.success {
+  background: #d7f4d7;
+  border-left: 4px solid #46b450;
+  color: #2c662d;
+}
+
+.markdown-fm-message.error {
+  background: #fbeaea;
+  border-left: 4px solid #dc3232;
+  color: #761919;
+}
+
+/* Responsive */
+@media screen and (max-width: 782px) {
+  .markdown-fm-modal-content {
+    width: 95%;
+    margin: 2% auto;
+  }
+
+  .markdown-fm-block-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .markdown-fm-block-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .markdown-fm-block-type-select {
+    max-width: 100%;
+    width: 100%;
+  }
+}
