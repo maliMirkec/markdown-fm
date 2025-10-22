@@ -8,9 +8,45 @@
   margin: 20px 0;
 }
 
+/* Header with Logo */
+.markdown-fm-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 6px rgba(0,0,0,.1);
+}
+
+.markdown-fm-header-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.markdown-fm-logo {
+  max-width: 80px;
+  height: auto;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.2));
+}
+
+.markdown-fm-header-text h1 {
+  color: #fff;
+  margin: 0 0 5px 0;
+  font-size: 32px;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0,0,0,.2);
+}
+
+.markdown-fm-tagline {
+  color: rgba(255,255,255,0.9);
+  margin: 0;
+  font-size: 16px;
+  font-weight: 400;
+}
+
 .markdown-fm-intro {
   background: #fff;
-  border-left: 4px solid #2271b1;
+  border-left: 4px solid #667eea;
   padding: 15px;
   margin-bottom: 20px;
   box-shadow: 0 1px 1px rgba(0,0,0,.04);
@@ -20,12 +56,25 @@
   margin: 10px 0;
 }
 
+/* Table Styles */
+.wp-list-table .dashicons-yes-alt {
+  vertical-align: middle;
+  margin-top: 5px;
+  margin-left: 8px;
+}
+
+.wp-list-table td {
+  vertical-align: middle;
+}
+
 /* Toggle Switch */
 .markdown-fm-switch {
   position: relative;
   display: inline-block;
   width: 50px;
   height: 24px;
+  margin-top: 3px;
+  margin-bottom: 3px;
 }
 
 .markdown-fm-switch input {
@@ -263,9 +312,9 @@
 }
 
 .markdown-fm-reset-data .dashicons {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
 }
 
 /* Object Fields */
@@ -347,10 +396,34 @@
 }
 
 /* Success/Error Messages */
+#markdown-fm-notifications {
+  position: fixed;
+  top: 32px;
+  right: 20px;
+  z-index: 999998;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 350px;
+}
+
 .markdown-fm-message {
   padding: 12px 15px;
-  margin: 15px 0;
   border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  min-width: 250px;
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .markdown-fm-message.success {
@@ -365,8 +438,153 @@
   color: #761919;
 }
 
+/* Documentation Page */
+.markdown-fm-docs-content {
+  background: #fff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  line-height: 1.8;
+}
+
+.markdown-fm-docs-content h2 {
+  color: #1d2327;
+  font-size: 28px;
+  font-weight: 600;
+  margin-top: 40px;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #667eea;
+}
+
+.markdown-fm-docs-content h2:first-child {
+  margin-top: 0;
+}
+
+.markdown-fm-docs-content h3 {
+  color: #1d2327;
+  font-size: 22px;
+  font-weight: 600;
+  margin-top: 30px;
+  margin-bottom: 15px;
+}
+
+.markdown-fm-docs-content p {
+  margin-bottom: 15px;
+  color: #3c434a;
+}
+
+.markdown-fm-docs-content ul {
+  margin-left: 20px;
+  margin-bottom: 15px;
+}
+
+.markdown-fm-docs-content li {
+  margin-bottom: 8px;
+  color: #3c434a;
+}
+
+.markdown-fm-docs-content code {
+  background: #f6f7f7;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: #d63638;
+}
+
+.markdown-fm-docs-content pre {
+  background: #1e1e1e;
+  padding: 20px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 20px 0;
+}
+
+.markdown-fm-docs-content pre code {
+  background: transparent;
+  padding: 0;
+  color: #d4d4d4;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.markdown-fm-docs-content a {
+  color: #667eea;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.markdown-fm-docs-content a:hover {
+  border-bottom-color: #667eea;
+}
+
+.markdown-fm-docs-content strong {
+  font-weight: 600;
+  color: #1d2327;
+}
+
+.markdown-fm-docs-content blockquote {
+  border-left: 4px solid #667eea;
+  padding: 10px 20px;
+  margin: 20px 0;
+  background: #f6f7f7;
+  font-style: italic;
+  color: #50575e;
+}
+
 /* Responsive */
 @media screen and (max-width: 782px) {
+  .markdown-fm-header {
+    padding: 20px;
+  }
+
+  .markdown-fm-header-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .markdown-fm-logo {
+    max-width: 60px;
+  }
+
+  .markdown-fm-header-text h1 {
+    font-size: 24px;
+  }
+
+  .markdown-fm-tagline {
+    font-size: 14px;
+  }
+
+  #markdown-fm-notifications {
+    top: 46px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+
+  .markdown-fm-message {
+    min-width: auto;
+  }
+
+  .markdown-fm-docs-content {
+    padding: 20px;
+  }
+
+  .markdown-fm-docs-content h2 {
+    font-size: 24px;
+  }
+
+  .markdown-fm-docs-content h3 {
+    font-size: 20px;
+  }
+
+  .markdown-fm-docs-content pre {
+    padding: 15px;
+    font-size: 12px;
+  }
+
   .markdown-fm-modal-content {
     width: 95%;
     margin: 2% auto;

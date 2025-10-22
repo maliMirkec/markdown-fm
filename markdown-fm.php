@@ -74,11 +74,21 @@ class Markdown_FM {
       'dashicons-edit-page',
       30
     );
+
+    add_submenu_page(
+      'markdown-fm',
+      __('Documentation', 'markdown-fm'),
+      __('Documentation', 'markdown-fm'),
+      'manage_options',
+      'markdown-fm-docs',
+      [$this, 'render_docs_page']
+    );
   }
 
   public function enqueue_admin_assets($hook) {
     // Load on the plugin settings page
     $is_settings_page = ('toplevel_page_markdown-fm' === $hook);
+    $is_docs_page = ('markdown-fm_page_markdown-fm-docs' === $hook);
 
     // Load on post edit screens
     $current_screen = get_current_screen();
@@ -89,8 +99,8 @@ class Markdown_FM {
                       in_array($current_screen->post_type, ['page', 'post']);
     }
 
-    // Only load if on settings page or post edit screen
-    if (!$is_settings_page && !$is_post_edit) {
+    // Only load if on settings page, docs page, or post edit screen
+    if (!$is_settings_page && !$is_docs_page && !$is_post_edit) {
       return;
     }
 
@@ -125,14 +135,10 @@ class Markdown_FM {
     }
 
     // Handle refresh action
+    $refresh_message = '';
     if (isset($_GET['refresh_mdfm'])) {
       $this->clear_template_cache();
-      add_settings_error(
-        'markdown_fm_messages',
-        'markdown_fm_message',
-        __('Template list refreshed successfully!', 'markdown-fm'),
-        'updated'
-      );
+      $refresh_message = __('Template list refreshed successfully!', 'markdown-fm');
     }
 
     $theme_files = $this->get_theme_templates();
@@ -142,6 +148,14 @@ class Markdown_FM {
     $schemas = get_option('markdown_fm_schemas', []);
 
     include MARKDOWN_FM_PLUGIN_DIR . 'templates/admin-page.php';
+  }
+
+  public function render_docs_page() {
+    if (!current_user_can('manage_options')) {
+      wp_die(__('You do not have sufficient permissions to access this page.', 'markdown-fm'));
+    }
+
+    include MARKDOWN_FM_PLUGIN_DIR . 'templates/docs-page.php';
   }
 
   private function get_theme_templates() {
@@ -544,7 +558,11 @@ class Markdown_FM {
           }
           echo '</div>';
           if ($field_value) {
-            echo '<div class="markdown-fm-image-preview"><img src="' . esc_url($field_value) . '" style="max-width: 200px; display: block; margin-top: 10px;" /></div>';
+            // Field value is now attachment ID, get the image URL
+            $image_url = wp_get_attachment_image_url($field_value, 'medium');
+            if ($image_url) {
+              echo '<div class="markdown-fm-image-preview"><img src="' . esc_url($image_url) . '" style="max-width: 200px; display: block; margin-top: 10px;" /></div>';
+            }
           }
           break;
 
@@ -557,7 +575,11 @@ class Markdown_FM {
           }
           echo '</div>';
           if ($field_value) {
-            echo '<div class="markdown-fm-file-name">' . esc_html(basename($field_value)) . '</div>';
+            // Field value is now attachment ID, get the filename
+            $file_path = get_attached_file($field_value);
+            if ($file_path) {
+              echo '<div class="markdown-fm-file-name">' . esc_html(basename($file_path)) . '</div>';
+            }
           }
           break;
 
@@ -856,6 +878,79 @@ if (!function_exists('mdfm_has_field')) {
   function mdfm_has_field($field_name, $post_id = null) {
     return markdown_fm_has_field($field_name, $post_id);
   }
+}
+
+/**
+ * Get image data for an image field
+ * Returns an array with image information
+ *
+ * @param string $field_name The name of the image field
+ * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param string $size Optional. Image size (thumbnail, medium, large, full). Defaults to 'full'.
+ * @return array|null Array with 'id', 'url', 'alt', 'width', 'height' keys or null if not found
+ */
+function mdfm_get_image($field_name, $post_id = null, $size = 'full') {
+  $attachment_id = mdfm_get_field($field_name, $post_id);
+
+  if (!$attachment_id || !is_numeric($attachment_id)) {
+    return null;
+  }
+
+  $image_data = [
+    'id' => $attachment_id,
+    'url' => wp_get_attachment_image_url($attachment_id, $size),
+    'alt' => get_post_meta($attachment_id, '_wp_attachment_image_alt', true),
+    'title' => get_the_title($attachment_id),
+    'caption' => wp_get_attachment_caption($attachment_id),
+    'description' => get_post_field('post_content', $attachment_id),
+  ];
+
+  $metadata = wp_get_attachment_metadata($attachment_id);
+  if ($metadata && isset($metadata['width']) && isset($metadata['height'])) {
+    $image_data['width'] = $metadata['width'];
+    $image_data['height'] = $metadata['height'];
+  }
+
+  // Get specific size dimensions if not full
+  if ($size !== 'full' && isset($metadata['sizes'][$size])) {
+    $image_data['width'] = $metadata['sizes'][$size]['width'];
+    $image_data['height'] = $metadata['sizes'][$size]['height'];
+  }
+
+  return $image_data;
+}
+
+/**
+ * Get file data for a file field
+ * Returns an array with file information
+ *
+ * @param string $field_name The name of the file field
+ * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @return array|null Array with 'id', 'url', 'filename', 'filesize', 'mime_type' keys or null if not found
+ */
+function mdfm_get_file($field_name, $post_id = null) {
+  $attachment_id = mdfm_get_field($field_name, $post_id);
+
+  if (!$attachment_id || !is_numeric($attachment_id)) {
+    return null;
+  }
+
+  $file_path = get_attached_file($attachment_id);
+  $file_url = wp_get_attachment_url($attachment_id);
+
+  if (!$file_path || !$file_url) {
+    return null;
+  }
+
+  return [
+    'id' => $attachment_id,
+    'url' => $file_url,
+    'path' => $file_path,
+    'filename' => basename($file_path),
+    'filesize' => filesize($file_path),
+    'mime_type' => get_post_mime_type($attachment_id),
+    'title' => get_the_title($attachment_id),
+  ];
 }
 
 register_uninstall_hook(__FILE__, 'markdown_fm_uninstall');

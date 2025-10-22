@@ -76,7 +76,13 @@
           if (response.success) {
             // Update the schema button visibility
             const $row = $checkbox.closest('tr');
-            const $schemaCell = $row.find('td:last');
+            const $cells = $row.find('td');
+
+            // Schema column is always the 4th column (index 3)
+            const $schemaCell = $cells.eq(3);
+
+            // Data column is the 5th column (index 4) - only exists in partials table
+            const $dataCell = $cells.eq(4);
 
             if (enabled) {
               $schemaCell.html(
@@ -85,8 +91,18 @@
                 'data-name="' + $row.find('td:first strong').text() + '">' +
                 'Add Schema</button>'
               );
+
+              // If this is a partial (has data column), update it too
+              if ($dataCell.length) {
+                $dataCell.html('<span class="description">Add schema first</span>');
+              }
             } else {
               $schemaCell.html('<span class="description">Enable YAML first</span>');
+
+              // If this is a partial (has data column), update it too
+              if ($dataCell.length) {
+                $dataCell.html('<span class="description">Add schema first</span>');
+              }
             }
 
             MarkdownFM.showMessage('Settings saved successfully', 'success');
@@ -351,7 +367,8 @@
 
         mediaUploader.on('select', function() {
           const attachment = mediaUploader.state().get('selection').first().toJSON();
-          $('#' + targetId).val(attachment.url);
+          // Store attachment ID instead of URL
+          $('#' + targetId).val(attachment.id);
 
           // Update preview
           const $preview = $button.siblings('.markdown-fm-image-preview');
@@ -391,7 +408,8 @@
 
         mediaUploader.on('select', function() {
           const attachment = mediaUploader.state().get('selection').first().toJSON();
-          $('#' + targetId).val(attachment.url);
+          // Store attachment ID instead of URL
+          $('#' + targetId).val(attachment.id);
 
           // Update file name display
           const $fileDisplay = $button.siblings('.markdown-fm-file-name');
@@ -450,7 +468,8 @@
       mediaUploader.on('select', function() {
         const attachment = mediaUploader.state().get('selection').first().toJSON();
         const $input = $('#' + targetId);
-        $input.val(attachment.url);
+        // Store attachment ID instead of URL
+        $input.val(attachment.id);
 
         // Update/add preview
         const $field = $button.closest('.markdown-fm-field');
@@ -498,7 +517,8 @@
       mediaUploader.on('select', function() {
         const attachment = mediaUploader.state().get('selection').first().toJSON();
         const $input = $('#' + targetId);
-        $input.val(attachment.url);
+        // Store attachment ID instead of URL
+        $input.val(attachment.id);
 
         // Update/add file name display
         const $field = $button.closest('.markdown-fm-field');
@@ -843,12 +863,21 @@
     },
 
     showMessage: function(message, type) {
+      // Create notification container if it doesn't exist
+      let $container = $('#markdown-fm-notifications');
+      if (!$container.length) {
+        $container = $('<div>', {
+          id: 'markdown-fm-notifications'
+        });
+        $('body').append($container);
+      }
+
       const $message = $('<div>', {
         class: 'markdown-fm-message ' + type,
         text: message
       });
 
-      $('.markdown-fm-admin-container').prepend($message);
+      $container.append($message);
 
       setTimeout(function() {
         $message.fadeOut(300, function() {
@@ -862,5 +891,8 @@
   $(document).ready(function() {
     MarkdownFM.init();
   });
+
+  // Make MarkdownFM globally accessible
+  window.MarkdownFM = MarkdownFM;
 
 })(jQuery);

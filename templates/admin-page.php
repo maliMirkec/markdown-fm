@@ -10,11 +10,17 @@ if (!defined('ABSPATH')) {
 ?>
 
 <div class="wrap">
-  <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-
-  <?php settings_errors('markdown_fm_messages'); ?>
-
   <div class="markdown-fm-admin-container">
+    <div class="markdown-fm-header">
+      <div class="markdown-fm-header-content">
+        <img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/logo.png'); ?>" alt="Markdown FM" class="markdown-fm-logo" />
+        <div class="markdown-fm-header-text">
+          <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+          <p class="markdown-fm-tagline"><?php _e('YAML-powered content schemas for WordPress themes', 'markdown-fm'); ?></p>
+        </div>
+      </div>
+    </div>
+
     <div class="markdown-fm-intro">
     <p><?php _e('Markdown FM allows you to define YAML frontmatter schemas for your theme templates. Enable YAML for templates, define schemas, and manage structured content directly in the WordPress editor.', 'markdown-fm'); ?></p>
     <p><strong><?php _e('Inspired by', 'markdown-fm'); ?> <a href="https://pagescms.org/docs/" target="_blank">PagesCMS</a></strong></p>
@@ -255,3 +261,14 @@ if (!defined('ABSPATH')) {
     </div>
   </div>
 </div>
+
+<?php if (!empty($refresh_message)) : ?>
+<script>
+jQuery(document).ready(function($) {
+  // Trigger refresh notification
+  if (typeof MarkdownFM !== 'undefined' && MarkdownFM.showMessage) {
+    MarkdownFM.showMessage('<?php echo esc_js($refresh_message); ?>', 'success');
+  }
+});
+</script>
+<?php endif; ?>

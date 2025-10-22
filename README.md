@@ -8,10 +8,12 @@ A WordPress plugin for managing YAML frontmatter schemas in theme templates and 
 
 - 🎨 **Define YAML schemas** for page templates and template partials
 - 📝 **12+ field types** including string, rich-text, images, blocks, and more
-- 🔧 **Easy-to-use admin interface** for managing schemas and data
+- 🔧 **Beautiful admin interface** with branded header and intuitive controls
 - 🎯 **Per-page data** for templates (stored in post meta)
 - 🌐 **Global data** for partials like headers and footers (stored in options)
 - 🚀 **Simple template functions** with ACF-like syntax
+- 🗑️ **Clear buttons** for image and file fields
+- 🔄 **Reset all data** button with confirmation
 - 🔒 **Administrator-only access** for security
 - 🧹 **Clean uninstall** removes all database records
 
