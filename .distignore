@@ -1,0 +1,21 @@
+# Development files to exclude from distribution
+/.git
+/.github
+/.gitignore
+/.editorconfig
+/.distignore
+/composer.json
+/composer.lock
+/node_modules
+/.DS_Store
+Thumbs.db
+*.log
+/.claude
+.vscode
+.idea
+phpcs.xml
+phpunit.xml
+/tests
+/bin
+*.md
+!readme.txt

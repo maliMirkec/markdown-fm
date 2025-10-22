@@ -1,534 +1,950 @@
-# Markdown FM Plugin
+# Markdown FM
 
-A WordPress plugin for managing YAML frontmatter schemas in theme templates. Inspired by [PagesCMS](https://pagescms.org/docs/).
+A WordPress plugin for managing YAML frontmatter schemas in theme templates and partials. Inspired by [PagesCMS](https://pagescms.org/docs/), Markdown FM allows you to define structured content schemas with an intuitive interface and ACF-like template functions.
 
-## Author
-**Silvestar Bistrović**
-Email: me@silvestar.codes
-Website: https://www.silvestar.codes
-
-## Installation
-
-1. Create the plugin directory structure:
-```
-wp-content/plugins/markdown-fm/
-├── markdown-fm.php (main plugin file)
-├── composer.json
-├── assets/
-│   ├── admin.css
-│   └── admin.js
-└── templates/
-    └── admin-page.php
-```
-
-2. Install dependencies with Composer:
-```bash
-cd wp-content/plugins/markdown-fm
-composer install
-```
-
-This will install Symfony YAML component in the `vendor/` directory.
-
-3. Copy the files to their respective locations:
-  - `markdown-fm.php` → root of plugin folder
-  - `composer.json` → root of plugin folder
-  - `admin.css` → `assets/admin.css`
-  - `admin.js` → `assets/admin.js`
-  - `admin-page.php` → `templates/admin-page.php`
-
-4. Activate the plugin from WordPress Admin → Plugins
-
-**Note:** The plugin requires Composer dependencies to be installed. If you see an error message about running `composer install`, navigate to the plugin directory and run that command.
+> Vibe-coded with Claude.
 
 ## Features
 
-- **Template Management**: Automatically detects all theme templates
-- **YAML Schema Support**: Define custom schemas for each template
-- **Rich Field Types**: Support for 12+ field types including repeaters
-- **Meta Box Integration**: Schemas appear as custom fields in the post editor
-- **Clean Uninstall**: Removes all database records when deleted
+- 🎨 **Define YAML schemas** for page templates and template partials
+- 📝 **12+ field types** including string, rich-text, images, blocks, and more
+- 🔧 **Easy-to-use admin interface** for managing schemas and data
+- 🎯 **Per-page data** for templates (stored in post meta)
+- 🌐 **Global data** for partials like headers and footers (stored in options)
+- 🚀 **Simple template functions** with ACF-like syntax
+- 🔒 **Administrator-only access** for security
+- 🧹 **Clean uninstall** removes all database records
 
-## Supported Field Types
+## Table of Contents
 
-### Basic Fields
-- **boolean**: Checkbox input
-- **string**: Single-line text (supports `minlength`, `maxlength`)
-- **text**: Multi-line textarea (supports `maxlength`)
-- **number**: Number input (supports `min`, `max`)
-- **date**: Date picker (supports `time: true` for datetime)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Template Functions](#template-functions)
+- [Working with Partials](#working-with-partials)
+- [Field Types](#field-types)
+- [Examples](#examples)
+- [Requirements](#requirements)
 
-### Rich Content
-- **rich-text**: WordPress WYSIWYG editor
-- **code**: Code editor (supports `language` option)
+## Installation
 
-### Selection
-- **select**: Dropdown menu (supports `multiple` and custom `values`)
+### From WordPress Plugin Directory (Recommended)
 
-### Media
-- **image**: WordPress media uploader for images
-- **file**: WordPress media uploader for any file type
+1. Log in to your WordPress admin dashboard
+2. Navigate to **Plugins → Add New**
+3. Search for "Markdown FM"
+4. Click **Install Now** next to the Markdown FM plugin
+5. Click **Activate** after installation completes
+6. Go to **Markdown FM** in the admin menu to configure your schemas
 
-### Advanced
-- **object**: Group of nested fields
-- **block**: Repeater field with multiple block types (set `list: true`)
+### Manual Installation
 
-## Usage
+If you're installing from source or a ZIP file:
 
-### Step 1: Enable YAML for a Template
+1. Upload the `markdown-fm` folder to `/wp-content/plugins/`
+2. If installing from source, navigate to the plugin directory and install dependencies:
+   ```bash
+   cd wp-content/plugins/markdown-fm
+   composer install
+   ```
+   **Note:** If you downloaded from the WordPress plugin directory, dependencies are already included.
+3. Activate the plugin through the **Plugins** menu in WordPress
+4. Go to **Markdown FM** in the admin menu to configure your schemas
 
-1. Go to **WordPress Admin → Markdown FM**
-2. Find your template in the list
-3. Toggle the **Enable YAML** switch
-4. Click **Add Schema**
+## Quick Start
 
-### Step 2: Define a Schema
+### 1. Enable YAML for a Template
 
-Add your YAML schema in the modal editor. Example:
+1. Go to **Markdown FM** in your WordPress admin
+2. Find your template in the "Page Templates" section
+3. Toggle the "Enable YAML" switch
+4. Click "Add Schema" or "Edit Schema"
+
+### 2. Define a Schema
+
+Here's an example schema for a landing page template:
 
 ```yaml
 fields:
-  - name: title
-    label: Page Title
-    type: string
-    options:
-      maxlength: 100
-
-  - name: featured
-    label: Featured Post
-    type: boolean
-    default: false
-
-  - name: publish_date
-    label: Publish Date
-    type: date
-    options:
-      time: true
-      format: dd-MM-yyyy HH:mm
-
+  - name: hero_title
+  label: Hero Title
+  type: string
+  required: true
+  options:
+    maxlength: 100
+  - name: hero_image
+  label: Hero Image
+  type: image
   - name: description
-    label: Description
-    type: text
-    options:
-      minlength: 20
-      maxlength: 160
-
-  - name: author
-    label: Author
-    type: select
-    options:
-      multiple: false
-      values:
-        - value: john
-          label: John Doe
-        - value: jane
-          label: Jane Smith
-
-  - name: featured_image
-    label: Featured Image
-    type: image
-
-  - name: sections
-    label: Page Sections
-    type: block
-    list: true
-    blockKey: type
-    blocks:
-      - name: hero
-        label: Hero Section
-        fields:
-          - name: title
-            label: Hero Title
-            type: string
-          - name: content
-            label: Hero Content
-            type: rich-text
-
-      - name: text
-        label: Text Block
-        fields:
-          - name: content
-            label: Content
-            type: rich-text
+  label: Description
+  type: text
+  options:
+    maxlength: 500
+  - name: cta_button
+  label: Call to Action Button
+  type: object
+  fields:
+    - name: text
+    label: Button Text
+    type: string
+    - name: url
+    label: Button URL
+    type: string
+  - name: features
+  label: Feature Sections
+  type: block
+  list: true
+  blockKey: type
+  blocks:
+    - name: feature
+    label: Feature Block
+    fields:
+      - name: title
+      label: Feature Title
+      type: string
+      - name: description
+      label: Feature Description
+      type: text
+      - name: icon
+      label: Icon
+      type: image
 ```
 
-### Step 3: Use in Pages/Posts
+### 3. Edit Page Data
 
 1. Create or edit a page/post
 2. Select your template from the **Template** dropdown
-3. Scroll down to see the **Markdown FM Schema** meta box
+3. The **Markdown FM Schema** meta box appears below the editor
 4. Fill in your custom fields
 5. Publish!
 
-## Schema Examples
+### 4. Use Fields in Your Template
 
-### Simple Contact Form
-
-```yaml
-fields:
-  - name: contact
-    label: Contact Information
-    type: object
-    fields:
-      - name: first_name
-        label: First Name
-        type: string
-      - name: last_name
-        label: Last Name
-        type: string
-      - name: email
-        label: Email Address
-        type: string
-      - name: phone
-        label: Phone Number
-        type: string
-```
-
-### Product Page
-
-```yaml
-fields:
-  - name: product_name
-    label: Product Name
-    type: string
-    options:
-      maxlength: 100
-
-  - name: price
-    label: Price
-    type: number
-    options:
-      min: 0
-
-  - name: in_stock
-    label: In Stock
-    type: boolean
-    default: true
-
-  - name: images
-    label: Product Images
-    type: block
-    list: true
-    blockKey: type
-    blocks:
-      - name: image
-        label: Add Image
-        fields:
-          - name: image_url
-            label: Image
-            type: image
-          - name: caption
-            label: Caption
-            type: string
-```
-
-### Blog Post with Sections
-
-```yaml
-fields:
-  - name: excerpt
-    label: Excerpt
-    type: text
-    options:
-      maxlength: 200
-
-  - name: reading_time
-    label: Reading Time (minutes)
-    type: number
-    options:
-      min: 1
-
-  - name: cover_image
-    label: Cover Image
-    type: image
-
-  - name: content_sections
-    label: Content Sections
-    type: block
-    list: true
-    blockKey: type
-    blocks:
-      - name: paragraph
-        label: Paragraph
-        fields:
-          - name: content
-            label: Content
-            type: rich-text
-
-      - name: quote
-        label: Quote Block
-        fields:
-          - name: quote
-            label: Quote Text
-            type: text
-          - name: author
-            label: Quote Author
-            type: string
-
-      - name: code_snippet
-        label: Code Snippet
-        fields:
-          - name: code
-            label: Code
-            type: code
-            options:
-              language: javascript
-```
-
-## Accessing Data in Templates
-
-Retrieve the saved data in your theme templates:
+In your theme template file (e.g., `page-landing.php`):
 
 ```php
 <?php
-$markdown_fm_data = get_post_meta(get_the_ID(), '_markdown_fm_data', true);
+// Get individual fields using short alias
+$hero_title = mdfm_get_field('hero_title');
+$hero_image = mdfm_get_field('hero_image');
+$description = mdfm_get_field('description');
+$cta = mdfm_get_field('cta_button');
+$features = mdfm_get_field('features');
+?>
 
-if (!empty($markdown_fm_data)) {
-    // Access simple fields
-    $title = isset($markdown_fm_data['title']) ? $markdown_fm_data['title'] : '';
-    $featured = isset($markdown_fm_data['featured']) ? $markdown_fm_data['featured'] : false;
+<div class="hero">
+  <?php if ($hero_image): ?>
+  <img src="<?php echo esc_url($hero_image); ?>" alt="Hero">
+  <?php endif; ?>
 
-    // Access object fields
-    if (isset($markdown_fm_data['contact'])) {
-        $first_name = $markdown_fm_data['contact']['first_name'];
-        $email = $markdown_fm_data['contact']['email'];
-    }
+  <h1><?php echo esc_html($hero_title); ?></h1>
+  <p><?php echo esc_html($description); ?></p>
 
-    // Access block/repeater fields
-    if (isset($markdown_fm_data['sections']) && is_array($markdown_fm_data['sections'])) {
-        foreach ($markdown_fm_data['sections'] as $section) {
-            $type = $section['type']; // Block type
+  <?php if ($cta): ?>
+  <a href="<?php echo esc_url($cta['url']); ?>" class="button">
+    <?php echo esc_html($cta['text']); ?>
+  </a>
+  <?php endif; ?>
+</div>
 
-            if ($type === 'hero') {
-                echo '<div class="hero-section">';
-                echo '<h1>' . esc_html($section['title']) . '</h1>';
-                echo '<div>' . wp_kses_post($section['content']) . '</div>';
-                echo '</div>';
-            } elseif ($type === 'text') {
-                echo '<div class="text-block">';
-                echo wp_kses_post($section['content']);
-                echo '</div>';
+<?php if ($features): ?>
+  <div class="features">
+  <?php foreach ($features as $feature): ?>
+    <div class="feature">
+    <?php if (!empty($feature['icon'])): ?>
+      <img src="<?php echo esc_url($feature['icon']); ?>" alt="">
+    <?php endif; ?>
+    <h3><?php echo esc_html($feature['title']); ?></h3>
+    <p><?php echo esc_html($feature['description']); ?></p>
+    </div>
+  <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+```
+
+## Template Functions
+
+Markdown FM provides ACF-like template functions for retrieving your data:
+
+### `mdfm_get_field($field_name, $post_id = null)`
+
+Get a single field value.
+
+```php
+// For current page/post
+$title = mdfm_get_field('hero_title');
+
+// For specific post ID
+$title = mdfm_get_field('hero_title', 123);
+
+// For partials
+$logo = mdfm_get_field('logo', 'partial:header.php');
+$copyright = mdfm_get_field('copyright', 'partial:footer.php');
+
+// For partials in subdirectories
+$menu = mdfm_get_field('menu_items', 'partial:partials/navigation.php');
+```
+
+### `mdfm_get_fields($post_id = null)`
+
+Get all fields at once.
+
+```php
+// For current page/post
+$fields = mdfm_get_fields();
+// Returns: ['hero_title' => 'Welcome', 'description' => '...', ...]
+
+// For partials
+$header_data = mdfm_get_fields('partial:header.php');
+```
+
+### `mdfm_has_field($field_name, $post_id = null)`
+
+Check if a field exists and has a value.
+
+```php
+if (mdfm_has_field('hero_title')) {
+  echo '<h1>' . esc_html(mdfm_get_field('hero_title')) . '</h1>';
+}
+
+// For partials
+if (mdfm_has_field('logo', 'partial:header.php')) {
+  $logo = mdfm_get_field('logo', 'partial:header.php');
+}
+```
+
+**Long-form aliases** are also available:
+- `markdown_fm_get_field()`
+- `markdown_fm_get_fields()`
+- `markdown_fm_has_field()`
+
+## Working with Partials
+
+Partials (like `header.php`, `footer.php`, `sidebar.php`) have **global, site-wide data** that you manage from the Markdown FM admin page.
+
+### Partial Detection
+
+Markdown FM automatically detects partials in two ways:
+
+#### Automatic Detection (Standard Partials)
+
+Common WordPress partials are detected automatically:
+- `header.php`, `header-*.php`
+- `footer.php`, `footer-*.php`
+- `sidebar.php`, `sidebar-*.php`
+- `content.php`, `content-*.php`
+- `comments.php`, `searchform.php`
+
+#### Manual Detection (Custom Partials)
+
+For custom partials with non-standard names, add the `@mdfm` marker in the file header:
+
+```php
+<?php
+/**
+ * Custom Navigation Partial
+ * @mdfm
+ */
+
+// Your template code here
+```
+
+The marker can appear anywhere in the **first 30 lines** of the file, in any comment style:
+
+```php
+<?php
+// @mdfm - Enable Markdown FM for this partial
+
+/* @mdfm */
+
+/**
+ * Some description
+ * @mdfm
+ */
+```
+
+After adding the marker, click the **"Refresh Template List"** button in the Markdown FM admin page.
+
+### 1. Enable YAML for a Partial
+
+1. Go to **Markdown FM** → scroll to **Template Partials** section
+2. Toggle "Enable YAML" for your partial (e.g., `header.php`)
+3. Click "Add Schema" to define fields
+4. Click "Manage Data" to edit the global values for this partial
+
+### 2. Example: Header Partial
+
+**Schema** for `header.php`:
+
+```yaml
+fields:
+  - name: logo
+  label: Site Logo
+  type: image
+  - name: site_title
+  label: Site Title
+  type: string
+  - name: show_search
+  label: Show Search Bar
+  type: boolean
+  - name: menu_cta
+  label: Menu CTA Button
+  type: object
+  fields:
+    - name: text
+    label: Button Text
+    type: string
+    - name: url
+    label: Button URL
+    type: string
+```
+
+**Usage** in `header.php`:
+
+```php
+<?php
+$logo = mdfm_get_field('logo', 'partial:header.php');
+$site_title = mdfm_get_field('site_title', 'partial:header.php');
+$show_search = mdfm_get_field('show_search', 'partial:header.php');
+$menu_cta = mdfm_get_field('menu_cta', 'partial:header.php');
+?>
+
+<header class="site-header">
+  <div class="logo">
+  <?php if ($logo): ?>
+    <img src="<?php echo esc_url($logo); ?>" alt="<?php echo esc_attr($site_title); ?>">
+  <?php else: ?>
+    <h1><?php echo esc_html($site_title); ?></h1>
+  <?php endif; ?>
+  </div>
+
+  <nav>
+  <?php wp_nav_menu(['theme_location' => 'primary']); ?>
+  </nav>
+
+  <?php if ($menu_cta): ?>
+  <a href="<?php echo esc_url($menu_cta['url']); ?>" class="cta-button">
+    <?php echo esc_html($menu_cta['text']); ?>
+  </a>
+  <?php endif; ?>
+
+  <?php if ($show_search): ?>
+  <?php get_search_form(); ?>
+  <?php endif; ?>
+</header>
+```
+
+### 3. Example: Footer Partial
+
+**Schema** for `footer.php`:
+
+```yaml
+fields:
+  - name: copyright_text
+  label: Copyright Text
+  type: string
+  default: "© 2024 My Company. All rights reserved."
+  - name: social_links
+  label: Social Media Links
+  type: object
+  fields:
+    - name: facebook
+    label: Facebook URL
+    type: string
+    - name: twitter
+    label: Twitter URL
+    type: string
+    - name: instagram
+    label: Instagram URL
+    type: string
+    - name: linkedin
+    label: LinkedIn URL
+    type: string
+  - name: show_newsletter
+  label: Show Newsletter Signup
+  type: boolean
+  default: true
+  - name: footer_columns
+  label: Footer Columns
+  type: block
+  list: true
+  blockKey: type
+  blocks:
+    - name: links
+    label: Link Column
+    fields:
+      - name: title
+      label: Column Title
+      type: string
+      - name: links
+      label: Links (one per line)
+      type: text
+```
+
+**Usage** in `footer.php`:
+
+```php
+<?php
+$copyright = mdfm_get_field('copyright_text', 'partial:footer.php');
+$social = mdfm_get_field('social_links', 'partial:footer.php');
+$show_newsletter = mdfm_get_field('show_newsletter', 'partial:footer.php');
+$columns = mdfm_get_field('footer_columns', 'partial:footer.php');
+?>
+
+<footer class="site-footer">
+  <?php if ($columns): ?>
+    <div class="footer-columns">
+      <?php foreach ($columns as $column): ?>
+        <?php if ($column['type'] === 'links'): ?>
+          <div class="footer-column">
+            <h4><?php echo esc_html($column['title']); ?></h4>
+            <?php
+            $links = explode("\n", $column['links']);
+            echo '<ul>';
+            foreach ($links as $link) {
+              echo '<li>' . esc_html(trim($link)) . '</li>';
             }
-        }
+            echo '</ul>';
+            ?>
+          </div>
+        <?php endif; ?>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
+  <?php if ($show_newsletter): ?>
+    <div class="newsletter-signup">
+      <!-- Your newsletter form here -->
+    </div>
+  <?php endif; ?>
+
+  <?php if ($social): ?>
+    <div class="social-links">
+      <?php if (!empty($social['facebook'])): ?>
+        <a href="<?php echo esc_url($social['facebook']); ?>">Facebook</a>
+      <?php endif; ?>
+      <?php if (!empty($social['twitter'])): ?>
+        <a href="<?php echo esc_url($social['twitter']); ?>">Twitter</a>
+      <?php endif; ?>
+      <?php if (!empty($social['instagram'])): ?>
+        <a href="<?php echo esc_url($social['instagram']); ?>">Instagram</a>
+      <?php endif; ?>
+      <?php if (!empty($social['linkedin'])): ?>
+        <a href="<?php echo esc_url($social['linkedin']); ?>">LinkedIn</a>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+
+  <div class="copyright">
+    <?php echo esc_html($copyright); ?>
+  </div>
+</footer>
+```
+
+## Field Types
+
+Markdown FM supports all field types from Pages CMS:
+
+### String
+
+Single-line text input.
+
+```yaml
+- name: title
+  label: Page Title
+  type: string
+  options:
+  minlength: 3
+  maxlength: 100
+```
+
+**Options:**
+- `minlength` - Minimum character length
+- `maxlength` - Maximum character length
+
+### Text
+
+Multi-line textarea.
+
+```yaml
+- name: description
+  label: Description
+  type: text
+  options:
+  maxlength: 500
+```
+
+**Options:**
+- `maxlength` - Maximum character length
+
+### Rich Text
+
+WordPress WYSIWYG editor with full formatting.
+
+```yaml
+- name: content
+  label: Page Content
+  type: rich-text
+```
+
+### Code
+
+Code editor with syntax highlighting.
+
+```yaml
+- name: custom_css
+  label: Custom CSS
+  type: code
+  options:
+  language: css
+```
+
+**Options:**
+- `language` - Syntax highlighting (html, css, javascript, php, python, etc.)
+
+### Boolean
+
+Checkbox for true/false values.
+
+```yaml
+- name: featured
+  label: Featured Post
+  type: boolean
+  default: false
+```
+
+### Number
+
+Number input with optional constraints.
+
+```yaml
+- name: price
+  label: Price
+  type: number
+  options:
+  min: 0
+  max: 9999
+```
+
+**Options:**
+- `min` - Minimum value
+- `max` - Maximum value
+
+### Date
+
+Date picker with optional time.
+
+```yaml
+- name: event_date
+  label: Event Date
+  type: date
+  options:
+  time: true
+```
+
+**Options:**
+- `time` - Set to `true` to include time selection
+
+### Select
+
+Dropdown selection.
+
+```yaml
+- name: category
+  label: Category
+  type: select
+  options:
+  multiple: false
+  values:
+    - value: news
+    label: News
+    - value: blog
+    label: Blog Posts
+    - value: events
+    label: Events
+```
+
+**Options:**
+- `multiple` - Allow multiple selections
+- `values` - Array of options with `value` and `label` keys
+
+### Image
+
+WordPress media uploader for images.
+
+```yaml
+- name: featured_image
+  label: Featured Image
+  type: image
+```
+
+Returns the image URL as a string.
+
+### File
+
+WordPress media uploader for any file type.
+
+```yaml
+- name: pdf_brochure
+  label: PDF Brochure
+  type: file
+```
+
+Returns the file URL as a string.
+
+### Object
+
+Nested group of fields.
+
+```yaml
+- name: author
+  label: Author Information
+  type: object
+  fields:
+  - name: name
+    label: Author Name
+    type: string
+  - name: bio
+    label: Biography
+    type: text
+  - name: photo
+    label: Author Photo
+    type: image
+  - name: social
+    label: Social Links
+    type: object
+    fields:
+    - name: twitter
+      label: Twitter
+      type: string
+    - name: website
+      label: Website
+      type: string
+```
+
+**Access nested fields:**
+
+```php
+$author = mdfm_get_field('author');
+echo $author['name'];
+echo $author['bio'];
+echo $author['social']['twitter'];
+```
+
+### Block
+
+Repeater field with multiple block types. Perfect for flexible page builders!
+
+```yaml
+- name: page_sections
+  label: Page Sections
+  type: block
+  list: true
+  blockKey: type
+  blocks:
+  - name: hero
+    label: Hero Section
+    fields:
+    - name: title
+      label: Hero Title
+      type: string
+    - name: subtitle
+      label: Subtitle
+      type: string
+    - name: background_image
+      label: Background Image
+      type: image
+    - name: content
+      label: Hero Content
+      type: rich-text
+
+  - name: two_column
+    label: Two Column Layout
+    fields:
+    - name: left_content
+      label: Left Column
+      type: rich-text
+    - name: right_content
+      label: Right Column
+      type: rich-text
+
+  - name: gallery
+    label: Image Gallery
+    fields:
+    - name: images
+      label: Gallery Images
+      type: text
+      description: Enter image URLs, one per line
+
+  - name: cta
+    label: Call to Action
+    fields:
+    - name: heading
+      label: CTA Heading
+      type: string
+    - name: button_text
+      label: Button Text
+      type: string
+    - name: button_url
+      label: Button URL
+      type: string
+```
+
+**Properties:**
+- `list: true` - Makes it repeatable
+- `blockKey` - Field name that identifies block type (usually "type")
+- `blocks` - Array of available block definitions
+
+**Usage in templates:**
+
+```php
+<?php
+$sections = mdfm_get_field('page_sections');
+
+if ($sections) {
+  foreach ($sections as $section) {
+    switch ($section['type']) {
+      case 'hero':
+        ?>
+        <section class="hero" style="background-image: url('<?php echo esc_url($section['background_image']); ?>')">
+          <h1><?php echo esc_html($section['title']); ?></h1>
+          <p class="subtitle"><?php echo esc_html($section['subtitle']); ?></p>
+          <div class="content">
+            <?php echo wp_kses_post($section['content']); ?>
+          </div>
+        </section>
+        <?php
+        break;
+
+      case 'two_column':
+        ?>
+        <section class="two-column">
+          <div class="column">
+            <?php echo wp_kses_post($section['left_content']); ?>
+          </div>
+          <div class="column">
+            <?php echo wp_kses_post($section['right_content']); ?>
+          </div>
+        </section>
+        <?php
+        break;
+
+      case 'gallery':
+        $images = explode("\n", $section['images']);
+        ?>
+        <section class="gallery">
+          <?php foreach ($images as $image_url): ?>
+            <img src="<?php echo esc_url(trim($image_url)); ?>" alt="">
+          <?php endforeach; ?>
+        </section>
+        <?php
+        break;
+
+      case 'cta':
+        ?>
+        <section class="cta">
+          <h2><?php echo esc_html($section['heading']); ?></h2>
+          <a href="<?php echo esc_url($section['button_url']); ?>" class="button">
+            <?php echo esc_html($section['button_text']); ?>
+          </a>
+        </section>
+        <?php
+        break;
     }
+  }
 }
 ?>
 ```
 
-## Database Structure
+## Common Field Properties
 
-The plugin stores data in two WordPress options:
-
-1. **markdown_fm_template_settings**: Tracks which templates have YAML enabled
-   ```php
-   [
-       'page.php' => true,
-       'single.php' => false,
-       'template-custom.php' => true
-   ]
-   ```
-
-2. **markdown_fm_schemas**: Stores YAML schemas for each template
-   ```php
-   [
-       'page.php' => 'fields:...',
-       'template-custom.php' => 'fields:...'
-   ]
-   ```
-
-Post meta is stored with the key `_markdown_fm_data` containing all field values.
-
-## Advanced Features
-
-### Repeater Blocks with BlockKey
-
-The `blockKey` property determines which field identifies the block type:
+All field types support these properties:
 
 ```yaml
-fields:
-  - name: sections
-    label: Page Sections
-    type: block
-    list: true
-    blockKey: type  # This field will store the block identifier
-    blocks:
-      - name: hero
-        label: Hero Section
-        fields:
-          - name: title
-            label: Title
-            type: string
+- name: field_name      # Required - Unique machine name
+  label: Field Label    # Display name in admin
+  type: string       # Required - Field type
+  description: Help text   # Optional help text for editors
+  default: Default value   # Default value for new entries
+  required: true       # Make field required (not enforced yet)
 ```
 
-### Nested Objects
+## Examples
 
-Create complex data structures with nested objects:
+### Blog Post Template
 
 ```yaml
 fields:
-  - name: settings
-    label: Page Settings
-    type: object
-    fields:
-      - name: seo
-        label: SEO Settings
-        type: object
-        fields:
-          - name: meta_title
-            label: Meta Title
-            type: string
-          - name: meta_description
-            label: Meta Description
-            type: text
-      - name: layout
-        label: Layout Options
-        type: object
-        fields:
-          - name: sidebar
-            label: Show Sidebar
-            type: boolean
-          - name: width
-            label: Content Width
-            type: select
-            options:
-              values:
-                - value: narrow
-                  label: Narrow
-                - value: wide
-                  label: Wide
-                - value: full
-                  label: Full Width
+  - name: featured_image
+  label: Featured Image
+  type: image
+  description: Main image for the post
+  - name: excerpt
+  label: Custom Excerpt
+  type: text
+  options:
+    maxlength: 300
+  - name: reading_time
+  label: Reading Time (minutes)
+  type: number
+  options:
+    min: 1
+    max: 60
+  - name: show_toc
+  label: Show Table of Contents
+  type: boolean
+  default: true
+  - name: author_override
+  label: Author Override
+  type: object
+  description: Override default author information
+  fields:
+    - name: name
+    label: Name
+    type: string
+    - name: avatar
+    label: Avatar
+    type: image
+    - name: bio
+    label: Short Bio
+    type: text
 ```
 
-### Field Validation Options
-
-Add validation to your fields:
+### Product Page Template
 
 ```yaml
 fields:
-  # String length validation
-  - name: username
-    label: Username
+  - name: product_info
+  label: Product Information
+  type: object
+  fields:
+    - name: name
+    label: Product Name
     type: string
     options:
-      minlength: 3
-      maxlength: 20
-
-  # Number range validation
-  - name: age
-    label: Age
+      maxlength: 100
+    - name: sku
+    label: SKU
+    type: string
+    - name: price
+    label: Price
     type: number
     options:
-      min: 18
-      max: 100
-
-  # Textarea character limit
-  - name: bio
-    label: Biography
-    type: text
+      min: 0
+    - name: sale_price
+    label: Sale Price
+    type: number
     options:
-      maxlength: 500
+      min: 0
+    - name: in_stock
+    label: In Stock
+    type: boolean
+    default: true
+
+  - name: product_images
+  label: Product Images
+  type: block
+  list: true
+  blockKey: type
+  blocks:
+    - name: image
+    label: Product Image
+    fields:
+      - name: image_url
+      label: Image
+      type: image
+      - name: caption
+      label: Caption
+      type: string
+
+  - name: product_details
+  label: Product Details
+  type: object
+  fields:
+    - name: description
+    label: Description
+    type: rich-text
+    - name: specifications
+    label: Specifications
+    type: text
+    - name: materials
+    label: Materials
+    type: string
 ```
 
-## Troubleshooting
+## Data Storage
 
-### Schemas Not Appearing
+### Page Templates
+- **Location**: Post meta with key `_markdown_fm_data`
+- **Scope**: Per post/page
+- **Editing**: WordPress post/page editor
 
-1. **Check Composer dependencies**: Run `composer install` in the plugin directory
-2. **Check template is enabled**: Ensure the YAML toggle is ON for your template
-3. **Verify template selection**: Make sure the correct template is selected for your page/post
-4. **Check schema format**: Validate your YAML syntax (indentation matters!)
+### Template Partials
+- **Location**: WordPress options with key `markdown_fm_partial_data`
+- **Scope**: Global (site-wide)
+- **Editing**: Markdown FM admin page → "Manage Data" button
 
-### Fields Not Saving
-
-1. **Check user permissions**: Ensure you have permission to edit posts
-2. **Verify nonce**: The plugin uses WordPress nonces for security
-3. **Check browser console**: Look for JavaScript errors
-
-### YAML Parsing Issues
-
-The plugin uses Symfony YAML Component for robust YAML parsing. If you encounter parsing errors:
-
-1. **Check YAML syntax**: Use an online YAML validator to verify your schema
-2. **Check indentation**: YAML is indentation-sensitive (use 2 spaces consistently)
-3. **View error logs**: Check WordPress debug logs for detailed parsing error messages
-4. **Common issues**:
-  - Mixed tabs and spaces (use spaces only)
-  - Incorrect indentation levels
-  - Missing colons after keys
-  - Unquoted special characters in values
-
-## Uninstallation
-
-When you delete the plugin:
-- `markdown_fm_template_settings` option is removed
-- `markdown_fm_schemas` option is removed
-- All `_markdown_fm_data` post meta is deleted
-
-**Note**: This happens only when you DELETE the plugin, not when you deactivate it.
-
-## Hooks for Developers
-
-### Accessing Data Programmatically
-
-```php
-// Get all schemas
-$schemas = get_option('markdown_fm_schemas', []);
-
-// Get schema for specific template
-$page_schema = isset($schemas['page.php']) ? $schemas['page.php'] : '';
-
-// Get all enabled templates
-$enabled_templates = get_option('markdown_fm_template_settings', []);
-
-// Get field data for a post
-$post_id = 123;
-$field_data = get_post_meta($post_id, '_markdown_fm_data', true);
-```
-
-### Helper Function Example
-
-Add this to your theme's `functions.php`:
-
-```php
-/**
- * Get Markdown FM field value
- */
-function get_markdown_fm_field($field_name, $post_id = null) {
-    if (!$post_id) {
-        $post_id = get_the_ID();
-    }
-
-    $data = get_post_meta($post_id, '_markdown_fm_data', true);
-
-    if (isset($data[$field_name])) {
-        return $data[$field_name];
-    }
-
-    return null;
-}
-
-// Usage in templates:
-$title = get_markdown_fm_field('title');
-$sections = get_markdown_fm_field('sections');
-```
+### Plugin Settings
+- `markdown_fm_template_settings` - Tracks which templates have YAML enabled
+- `markdown_fm_schemas` - Stores YAML schemas for each template/partial
 
 ## Requirements
 
 - WordPress 5.0 or higher
-- PHP 7.0 or higher
+- PHP 7.4 or higher
 - Composer (for installing dependencies)
-- jQuery (included with WordPress)
-- WordPress Media Library
 
 ## Dependencies
 
-- **Symfony YAML Component** (^5.4|^6.0|^7.0) - Robust YAML parsing
+- **Symfony YAML Component** (^5.4|^6.0|^7.0) - YAML parsing
 
-## Support
+## Security
 
-For issues, questions, or contributions:
-- Email: me@silvestar.codes
-- Website: https://www.silvestar.codes
+- All admin functionality requires `manage_options` capability (administrator by default)
+- AJAX requests protected with WordPress nonces
+- Data sanitized and escaped appropriately
+- Input validation on all fields
+
+## Uninstallation
+
+When you **delete** (not deactivate) the plugin, it automatically cleans up:
+- Template settings (`markdown_fm_template_settings`)
+- Schemas (`markdown_fm_schemas`)
+- Partial data (`markdown_fm_partial_data`)
+- All post meta data (`_markdown_fm_data`)
+
+## Troubleshooting
+
+### Plugin activation error about Composer
+
+**Solution**: Navigate to the plugin directory and run:
+```bash
+composer install
+```
+
+### Schema fields not appearing in post editor
+
+1. Ensure YAML is enabled for the template
+2. Verify you selected the correct page template
+3. Check YAML syntax (use 2 spaces for indentation)
+4. Clear browser cache and refresh
+
+### YAML parsing errors
+
+1. Validate YAML syntax with an online validator
+2. Use consistent 2-space indentation (no tabs)
+3. Check WordPress debug logs for detailed error messages
+
+### Changes not saving
+
+1. Check browser console for JavaScript errors
+2. Ensure you have permission to edit posts/options
+3. Verify WordPress AJAX is working
+
+## Credits
+
+* **Author**: [Silvestar Bistrović](https://www.silvestar.codes)
+* **Email**: me@silvestar.codes
+* **Inspired by**: [PagesCMS](https://pagescms.org/) - Open-source CMS for static websites
 
 ## License
 
@@ -538,11 +954,17 @@ GPL v2 or later
 
 ### Version 1.0.0
 - Initial release
-- Support for all PagesCMS field types
+- Support for 12+ field types from PagesCMS
+- Template and partial support
+- ACF-like template functions
 - Block/repeater functionality
-- Media uploader integration
-- Clean uninstall functionality
+- WordPress media integration
+- Administrator-only access
+- Clean uninstall
+- Clear buttons for image and file fields
+- Reset All Data button for clearing all custom fields on a page
+- Confirmation alerts for destructive actions
 
 ---
 
-**Inspired by [PagesCMS](https://pagescms.org/docs/)** - A simple, lightweight CMS for static sites.
+**Built with ❤️ for the WordPress community**

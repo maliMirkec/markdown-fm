@@ -1,51 +1,50 @@
-<?php return array (
-  'root' => 
-  array (
-    'pretty_version' => 'dev-main',
-    'version' => 'dev-main',
-    'aliases' => 
-    array (
+<?php return array(
+    'root' => array(
+        'name' => 'silvestar/markdown-fm',
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => 'ffeeff4671c29d9bec8aa4ac6b147626c4ab61e1',
+        'type' => 'wordpress-plugin',
+        'install_path' => __DIR__ . '/../../',
+        'aliases' => array(),
+        'dev' => false,
     ),
-    'reference' => '67500f5790bf8fc8f5073b3a695e253ee7ac4ea8',
-    'name' => 'silvestar/markdown-fm',
-  ),
-  'versions' => 
-  array (
-    'silvestar/markdown-fm' => 
-    array (
-      'pretty_version' => 'dev-main',
-      'version' => 'dev-main',
-      'aliases' => 
-      array (
-      ),
-      'reference' => '67500f5790bf8fc8f5073b3a695e253ee7ac4ea8',
+    'versions' => array(
+        'silvestar/markdown-fm' => array(
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => 'ffeeff4671c29d9bec8aa4ac6b147626c4ab61e1',
+            'type' => 'wordpress-plugin',
+            'install_path' => __DIR__ . '/../../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'symfony/deprecation-contracts' => array(
+            'pretty_version' => 'v3.6.0',
+            'version' => '3.6.0.0',
+            'reference' => '63afe740e99a13ba87ec199bb07bbdee937a5b62',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../symfony/deprecation-contracts',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'symfony/polyfill-ctype' => array(
+            'pretty_version' => 'v1.33.0',
+            'version' => '1.33.0.0',
+            'reference' => 'a3cc8b044a6ea513310cbd48ef7333b384945638',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../symfony/polyfill-ctype',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'symfony/yaml' => array(
+            'pretty_version' => 'v7.3.3',
+            'version' => '7.3.3.0',
+            'reference' => 'd4f4a66866fe2451f61296924767280ab5732d9d',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../symfony/yaml',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
     ),
-    'symfony/deprecation-contracts' => 
-    array (
-      'pretty_version' => 'v3.6.0',
-      'version' => '3.6.0.0',
-      'aliases' => 
-      array (
-      ),
-      'reference' => '63afe740e99a13ba87ec199bb07bbdee937a5b62',
-    ),
-    'symfony/polyfill-ctype' => 
-    array (
-      'pretty_version' => 'v1.33.0',
-      'version' => '1.33.0.0',
-      'aliases' => 
-      array (
-      ),
-      'reference' => 'a3cc8b044a6ea513310cbd48ef7333b384945638',
-    ),
-    'symfony/yaml' => 
-    array (
-      'pretty_version' => 'v7.3.3',
-      'version' => '7.3.3.0',
-      'aliases' => 
-      array (
-      ),
-      'reference' => 'd4f4a66866fe2451f61296924767280ab5732d9d',
-    ),
-  ),
 );

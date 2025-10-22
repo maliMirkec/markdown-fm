@@ -12,13 +12,25 @@ if (!defined('ABSPATH')) {
 <div class="wrap">
   <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
+  <?php settings_errors('markdown_fm_messages'); ?>
+
   <div class="markdown-fm-admin-container">
     <div class="markdown-fm-intro">
     <p><?php _e('Markdown FM allows you to define YAML frontmatter schemas for your theme templates. Enable YAML for templates, define schemas, and manage structured content directly in the WordPress editor.', 'markdown-fm'); ?></p>
     <p><strong><?php _e('Inspired by', 'markdown-fm'); ?> <a href="https://pagescms.org/docs/" target="_blank">PagesCMS</a></strong></p>
+    <p>
+      <a href="<?php echo esc_url(add_query_arg('refresh_mdfm', '1')); ?>" class="button">
+        <span class="dashicons dashicons-update" style="margin-top: 3px;"></span>
+        <?php _e('Refresh Template List', 'markdown-fm'); ?>
+      </a>
+      <span class="description" style="margin-left: 10px;">
+        <?php _e('Scan theme files for new templates and partials with @mdfm markers', 'markdown-fm'); ?>
+      </span>
+    </p>
     </div>
 
-    <h2><?php _e('Theme Templates', 'markdown-fm'); ?></h2>
+    <h2><?php _e('Page Templates', 'markdown-fm'); ?></h2>
+    <p><?php _e('Configure YAML schemas for page templates. Data for these templates is stored per post/page.', 'markdown-fm'); ?></p>
 
     <?php if (empty($templates)) : ?>
     <p><?php _e('No templates found in the current theme.', 'markdown-fm'); ?></p>
@@ -63,6 +75,73 @@ if (!defined('ABSPATH')) {
                           <?php endif; ?>
                       <?php else : ?>
                           <span class="description"><?php _e('Enable YAML first', 'markdown-fm'); ?></span>
+                      <?php endif; ?>
+                  </td>
+              </tr>
+          <?php endforeach; ?>
+      </tbody>
+    </table>
+    <?php endif; ?>
+
+    <h2 style="margin-top: 40px;"><?php _e('Template Partials', 'markdown-fm'); ?></h2>
+    <p><?php _e('Configure YAML schemas for template partials (header, footer, sidebar, etc.). Data for partials is stored globally and can be managed below.', 'markdown-fm'); ?></p>
+
+    <?php if (empty($partials)) : ?>
+    <p><?php _e('No partials found in the current theme.', 'markdown-fm'); ?></p>
+    <?php else : ?>
+    <table class="wp-list-table widefat fixed striped">
+      <thead>
+          <tr>
+              <th><?php _e('Partial Name', 'markdown-fm'); ?></th>
+              <th><?php _e('File', 'markdown-fm'); ?></th>
+              <th><?php _e('Enable YAML', 'markdown-fm'); ?></th>
+              <th><?php _e('Schema', 'markdown-fm'); ?></th>
+              <th><?php _e('Data', 'markdown-fm'); ?></th>
+          </tr>
+      </thead>
+      <tbody>
+          <?php foreach ($partials as $partial) : ?>
+              <?php
+              $is_enabled = isset($template_settings[$partial['file']]) && $template_settings[$partial['file']];
+              $has_schema = isset($schemas[$partial['file']]) && !empty($schemas[$partial['file']]);
+              ?>
+              <tr>
+                  <td><strong><?php echo esc_html($partial['name']); ?></strong></td>
+                  <td><code><?php echo esc_html($partial['file']); ?></code></td>
+                  <td>
+                      <label class="markdown-fm-switch">
+                          <input type="checkbox"
+                                  class="markdown-fm-enable-yaml"
+                                  data-template="<?php echo esc_attr($partial['file']); ?>"
+                                  <?php checked($is_enabled); ?> />
+                          <span class="markdown-fm-slider"></span>
+                      </label>
+                  </td>
+                  <td>
+                      <?php if ($is_enabled) : ?>
+                          <button type="button"
+                                  class="button markdown-fm-edit-schema"
+                                  data-template="<?php echo esc_attr($partial['file']); ?>"
+                                  data-name="<?php echo esc_attr($partial['name']); ?>">
+                              <?php echo $has_schema ? __('Edit Schema', 'markdown-fm') : __('Add Schema', 'markdown-fm'); ?>
+                          </button>
+                          <?php if ($has_schema) : ?>
+                              <span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span>
+                          <?php endif; ?>
+                      <?php else : ?>
+                          <span class="description"><?php _e('Enable YAML first', 'markdown-fm'); ?></span>
+                      <?php endif; ?>
+                  </td>
+                  <td>
+                      <?php if ($is_enabled && $has_schema) : ?>
+                          <button type="button"
+                                  class="button markdown-fm-manage-partial-data"
+                                  data-template="<?php echo esc_attr($partial['file']); ?>"
+                                  data-name="<?php echo esc_attr($partial['name']); ?>">
+                              <?php _e('Manage Data', 'markdown-fm'); ?>
+                          </button>
+                      <?php else : ?>
+                          <span class="description"><?php _e('Add schema first', 'markdown-fm'); ?></span>
                       <?php endif; ?>
                   </td>
               </tr>
@@ -153,6 +232,25 @@ if (!defined('ABSPATH')) {
     </div>
     <div class="markdown-fm-modal-footer">
     <button type="button" class="button button-primary markdown-fm-save-schema"><?php _e('Save Schema', 'markdown-fm'); ?></button>
+    <button type="button" class="button markdown-fm-modal-close"><?php _e('Cancel', 'markdown-fm'); ?></button>
+    </div>
+  </div>
+</div>
+
+<!-- Partial Data Editor Modal -->
+<div id="markdown-fm-partial-data-modal" class="markdown-fm-modal" style="display: none;">
+  <div class="markdown-fm-modal-content">
+    <div class="markdown-fm-modal-header">
+    <h2><?php _e('Manage Partial Data', 'markdown-fm'); ?>: <span id="markdown-fm-partial-name"></span></h2>
+    <button type="button" class="markdown-fm-modal-close">&times;</button>
+    </div>
+    <div class="markdown-fm-modal-body">
+    <p><?php _e('Edit the data for this partial:', 'markdown-fm'); ?></p>
+    <div id="markdown-fm-partial-fields"></div>
+    <input type="hidden" id="markdown-fm-current-partial" value="" />
+    </div>
+    <div class="markdown-fm-modal-footer">
+    <button type="button" class="button button-primary markdown-fm-save-partial-data"><?php _e('Save Data', 'markdown-fm'); ?></button>
     <button type="button" class="button markdown-fm-modal-close"><?php _e('Cancel', 'markdown-fm'); ?></button>
     </div>
   </div>

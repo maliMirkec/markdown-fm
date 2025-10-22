@@ -218,6 +218,24 @@
 }
 
 /* Image and File Upload */
+.markdown-fm-media-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.markdown-fm-clear-media {
+  color: #b32d2e;
+  border-color: #b32d2e;
+}
+
+.markdown-fm-clear-media:hover {
+  background: #b32d2e;
+  color: #fff;
+  border-color: #b32d2e;
+}
+
 .markdown-fm-image-preview {
   margin-top: 10px;
 }
@@ -235,6 +253,19 @@
   border: 1px solid #ddd;
   border-radius: 3px;
   display: inline-block;
+}
+
+/* Reset Data Button */
+.markdown-fm-reset-data {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.markdown-fm-reset-data .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
 }
 
 /* Object Fields */

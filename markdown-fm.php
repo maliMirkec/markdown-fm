@@ -57,6 +57,11 @@ class Markdown_FM {
     add_action('wp_ajax_markdown_fm_save_template_settings', [$this, 'ajax_save_template_settings']);
     add_action('wp_ajax_markdown_fm_save_schema', [$this, 'ajax_save_schema']);
     add_action('wp_ajax_markdown_fm_get_schema', [$this, 'ajax_get_schema']);
+    add_action('wp_ajax_markdown_fm_get_partial_data', [$this, 'ajax_get_partial_data']);
+    add_action('wp_ajax_markdown_fm_save_partial_data', [$this, 'ajax_save_partial_data']);
+
+    // Clear cache on theme switch
+    add_action('switch_theme', [$this, 'clear_template_cache']);
   }
 
   public function add_admin_menu() {
@@ -116,10 +121,23 @@ class Markdown_FM {
 
   public function render_admin_page() {
     if (!current_user_can('manage_options')) {
-      return;
+      wp_die(__('You do not have sufficient permissions to access this page.', 'markdown-fm'));
     }
 
-    $templates = $this->get_theme_templates();
+    // Handle refresh action
+    if (isset($_GET['refresh_mdfm'])) {
+      $this->clear_template_cache();
+      add_settings_error(
+        'markdown_fm_messages',
+        'markdown_fm_message',
+        __('Template list refreshed successfully!', 'markdown-fm'),
+        'updated'
+      );
+    }
+
+    $theme_files = $this->get_theme_templates();
+    $templates = $theme_files['templates'];
+    $partials = $theme_files['partials'];
     $template_settings = get_option('markdown_fm_template_settings', []);
     $schemas = get_option('markdown_fm_schemas', []);
 
@@ -127,11 +145,20 @@ class Markdown_FM {
   }
 
   private function get_theme_templates() {
+    // Check cache first
+    $cache_key = 'markdown_fm_templates_' . get_stylesheet();
+    $cached = get_transient($cache_key);
+
+    if ($cached !== false && !isset($_GET['refresh_mdfm'])) {
+      return $cached;
+    }
+
     $templates = [];
+    $partials = [];
     $theme = wp_get_theme();
 
-    // Get only root-level template files (depth 1 means root directory only)
-    $template_files = $theme->get_files('php', 1);
+    // Get all template files
+    $template_files = $theme->get_files('php', -1); // -1 for unlimited depth
 
     // WordPress template hierarchy - only main templates, not partials
     $valid_template_patterns = [
@@ -159,26 +186,60 @@ class Markdown_FM {
       'author-*.php'
     ];
 
+    // Partial patterns (automatic detection)
+    $partial_patterns = [
+      'header.php',
+      'footer.php',
+      'sidebar.php',
+      'header-*.php',
+      'footer-*.php',
+      'sidebar-*.php',
+      'content.php',
+      'content-*.php',
+      'comments.php',
+      'searchform.php'
+    ];
+
     foreach ($template_files as $file => $path) {
       $basename = basename($file);
+      $relative_path = str_replace(get_template_directory() . '/', '', $path);
 
-      // Skip if file is in a subdirectory
-      if (dirname($file) !== '.') {
-        continue;
+      // Check if it's a root-level main template
+      if (dirname($file) === '.') {
+        $is_valid_template = false;
+        foreach ($valid_template_patterns as $pattern) {
+          if ($pattern === $basename || fnmatch($pattern, $basename)) {
+            $is_valid_template = true;
+            break;
+          }
+        }
+
+        if ($is_valid_template) {
+          $templates[] = [
+            'file' => $basename,
+            'path' => $path,
+            'name' => $this->format_template_name($basename)
+          ];
+        }
       }
 
-      // Check if file matches any valid template pattern
-      $is_valid_template = false;
-      foreach ($valid_template_patterns as $pattern) {
+      // Check if it's a partial (automatic detection by pattern)
+      $is_partial = false;
+      foreach ($partial_patterns as $pattern) {
         if ($pattern === $basename || fnmatch($pattern, $basename)) {
-          $is_valid_template = true;
+          $is_partial = true;
           break;
         }
       }
 
-      if ($is_valid_template) {
-        $templates[] = [
-          'file' => $basename,
+      // Also check for @mdfm marker in file header (custom partials)
+      if (!$is_partial && $this->has_mdfm_marker($path)) {
+        $is_partial = true;
+      }
+
+      if ($is_partial) {
+        $partials[] = [
+          'file' => $relative_path,
           'path' => $path,
           'name' => $this->format_template_name($basename)
         ];
@@ -209,7 +270,56 @@ class Markdown_FM {
       }
     }
 
-    return $templates;
+    $result = [
+      'templates' => $templates,
+      'partials' => $partials
+    ];
+
+    // Cache for 1 hour
+    set_transient($cache_key, $result, HOUR_IN_SECONDS);
+
+    return $result;
+  }
+
+  /**
+   * Check if a file has the @mdfm marker in its header
+   * Only reads first 30 lines for performance
+   */
+  private function has_mdfm_marker($file_path) {
+    if (!file_exists($file_path) || !is_readable($file_path)) {
+      return false;
+    }
+
+    $file = fopen($file_path, 'r');
+    if (!$file) {
+      return false;
+    }
+
+    $lines_to_check = 30;
+    $line_count = 0;
+    $has_marker = false;
+
+    while (!feof($file) && $line_count < $lines_to_check) {
+      $line = fgets($file);
+      $line_count++;
+
+      // Check for @mdfm marker (case insensitive)
+      if (preg_match('/@mdfm/i', $line)) {
+        $has_marker = true;
+        break;
+      }
+    }
+
+    fclose($file);
+    return $has_marker;
+  }
+
+  /**
+   * Clear the template cache
+   */
+  public function clear_template_cache() {
+    $cache_key = 'markdown_fm_templates_' . get_stylesheet();
+    delete_transient($cache_key);
   }
 
   private function format_template_name($filename) {
@@ -256,7 +366,7 @@ class Markdown_FM {
   public function ajax_get_schema() {
     check_ajax_referer('markdown_fm_nonce', 'nonce');
 
-    if (!current_user_can('edit_posts')) {
+    if (!current_user_can('manage_options')) {
       wp_send_json_error('Permission denied');
     }
 
@@ -310,12 +420,16 @@ class Markdown_FM {
     echo '<div id="markdown-fm-meta-box" class="postbox" style="margin-bottom: 20px;">';
     echo '<div class="postbox-header"><h2 class="hndle">' . __('Markdown FM Schema', 'markdown-fm') . '</h2></div>';
     echo '<div class="inside">';
-    echo '<div class="markdown-fm-meta-box-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">';
+    echo '<div class="markdown-fm-meta-box-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">';
     echo '<p style="margin: 0;">';
     echo '<strong>' . __('Template:', 'markdown-fm') . '</strong> ' . esc_html($template);
     echo ' | ';
     echo '<a href="' . esc_url($edit_schema_url) . '" target="_blank">' . __('Edit Schema', 'markdown-fm') . '</a>';
     echo '</p>';
+    echo '<button type="button" class="button button-secondary markdown-fm-reset-data" data-post-id="' . esc_attr($post->ID) . '">';
+    echo '<span class="dashicons dashicons-update-alt" style="margin-top: 3px;"></span> ';
+    echo __('Reset All Data', 'markdown-fm');
+    echo '</button>';
     echo '</div>';
 
     $saved_data = get_post_meta($post->ID, '_markdown_fm_data', true);
@@ -423,7 +537,12 @@ class Markdown_FM {
 
         case 'image':
           echo '<input type="hidden" name="markdown_fm[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" />';
+          echo '<div class="markdown-fm-media-buttons">';
           echo '<button type="button" class="button markdown-fm-upload-image" data-target="' . esc_attr($field_id) . '">Upload Image</button>';
+          if ($field_value) {
+            echo '<button type="button" class="button markdown-fm-clear-media" data-target="' . esc_attr($field_id) . '">Clear</button>';
+          }
+          echo '</div>';
           if ($field_value) {
             echo '<div class="markdown-fm-image-preview"><img src="' . esc_url($field_value) . '" style="max-width: 200px; display: block; margin-top: 10px;" /></div>';
           }
@@ -431,7 +550,12 @@ class Markdown_FM {
 
         case 'file':
           echo '<input type="hidden" name="markdown_fm[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" />';
+          echo '<div class="markdown-fm-media-buttons">';
           echo '<button type="button" class="button markdown-fm-upload-file" data-target="' . esc_attr($field_id) . '">Upload File</button>';
+          if ($field_value) {
+            echo '<button type="button" class="button markdown-fm-clear-media" data-target="' . esc_attr($field_id) . '">Clear</button>';
+          }
+          echo '</div>';
           if ($field_value) {
             echo '<div class="markdown-fm-file-name">' . esc_html(basename($field_value)) . '</div>';
           }
@@ -557,6 +681,58 @@ class Markdown_FM {
       update_post_meta($post_id, '_markdown_fm_data', $_POST['markdown_fm']);
     }
   }
+
+  public function ajax_get_partial_data() {
+    check_ajax_referer('markdown_fm_nonce', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+      wp_send_json_error('Permission denied');
+    }
+
+    $template = sanitize_text_field($_POST['template']);
+
+    // Get schema
+    $schemas = get_option('markdown_fm_schemas', []);
+    $schema_yaml = isset($schemas[$template]) ? $schemas[$template] : '';
+
+    if (empty($schema_yaml)) {
+      wp_send_json_error('No schema found');
+      return;
+    }
+
+    $schema = $this->parse_yaml_schema($schema_yaml);
+
+    // Get existing data
+    $partial_data = get_option('markdown_fm_partial_data', []);
+    $data = isset($partial_data[$template]) ? $partial_data[$template] : [];
+
+    wp_send_json_success([
+      'schema' => $schema,
+      'data' => $data
+    ]);
+  }
+
+  public function ajax_save_partial_data() {
+    check_ajax_referer('markdown_fm_nonce', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+      wp_send_json_error('Permission denied');
+    }
+
+    $template = sanitize_text_field($_POST['template']);
+    $data = json_decode(wp_unslash($_POST['data']), true);
+
+    // Get existing partial data
+    $partial_data = get_option('markdown_fm_partial_data', []);
+
+    // Update data for this partial
+    $partial_data[$template] = $data;
+
+    // Save back to options
+    update_option('markdown_fm_partial_data', $partial_data);
+
+    wp_send_json_success();
+  }
 }
 
 function markdown_fm_init() {
@@ -565,11 +741,129 @@ function markdown_fm_init() {
 
 add_action('plugins_loaded', 'markdown_fm_init');
 
+/**
+ * Get a specific field value from Markdown FM data
+ *
+ * @param string $field_name The name of the field to retrieve
+ * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @return mixed The field value, or null if not found
+ *
+ * Usage in templates:
+ * - For page/post: $hero = markdown_fm_get_field('hero');
+ * - For specific post: $hero = markdown_fm_get_field('hero', 123);
+ * - For partial: $logo = markdown_fm_get_field('logo', 'partial:header.php');
+ */
+function markdown_fm_get_field($field_name, $post_id = null) {
+  // Handle partials
+  if (is_string($post_id) && strpos($post_id, 'partial:') === 0) {
+    $partial_file = str_replace('partial:', '', $post_id);
+    $partial_data = get_option('markdown_fm_partial_data', []);
+
+    if (isset($partial_data[$partial_file][$field_name])) {
+      return $partial_data[$partial_file][$field_name];
+    }
+
+    return null;
+  }
+
+  // Handle post/page data
+  if ($post_id === null) {
+    $post_id = get_the_ID();
+  }
+
+  if (!$post_id) {
+    return null;
+  }
+
+  $data = get_post_meta($post_id, '_markdown_fm_data', true);
+
+  if (is_array($data) && isset($data[$field_name])) {
+    return $data[$field_name];
+  }
+
+  return null;
+}
+
+/**
+ * Get all Markdown FM fields for the current post or partial
+ *
+ * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @return array Array of all field values
+ *
+ * Usage in templates:
+ * - For page/post: $fields = markdown_fm_get_fields();
+ * - For specific post: $fields = markdown_fm_get_fields(123);
+ * - For partial: $fields = markdown_fm_get_fields('partial:header.php');
+ */
+function markdown_fm_get_fields($post_id = null) {
+  // Handle partials
+  if (is_string($post_id) && strpos($post_id, 'partial:') === 0) {
+    $partial_file = str_replace('partial:', '', $post_id);
+    $partial_data = get_option('markdown_fm_partial_data', []);
+
+    return isset($partial_data[$partial_file]) ? $partial_data[$partial_file] : [];
+  }
+
+  // Handle post/page data
+  if ($post_id === null) {
+    $post_id = get_the_ID();
+  }
+
+  if (!$post_id) {
+    return [];
+  }
+
+  $data = get_post_meta($post_id, '_markdown_fm_data', true);
+
+  return is_array($data) ? $data : [];
+}
+
+/**
+ * Check if a field exists
+ *
+ * @param string $field_name The name of the field to check
+ * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @return bool True if field exists, false otherwise
+ */
+function markdown_fm_has_field($field_name, $post_id = null) {
+  $value = markdown_fm_get_field($field_name, $post_id);
+  return $value !== null;
+}
+
+// Shorter aliases for convenience
+if (!function_exists('mdfm_get_field')) {
+  /**
+   * Alias for markdown_fm_get_field()
+   */
+  function mdfm_get_field($field_name, $post_id = null) {
+    return markdown_fm_get_field($field_name, $post_id);
+  }
+}
+
+if (!function_exists('mdfm_get_fields')) {
+  /**
+   * Alias for markdown_fm_get_fields()
+   */
+  function mdfm_get_fields($post_id = null) {
+    return markdown_fm_get_fields($post_id);
+  }
+}
+
+if (!function_exists('mdfm_has_field')) {
+  /**
+   * Alias for markdown_fm_has_field()
+   */
+  function mdfm_has_field($field_name, $post_id = null) {
+    return markdown_fm_has_field($field_name, $post_id);
+  }
+}
+
 register_uninstall_hook(__FILE__, 'markdown_fm_uninstall');
 
 function markdown_fm_uninstall() {
   delete_option('markdown_fm_template_settings');
   delete_option('markdown_fm_schemas');
+  delete_option('markdown_fm_partial_data');
 
   global $wpdb;
   $wpdb->query("DELETE FROM {$wpdb->postmeta} WHERE meta_key = '_markdown_fm_data'");

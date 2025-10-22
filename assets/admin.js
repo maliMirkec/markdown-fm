@@ -22,6 +22,12 @@
       // Save Schema
       $(document).on('click', '.markdown-fm-save-schema', this.saveSchema);
 
+      // Manage Partial Data button
+      $(document).on('click', '.markdown-fm-manage-partial-data', this.openPartialDataModal);
+
+      // Save Partial Data
+      $(document).on('click', '.markdown-fm-save-partial-data', this.savePartialData);
+
       // Close Modal
       $(document).on('click', '.markdown-fm-modal-close', this.closeModal);
       $(document).on('click', '.markdown-fm-modal', function(e) {
@@ -33,6 +39,16 @@
       // Block Controls
       $(document).on('click', '.markdown-fm-add-block', this.addBlock);
       $(document).on('click', '.markdown-fm-remove-block', this.removeBlock);
+
+      // Clear Media
+      $(document).on('click', '.markdown-fm-clear-media', this.clearMedia);
+
+      // Partial Modal Media Upload
+      $(document).on('click', '.markdown-fm-upload-image-partial', this.uploadImagePartial);
+      $(document).on('click', '.markdown-fm-upload-file-partial', this.uploadFilePartial);
+
+      // Reset All Data
+      $(document).on('click', '.markdown-fm-reset-data', this.resetAllData);
 
       // Escape key to close modal
       $(document).on('keydown', function(e) {
@@ -114,7 +130,7 @@
     },
 
     closeModal: function() {
-      $('#markdown-fm-schema-modal').fadeOut(300);
+      $('.markdown-fm-modal').fadeOut(300);
     },
 
     saveSchema: function() {
@@ -389,6 +405,440 @@
         });
 
         mediaUploader.open();
+      });
+    },
+
+    clearMedia: function(e) {
+      e.preventDefault();
+
+      const $button = $(this);
+      const targetId = $button.data('target');
+      const $field = $('#' + targetId);
+
+      if (!confirm('Are you sure you want to clear this file? Remember to update the page to save changes.')) {
+        return;
+      }
+
+      // Clear the hidden input value
+      $field.val('');
+
+      // Remove the preview/filename display
+      $button.closest('.markdown-fm-field').find('.markdown-fm-image-preview').remove();
+      $button.closest('.markdown-fm-field').find('.markdown-fm-file-name').remove();
+
+      // Remove the clear button itself
+      $button.remove();
+    },
+
+    uploadImagePartial: function(e) {
+      e.preventDefault();
+
+      const $button = $(this);
+      const targetId = $button.data('target');
+
+      const mediaUploader = wp.media({
+        title: 'Select Image',
+        button: {
+          text: 'Use This Image'
+        },
+        multiple: false,
+        library: {
+          type: 'image'
+        }
+      });
+
+      mediaUploader.on('select', function() {
+        const attachment = mediaUploader.state().get('selection').first().toJSON();
+        const $input = $('#' + targetId);
+        $input.val(attachment.url);
+
+        // Update/add preview
+        const $field = $button.closest('.markdown-fm-field');
+        let $preview = $field.find('.markdown-fm-image-preview');
+        if ($preview.length) {
+          $preview.find('img').attr('src', attachment.url);
+        } else {
+          $field.append(
+            $('<div>', {
+              class: 'markdown-fm-image-preview',
+              html: '<img src="' + attachment.url + '" style="max-width: 200px; display: block; margin-top: 10px;" />'
+            })
+          );
+        }
+
+        // Add clear button if it doesn't exist
+        const $buttonsDiv = $button.closest('.markdown-fm-media-buttons');
+        if (!$buttonsDiv.find('.markdown-fm-clear-media').length) {
+          $buttonsDiv.append($('<button>', {
+            type: 'button',
+            class: 'button markdown-fm-clear-media',
+            'data-target': targetId,
+            text: 'Clear'
+          }));
+        }
+      });
+
+      mediaUploader.open();
+    },
+
+    uploadFilePartial: function(e) {
+      e.preventDefault();
+
+      const $button = $(this);
+      const targetId = $button.data('target');
+
+      const mediaUploader = wp.media({
+        title: 'Select File',
+        button: {
+          text: 'Use This File'
+        },
+        multiple: false
+      });
+
+      mediaUploader.on('select', function() {
+        const attachment = mediaUploader.state().get('selection').first().toJSON();
+        const $input = $('#' + targetId);
+        $input.val(attachment.url);
+
+        // Update/add file name display
+        const $field = $button.closest('.markdown-fm-field');
+        let $fileDisplay = $field.find('.markdown-fm-file-name');
+        if ($fileDisplay.length) {
+          $fileDisplay.text(attachment.filename);
+        } else {
+          $field.append(
+            $('<div>', {
+              class: 'markdown-fm-file-name',
+              text: attachment.filename
+            })
+          );
+        }
+
+        // Add clear button if it doesn't exist
+        const $buttonsDiv = $button.closest('.markdown-fm-media-buttons');
+        if (!$buttonsDiv.find('.markdown-fm-clear-media').length) {
+          $buttonsDiv.append($('<button>', {
+            type: 'button',
+            class: 'button markdown-fm-clear-media',
+            'data-target': targetId,
+            text: 'Clear'
+          }));
+        }
+      });
+
+      mediaUploader.open();
+    },
+
+    resetAllData: function(e) {
+      e.preventDefault();
+
+      const $button = $(this);
+
+      if (!confirm('⚠️ WARNING: This will clear ALL custom field data for this page.\n\nThis action cannot be undone. You will need to save the page to make this permanent.\n\nAre you sure you want to continue?')) {
+        return;
+      }
+
+      // Reset all fields in the meta box
+      $('#markdown-fm-meta-box .markdown-fm-fields').find('input, textarea, select').each(function() {
+        const $input = $(this);
+        const type = $input.attr('type');
+
+        if (type === 'checkbox') {
+          $input.prop('checked', false);
+        } else if (type === 'hidden' && ($input.closest('.markdown-fm-field').find('.markdown-fm-upload-image').length ||
+                                          $input.closest('.markdown-fm-field').find('.markdown-fm-upload-file').length)) {
+          // Clear image/file fields
+          $input.val('');
+        } else if ($input.is('select')) {
+          $input.prop('selectedIndex', 0);
+        } else if (!type || type === 'text' || type === 'number' || type === 'date' || type === 'datetime-local' || $input.is('textarea')) {
+          $input.val('');
+        }
+      });
+
+      // Clear image previews and file names
+      $('#markdown-fm-meta-box .markdown-fm-image-preview').remove();
+      $('#markdown-fm-meta-box .markdown-fm-file-name').remove();
+      $('#markdown-fm-meta-box .markdown-fm-clear-media').remove();
+
+      // Clear WordPress editors (if any)
+      if (typeof tinymce !== 'undefined') {
+        $('#markdown-fm-meta-box .markdown-fm-fields').find('textarea').each(function() {
+          const editorId = $(this).attr('id');
+          if (editorId && tinymce.get(editorId)) {
+            tinymce.get(editorId).setContent('');
+          }
+        });
+      }
+
+      // Remove all blocks
+      $('#markdown-fm-meta-box .markdown-fm-block-item').remove();
+
+      alert('All custom field data has been cleared. Remember to save the page to make this change permanent.');
+    },
+
+    openPartialDataModal: function() {
+      const $button = $(this);
+      const template = $button.data('template');
+      const templateName = $button.data('name');
+
+      $('#markdown-fm-partial-name').text(templateName);
+      $('#markdown-fm-current-partial').val(template);
+
+      // Load schema and existing data
+      $.ajax({
+        url: markdownFM.ajax_url,
+        type: 'POST',
+        data: {
+          action: 'markdown_fm_get_partial_data',
+          nonce: markdownFM.nonce,
+          template: template
+        },
+        success: function(response) {
+          if (response.success) {
+            MarkdownFM.renderPartialFields(response.data.schema, response.data.data || {});
+          } else {
+            alert('Error loading partial data');
+          }
+        },
+        error: function() {
+          alert('Error loading partial data');
+        }
+      });
+
+      $('#markdown-fm-partial-data-modal').fadeIn(300);
+    },
+
+    renderPartialFields: function(schema, data) {
+      const $container = $('#markdown-fm-partial-fields');
+      $container.empty();
+
+      if (!schema || !schema.fields) {
+        $container.html('<p>No schema defined for this partial.</p>');
+        return;
+      }
+
+      schema.fields.forEach(function(field) {
+        const fieldValue = data[field.name] || (field.default || '');
+        const fieldId = 'partial_' + field.name;
+        const $fieldDiv = $('<div>', { class: 'markdown-fm-field' });
+
+        $fieldDiv.append($('<label>', {
+          'for': fieldId,
+          text: field.label || field.name
+        }));
+
+        // Render field based on type
+        switch (field.type) {
+          case 'image':
+            const $imageInput = $('<input>', {
+              type: 'hidden',
+              name: 'partial_data[' + field.name + ']',
+              id: fieldId,
+              value: fieldValue
+            });
+            const $imageButtonsDiv = $('<div>', { class: 'markdown-fm-media-buttons' });
+            const $imageUploadBtn = $('<button>', {
+              type: 'button',
+              class: 'button markdown-fm-upload-image-partial',
+              'data-target': fieldId,
+              text: 'Upload Image'
+            });
+            $imageButtonsDiv.append($imageUploadBtn);
+
+            if (fieldValue) {
+              const $imageClearBtn = $('<button>', {
+                type: 'button',
+                class: 'button markdown-fm-clear-media',
+                'data-target': fieldId,
+                text: 'Clear'
+              });
+              $imageButtonsDiv.append($imageClearBtn);
+            }
+
+            $fieldDiv.append($imageInput).append($imageButtonsDiv);
+
+            if (fieldValue) {
+              $fieldDiv.append($('<div>', {
+                class: 'markdown-fm-image-preview',
+                html: '<img src="' + fieldValue + '" style="max-width: 200px; display: block; margin-top: 10px;" />'
+              }));
+            }
+            break;
+
+          case 'file':
+            const $fileInput = $('<input>', {
+              type: 'hidden',
+              name: 'partial_data[' + field.name + ']',
+              id: fieldId,
+              value: fieldValue
+            });
+            const $fileButtonsDiv = $('<div>', { class: 'markdown-fm-media-buttons' });
+            const $fileUploadBtn = $('<button>', {
+              type: 'button',
+              class: 'button markdown-fm-upload-file-partial',
+              'data-target': fieldId,
+              text: 'Upload File'
+            });
+            $fileButtonsDiv.append($fileUploadBtn);
+
+            if (fieldValue) {
+              const $fileClearBtn = $('<button>', {
+                type: 'button',
+                class: 'button markdown-fm-clear-media',
+                'data-target': fieldId,
+                text: 'Clear'
+              });
+              $fileButtonsDiv.append($fileClearBtn);
+            }
+
+            $fieldDiv.append($fileInput).append($fileButtonsDiv);
+
+            if (fieldValue) {
+              const fileName = fieldValue.split('/').pop();
+              $fieldDiv.append($('<div>', {
+                class: 'markdown-fm-file-name',
+                text: fileName
+              }));
+            }
+            break;
+          case 'boolean':
+            $fieldDiv.append($('<input>', {
+              type: 'checkbox',
+              name: 'partial_data[' + field.name + ']',
+              id: fieldId,
+              value: '1',
+              checked: fieldValue == 1
+            }));
+            break;
+
+          case 'string':
+            const options = field.options || {};
+            $fieldDiv.append($('<input>', {
+              type: 'text',
+              name: 'partial_data[' + field.name + ']',
+              id: fieldId,
+              value: fieldValue,
+              class: 'regular-text',
+              maxlength: options.maxlength || '',
+              minlength: options.minlength || ''
+            }));
+            break;
+
+          case 'text':
+            const textOptions = field.options || {};
+            $fieldDiv.append($('<textarea>', {
+              name: 'partial_data[' + field.name + ']',
+              id: fieldId,
+              rows: 5,
+              class: 'large-text',
+              maxlength: textOptions.maxlength || '',
+              text: fieldValue
+            }));
+            break;
+
+          case 'number':
+            const numOptions = field.options || {};
+            $fieldDiv.append($('<input>', {
+              type: 'number',
+              name: 'partial_data[' + field.name + ']',
+              id: fieldId,
+              value: fieldValue,
+              class: 'small-text',
+              min: numOptions.min || '',
+              max: numOptions.max || ''
+            }));
+            break;
+
+          case 'select':
+            const $select = $('<select>', {
+              name: 'partial_data[' + field.name + ']',
+              id: fieldId
+            });
+            $select.append($('<option>', { value: '', text: '-- Select --' }));
+
+            if (field.values && Array.isArray(field.values)) {
+              field.values.forEach(function(option) {
+                const optValue = option.value || option;
+                const optLabel = option.label || optValue;
+                $select.append($('<option>', {
+                  value: optValue,
+                  text: optLabel,
+                  selected: fieldValue === optValue
+                }));
+              });
+            }
+            $fieldDiv.append($select);
+            break;
+
+          case 'date':
+            const dateOptions = field.options || {};
+            const hasTime = dateOptions.time || false;
+            $fieldDiv.append($('<input>', {
+              type: hasTime ? 'datetime-local' : 'date',
+              name: 'partial_data[' + field.name + ']',
+              id: fieldId,
+              value: fieldValue
+            }));
+            break;
+
+          default:
+            $fieldDiv.append($('<input>', {
+              type: 'text',
+              name: 'partial_data[' + field.name + ']',
+              id: fieldId,
+              value: fieldValue,
+              class: 'regular-text'
+            }));
+        }
+
+        $container.append($fieldDiv);
+      });
+    },
+
+    savePartialData: function() {
+      const template = $('#markdown-fm-current-partial').val();
+      const $fields = $('#markdown-fm-partial-fields').find('input, textarea, select');
+      const data = {};
+
+      $fields.each(function() {
+        const $field = $(this);
+        const name = $field.attr('name');
+        if (name && name.startsWith('partial_data[')) {
+          const fieldName = name.match(/partial_data\[([^\]]+)\]/)[1];
+          if ($field.attr('type') === 'checkbox') {
+            data[fieldName] = $field.is(':checked') ? 1 : 0;
+          } else {
+            data[fieldName] = $field.val();
+          }
+        }
+      });
+
+      $('.markdown-fm-save-partial-data').prop('disabled', true).text('Saving...');
+
+      $.ajax({
+        url: markdownFM.ajax_url,
+        type: 'POST',
+        data: {
+          action: 'markdown_fm_save_partial_data',
+          nonce: markdownFM.nonce,
+          template: template,
+          data: JSON.stringify(data)
+        },
+        success: function(response) {
+          if (response.success) {
+            MarkdownFM.showMessage('Partial data saved successfully', 'success');
+            MarkdownFM.closeModal();
+          } else {
+            MarkdownFM.showMessage('Error saving partial data', 'error');
+          }
+        },
+        error: function() {
+          MarkdownFM.showMessage('Error saving partial data', 'error');
+        },
+        complete: function() {
+          $('.markdown-fm-save-partial-data').prop('disabled', false).text('Save Data');
+        }
       });
     },
 
