@@ -281,7 +281,7 @@
     },
 
     removeBlock: function() {
-      if (confirm('Are you sure you want to remove this block?')) {
+      if (confirm('Are you sure you want to remove this block? Remember to update the page to save changes.')) {
         $(this).closest('.markdown-fm-block-item').fadeOut(300, function() {
           $(this).remove();
           // Re-index remaining blocks

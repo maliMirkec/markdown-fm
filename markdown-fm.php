@@ -52,6 +52,7 @@ class Markdown_FM {
     add_action('admin_menu', [$this, 'add_admin_menu']);
     add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
     add_action('add_meta_boxes', [$this, 'add_schema_meta_box']);
+    add_action('edit_form_after_title', [$this, 'render_schema_meta_box_after_title']);
     add_action('save_post', [$this, 'save_schema_data']);
     add_action('wp_ajax_markdown_fm_save_template_settings', [$this, 'ajax_save_template_settings']);
     add_action('wp_ajax_markdown_fm_save_schema', [$this, 'ajax_save_schema']);
@@ -128,25 +129,84 @@ class Markdown_FM {
   private function get_theme_templates() {
     $templates = [];
     $theme = wp_get_theme();
+
+    // Get only root-level template files (depth 1 means root directory only)
     $template_files = $theme->get_files('php', 1);
 
+    // WordPress template hierarchy - only main templates, not partials
+    $valid_template_patterns = [
+      'index.php',
+      'front-page.php',
+      'home.php',
+      'page.php',
+      'single.php',
+      'archive.php',
+      'category.php',
+      'tag.php',
+      'taxonomy.php',
+      'author.php',
+      'date.php',
+      'search.php',
+      'attachment.php',
+      '404.php',
+      // Specific templates with prefixes
+      'page-*.php',
+      'single-*.php',
+      'archive-*.php',
+      'category-*.php',
+      'tag-*.php',
+      'taxonomy-*.php',
+      'author-*.php'
+    ];
+
     foreach ($template_files as $file => $path) {
-      if (preg_match('/^(header|footer|sidebar|searchform|comments|archive|single|page|index|404|category|tag|author|date|search|attachment)/', basename($file))) {
+      $basename = basename($file);
+
+      // Skip if file is in a subdirectory
+      if (dirname($file) !== '.') {
+        continue;
+      }
+
+      // Check if file matches any valid template pattern
+      $is_valid_template = false;
+      foreach ($valid_template_patterns as $pattern) {
+        if ($pattern === $basename || fnmatch($pattern, $basename)) {
+          $is_valid_template = true;
+          break;
+        }
+      }
+
+      if ($is_valid_template) {
         $templates[] = [
-          'file' => basename($file),
+          'file' => $basename,
           'path' => $path,
-          'name' => $this->format_template_name(basename($file))
+          'name' => $this->format_template_name($basename)
         ];
       }
     }
 
+    // Add custom page templates (templates with Template Name header)
     $page_templates = get_page_templates();
     foreach ($page_templates as $name => $file) {
-      $templates[] = [
-        'file' => $file,
-        'path' => get_template_directory() . '/' . $file,
-        'name' => $name
-      ];
+      // Only include templates in the root directory
+      if (strpos($file, '/') === false) {
+        // Avoid duplicates
+        $already_added = false;
+        foreach ($templates as $existing) {
+          if ($existing['file'] === $file) {
+            $already_added = true;
+            break;
+          }
+        }
+
+        if (!$already_added) {
+          $templates[] = [
+            'file' => $file,
+            'path' => get_template_directory() . '/' . $file,
+            'name' => $name
+          ];
+        }
+      }
     }
 
     return $templates;
@@ -209,21 +269,15 @@ class Markdown_FM {
   }
 
   public function add_schema_meta_box() {
-    $post_types = ['page', 'post'];
-
-    foreach ($post_types as $post_type) {
-      add_meta_box(
-        'markdown_fm_schema',
-        __('Markdown FM Schema', 'markdown-fm'),
-        [$this, 'render_schema_meta_box'],
-        $post_type,
-        'normal',
-        'high'
-      );
-    }
+    // Meta box is rendered via edit_form_after_title hook instead
   }
 
-  public function render_schema_meta_box($post) {
+  public function render_schema_meta_box_after_title($post) {
+    // Only render for post types we support
+    if (!in_array($post->post_type, ['page', 'post'])) {
+      return;
+    }
+
     wp_nonce_field('markdown_fm_meta_box', 'markdown_fm_meta_box_nonce');
 
     $template = get_post_meta($post->ID, '_wp_page_template', true);
@@ -234,14 +288,12 @@ class Markdown_FM {
     $template_settings = get_option('markdown_fm_template_settings', []);
 
     if (!isset($template_settings[$template]) || !$template_settings[$template]) {
-      echo '<p>' . __('This template does not have YAML frontmatter enabled.', 'markdown-fm') . '</p>';
       return;
     }
 
     $schemas = get_option('markdown_fm_schemas', []);
 
     if (!isset($schemas[$template]) || empty($schemas[$template])) {
-      echo '<p>' . __('No schema defined for this template.', 'markdown-fm') . '</p>';
       return;
     }
 
@@ -249,12 +301,15 @@ class Markdown_FM {
     $schema = $this->parse_yaml_schema($schema_yaml);
 
     if (!$schema || !isset($schema['fields'])) {
-      echo '<p>' . __('Invalid schema format.', 'markdown-fm') . '</p>';
       return;
     }
 
     // Add link to edit schema
     $edit_schema_url = admin_url('admin.php?page=markdown-fm');
+
+    echo '<div id="markdown-fm-meta-box" class="postbox" style="margin-bottom: 20px;">';
+    echo '<div class="postbox-header"><h2 class="hndle">' . __('Markdown FM Schema', 'markdown-fm') . '</h2></div>';
+    echo '<div class="inside">';
     echo '<div class="markdown-fm-meta-box-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">';
     echo '<p style="margin: 0;">';
     echo '<strong>' . __('Template:', 'markdown-fm') . '</strong> ' . esc_html($template);
@@ -268,10 +323,10 @@ class Markdown_FM {
       $saved_data = [];
     }
 
-    error_log('Retrieved saved_data for post ' . $post->ID . ': ' . print_r($saved_data, true));
-
     echo '<div class="markdown-fm-fields">';
     $this->render_schema_fields($schema['fields'], $saved_data);
+    echo '</div>';
+    echo '</div>';
     echo '</div>';
   }
 
@@ -499,11 +554,7 @@ class Markdown_FM {
     }
 
     if (isset($_POST['markdown_fm'])) {
-      error_log('Saving markdown_fm data: ' . print_r($_POST['markdown_fm'], true));
       update_post_meta($post_id, '_markdown_fm_data', $_POST['markdown_fm']);
-      error_log('Data saved for post: ' . $post_id);
-    } else {
-      error_log('No markdown_fm data in POST');
     }
   }
 }
