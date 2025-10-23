@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
   <div class="markdown-fm-admin-container">
     <div class="markdown-fm-header">
       <div class="markdown-fm-header-content">
-        <img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/logo.png'); ?>" alt="Markdown FM" class="markdown-fm-logo" />
+        <img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'icon-256x256.png'); ?>" alt="Markdown FM" class="markdown-fm-logo" />
         <div class="markdown-fm-header-text">
           <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
           <p class="markdown-fm-tagline"><?php _e('YAML-powered content schemas for WordPress themes', 'markdown-fm'); ?></p>
@@ -31,6 +31,20 @@ if (!defined('ABSPATH')) {
       </a>
       <span class="description" style="margin-left: 10px;">
         <?php _e('Scan theme files for new templates and partials with @mdfm markers', 'markdown-fm'); ?>
+      </span>
+    </p>
+    <p>
+      <button type="button" class="button markdown-fm-export-settings">
+        <span class="dashicons dashicons-download" style="margin-top: 3px;"></span>
+        <?php _e('Export Settings', 'markdown-fm'); ?>
+      </button>
+      <button type="button" class="button markdown-fm-import-settings-trigger" style="margin-left: 10px;">
+        <span class="dashicons dashicons-upload" style="margin-top: 3px;"></span>
+        <?php _e('Import Settings', 'markdown-fm'); ?>
+      </button>
+      <input type="file" id="markdown-fm-import-file" accept=".json" style="display: none;" />
+      <span class="description" style="margin-left: 10px;">
+        <?php _e('Backup or restore all schemas and settings', 'markdown-fm'); ?>
       </span>
     </p>
     </div>
@@ -63,6 +77,7 @@ if (!defined('ABSPATH')) {
                       <label class="markdown-fm-switch">
                           <input type="checkbox"
                                   class="markdown-fm-enable-yaml"
+                                  name="enable-yaml"
                                   data-template="<?php echo esc_attr($template['file']); ?>"
                                   <?php checked($is_enabled); ?> />
                           <span class="markdown-fm-slider"></span>
@@ -70,12 +85,10 @@ if (!defined('ABSPATH')) {
                   </td>
                   <td>
                       <?php if ($is_enabled) : ?>
-                          <button type="button"
-                                  class="button markdown-fm-edit-schema"
-                                  data-template="<?php echo esc_attr($template['file']); ?>"
-                                  data-name="<?php echo esc_attr($template['name']); ?>">
+                          <a href="<?php echo esc_url(admin_url('admin.php?page=markdown-fm-edit-schema&template=' . urlencode($template['file']))); ?>"
+                             class="button">
                               <?php echo $has_schema ? __('Edit Schema', 'markdown-fm') : __('Add Schema', 'markdown-fm'); ?>
-                          </button>
+                          </a>
                           <?php if ($has_schema) : ?>
                               <span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span>
                           <?php endif; ?>
@@ -118,6 +131,7 @@ if (!defined('ABSPATH')) {
                       <label class="markdown-fm-switch">
                           <input type="checkbox"
                                   class="markdown-fm-enable-yaml"
+                                  name="enable-yaml"
                                   data-template="<?php echo esc_attr($partial['file']); ?>"
                                   <?php checked($is_enabled); ?> />
                           <span class="markdown-fm-slider"></span>
@@ -125,12 +139,10 @@ if (!defined('ABSPATH')) {
                   </td>
                   <td>
                       <?php if ($is_enabled) : ?>
-                          <button type="button"
-                                  class="button markdown-fm-edit-schema"
-                                  data-template="<?php echo esc_attr($partial['file']); ?>"
-                                  data-name="<?php echo esc_attr($partial['name']); ?>">
+                          <a href="<?php echo esc_url(admin_url('admin.php?page=markdown-fm-edit-schema&template=' . urlencode($partial['file']))); ?>"
+                             class="button">
                               <?php echo $has_schema ? __('Edit Schema', 'markdown-fm') : __('Add Schema', 'markdown-fm'); ?>
-                          </button>
+                          </a>
                           <?php if ($has_schema) : ?>
                               <span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span>
                           <?php endif; ?>
@@ -140,12 +152,10 @@ if (!defined('ABSPATH')) {
                   </td>
                   <td>
                       <?php if ($is_enabled && $has_schema) : ?>
-                          <button type="button"
-                                  class="button markdown-fm-manage-partial-data"
-                                  data-template="<?php echo esc_attr($partial['file']); ?>"
-                                  data-name="<?php echo esc_attr($partial['name']); ?>">
+                          <a href="<?php echo esc_url(admin_url('admin.php?page=markdown-fm-edit-partial&template=' . urlencode($partial['file']))); ?>"
+                             class="button">
                               <?php _e('Manage Data', 'markdown-fm'); ?>
-                          </button>
+                          </a>
                       <?php else : ?>
                           <span class="description"><?php _e('Add schema first', 'markdown-fm'); ?></span>
                       <?php endif; ?>
@@ -224,43 +234,6 @@ if (!defined('ABSPATH')) {
   </div>
 </div>
 
-<!-- Schema Editor Modal -->
-<div id="markdown-fm-schema-modal" class="markdown-fm-modal" style="display: none;">
-  <div class="markdown-fm-modal-content">
-    <div class="markdown-fm-modal-header">
-    <h2><?php _e('Edit Schema', 'markdown-fm'); ?>: <span id="markdown-fm-template-name"></span></h2>
-    <button type="button" class="markdown-fm-modal-close">&times;</button>
-    </div>
-    <div class="markdown-fm-modal-body">
-    <p><?php _e('Enter your YAML schema below:', 'markdown-fm'); ?></p>
-    <textarea id="markdown-fm-schema-editor" rows="20" class="large-text code"></textarea>
-    <input type="hidden" id="markdown-fm-current-template" value="" />
-    </div>
-    <div class="markdown-fm-modal-footer">
-    <button type="button" class="button button-primary markdown-fm-save-schema"><?php _e('Save Schema', 'markdown-fm'); ?></button>
-    <button type="button" class="button markdown-fm-modal-close"><?php _e('Cancel', 'markdown-fm'); ?></button>
-    </div>
-  </div>
-</div>
-
-<!-- Partial Data Editor Modal -->
-<div id="markdown-fm-partial-data-modal" class="markdown-fm-modal" style="display: none;">
-  <div class="markdown-fm-modal-content">
-    <div class="markdown-fm-modal-header">
-    <h2><?php _e('Manage Partial Data', 'markdown-fm'); ?>: <span id="markdown-fm-partial-name"></span></h2>
-    <button type="button" class="markdown-fm-modal-close">&times;</button>
-    </div>
-    <div class="markdown-fm-modal-body">
-    <p><?php _e('Edit the data for this partial:', 'markdown-fm'); ?></p>
-    <div id="markdown-fm-partial-fields"></div>
-    <input type="hidden" id="markdown-fm-current-partial" value="" />
-    </div>
-    <div class="markdown-fm-modal-footer">
-    <button type="button" class="button button-primary markdown-fm-save-partial-data"><?php _e('Save Data', 'markdown-fm'); ?></button>
-    <button type="button" class="button markdown-fm-modal-close"><?php _e('Cancel', 'markdown-fm'); ?></button>
-    </div>
-  </div>
-</div>
 
 <?php if (!empty($refresh_message)) : ?>
 <script>

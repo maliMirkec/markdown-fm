@@ -3,6 +3,7 @@
 ## Pre-Submission Tasks
 
 ### Required Files
+
 - [x] `markdown-fm.php` with proper plugin headers
 - [x] `readme.txt` in WordPress format
 - [x] `LICENSE.txt` (GPL v2 or later)
@@ -12,6 +13,7 @@
 - [ ] Plugin banner (772x250 and 1544x500, optional but recommended)
 
 ### Plugin Information
+
 - [x] Plugin Name: Markdown FM
 - [x] Version: 1.0.0
 - [x] Author: Silvestar Bistrović
@@ -23,6 +25,7 @@
 - [x] Requires PHP: 7.4
 
 ### Code Quality
+
 - [x] All functions prefixed with `markdown_fm_` or `mdfm_`
 - [x] Class name follows WordPress standards
 - [x] No conflicts with WordPress core functions
@@ -31,6 +34,7 @@
 - [x] Text domain matches plugin slug
 
 ### Security
+
 - [x] All inputs sanitized (using sanitize_text_field, etc.)
 - [x] All outputs escaped (using esc_html, esc_url, etc.)
 - [x] AJAX requests use nonces
@@ -40,6 +44,7 @@
 - [x] File upload validation (if applicable)
 
 ### Functionality
+
 - [x] Plugin activation works
 - [x] Plugin deactivation works
 - [x] Uninstall hook cleans up database
@@ -52,6 +57,7 @@
 - [ ] Tested on fresh WordPress installation
 
 ### WordPress Guidelines Compliance
+
 - [x] GPL-compatible license
 - [x] No phone-home or tracking (without disclosure)
 - [x] No external dependencies loaded from CDNs
@@ -64,6 +70,7 @@
 - [ ] All third-party code is GPL-compatible
 
 ### Documentation
+
 - [x] Clear installation instructions in readme.txt
 - [x] FAQ section completed
 - [x] Changelog documented
@@ -72,6 +79,7 @@
 - [x] Support/contact information provided
 
 ### Testing Checklist
+
 - [ ] Test plugin installation from ZIP
 - [ ] Test plugin activation
 - [ ] Test creating/editing schemas
@@ -91,11 +99,13 @@
 ## Submission Process
 
 ### Step 1: Create WordPress.org Account
+
 - [ ] Register at https://wordpress.org/support/register.php
 - [ ] Verify email address
 - [ ] Complete profile
 
 ### Step 2: Prepare Screenshots
+
 - [ ] Screenshot 1: Admin interface (1200x900px)
 - [ ] Screenshot 2: YAML editor (1200x900px)
 - [ ] Screenshot 3: Post editor with fields (1200x900px)
@@ -105,6 +115,7 @@
 - [ ] Name them: screenshot-1.png through screenshot-5.png
 
 ### Step 3: Create Plugin ZIP
+
 ```bash
 cd /path/to/wp-content/plugins
 zip -r markdown-fm.zip markdown-fm/ \
@@ -122,12 +133,14 @@ zip -r markdown-fm.zip markdown-fm/ \
 ```
 
 ### Step 4: Validate Before Submission
+
 - [ ] Validate readme.txt: https://wordpress.org/plugins/developers/readme-validator/
 - [ ] Check PHP syntax: `php -l markdown-fm.php`
 - [ ] Install Plugin Check plugin and run scan
 - [ ] Review plugin guidelines: https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/
 
 ### Step 5: Submit Plugin
+
 - [ ] Go to: https://wordpress.org/plugins/developers/add/
 - [ ] Upload markdown-fm.zip
 - [ ] Wait for automated checks
@@ -136,6 +149,7 @@ zip -r markdown-fm.zip markdown-fm/ \
 - [ ] Respond to any feedback within 48 hours
 
 ### Step 6: SVN Setup (After Approval)
+
 - [ ] Note SVN URL: `https://plugins.svn.wordpress.org/markdown-fm/`
 - [ ] Checkout repository: `svn co https://plugins.svn.wordpress.org/markdown-fm`
 - [ ] Create folder structure (trunk, tags, assets)
@@ -146,6 +160,7 @@ zip -r markdown-fm.zip markdown-fm/ \
 - [ ] Commit tag: `svn ci -m "Tagging version 1.0.0"`
 
 ### Step 7: Post-Launch
+
 - [ ] Verify plugin is live: https://wordpress.org/plugins/markdown-fm/
 - [ ] Test installation from WordPress.org
 - [ ] Upload plugin icon and banner to SVN assets folder
@@ -157,6 +172,7 @@ zip -r markdown-fm.zip markdown-fm/ \
 ## Common Issues to Avoid
 
 ### Security Issues
+
 - ❌ Missing nonce verification on forms
 - ❌ Missing capability checks
 - ❌ Direct database queries without sanitization
@@ -164,6 +180,7 @@ zip -r markdown-fm.zip markdown-fm/ \
 - ❌ File uploads without validation
 
 ### Guideline Violations
+
 - ❌ Loading external resources (jQuery from CDN)
 - ❌ Phone-home without disclosure
 - ❌ Including other plugins/themes
@@ -171,6 +188,7 @@ zip -r markdown-fm.zip markdown-fm/ \
 - ❌ Trademark violations
 
 ### Code Quality Issues
+
 - ❌ Using deprecated WordPress functions
 - ❌ Not using WordPress APIs
 - ❌ Poor PHP practices
@@ -180,16 +198,19 @@ zip -r markdown-fm.zip markdown-fm/ \
 ## Quick Reference
 
 ### Validate readme.txt
+
 ```bash
 curl -F "readme=@readme.txt" https://wordpress.org/plugins/about/validator/
 ```
 
 ### Test PHP Syntax
+
 ```bash
 find . -name "*.php" -exec php -l {} \;
 ```
 
 ### Check for Common Issues
+
 ```bash
 # Check for eval (not allowed)
 grep -r "eval(" .
@@ -202,6 +223,7 @@ grep -r "ABSPATH" *.php
 ```
 
 ### SVN Quick Commands
+
 ```bash
 # Checkout
 svn co https://plugins.svn.wordpress.org/markdown-fm
@@ -226,18 +248,21 @@ svn up
 ## Support After Launch
 
 ### Monitor These Channels
+
 - [ ] Support forum: https://wordpress.org/support/plugin/markdown-fm/
 - [ ] Reviews: https://wordpress.org/support/plugin/markdown-fm/reviews/
 - [ ] Email notifications from WordPress.org
 - [ ] GitHub issues (if you have a repo)
 
 ### Response Times
+
 - Support threads: Within 48 hours
 - Security issues: Within 24 hours
 - Feature requests: Acknowledge within 1 week
 - Bug reports: Within 48 hours
 
 ### Best Practices
+
 - Be professional and courteous
 - Close resolved threads
 - Mark solutions as resolved
@@ -249,12 +274,14 @@ svn up
 **Current Status:** Ready for screenshot creation and final testing
 
 **Next Steps:**
+
 1. Create 5 screenshots
 2. Run final tests on clean WP install
 3. Create plugin ZIP
 4. Submit to WordPress.org
 
 **Estimated Timeline:**
+
 - Screenshot creation: 1-2 hours
 - Testing: 2-4 hours
 - Submission: 30 minutes

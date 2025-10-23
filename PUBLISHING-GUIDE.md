@@ -42,6 +42,7 @@
      - `screenshot-5.png` (Block field example)
 
 2. **Create screenshots** (1200x900px recommended):
+
    ```bash
    # Take screenshots of:
    # 1. Main admin page with template list
@@ -90,6 +91,7 @@ unzip -l markdown-fm.zip
 ```
 
 **The ZIP should contain:**
+
 ```
 markdown-fm/
 ├── markdown-fm.php
@@ -134,6 +136,7 @@ markdown-fm/
 #### Step 5: Approval and SVN Setup
 
 Once approved, you'll receive:
+
 - SVN repository URL: `https://plugins.svn.wordpress.org/markdown-fm/`
 - Instructions for SVN access
 
@@ -232,7 +235,7 @@ svn ci -m "Tagging version 1.0.1"
 2. **No phone home** - Don't send data to external servers without disclosure
 3. **Trademark compliance** - Don't use WordPress or WP in plugin name
 4. **Security** - Sanitize inputs, escape outputs, use nonces
-5. **Prefix functions** - Use unique prefixes (markdown_fm_)
+5. **Prefix functions** - Use unique prefixes (markdown*fm*)
 6. **No advertising** - Don't include ads in free plugin
 7. **Proper enqueuing** - Use wp_enqueue_script/style
 8. **Database cleanup** - Remove data on uninstall
@@ -251,18 +254,21 @@ svn ci -m "Tagging version 1.0.1"
 ### 🎨 Creating Plugin Assets
 
 #### Screenshots (1200x900px or 1440x900px)
+
 - PNG or JPG format
 - High quality, not pixelated
 - Show actual plugin functionality
 - Clear, easy to understand
 
 #### Icon (128x128px and 256x256px)
+
 - Square format
 - Simple, recognizable design
 - PNG with transparent background
 - Should work at small sizes
 
 #### Banner (772x250px and 1544x500px)
+
 - Professional design
 - Plugin name and tagline
 - Consistent with icon design

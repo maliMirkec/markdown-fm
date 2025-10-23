@@ -3,6 +3,11 @@
   "description": "A WordPress plugin for managing YAML frontmatter schemas in theme templates",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
+  "homepage": "https://github.com/maliMirkec/markdown-fm",
+  "support": {
+    "issues": "https://github.com/maliMirkec/markdown-fm/issues",
+    "source": "https://github.com/maliMirkec/markdown-fm"
+  },
   "authors": [
     {
       "name": "Silvestar Bistrović",

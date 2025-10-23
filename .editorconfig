@@ -1,17 +1,20 @@
-# EditorConfig is awesome: https://EditorConfig.org
+# EditorConfig: https://editorconfig.org
 
-# top-most EditorConfig file
 root = true
 
 [*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{js,css,json}]
 indent_style = space
 indent_size = 2
-end_of_line = lf
-charset = utf-8
-trim_trailing_whitespace = true
-insert_final_newline = true
 
-# PHP files
 [*.php]
 indent_style = space
 indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

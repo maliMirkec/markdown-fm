@@ -215,6 +215,7 @@ if (mdfm_has_field('logo', 'partial:header.php')) {
 ```
 
 **Long-form aliases** are also available:
+
 - `markdown_fm_get_field()`
 - `markdown_fm_get_fields()`
 - `markdown_fm_has_field()`
@@ -230,6 +231,7 @@ Markdown FM automatically detects partials in two ways:
 #### Automatic Detection (Standard Partials)
 
 Common WordPress partials are detected automatically:
+
 - `header.php`, `header-*.php`
 - `footer.php`, `footer-*.php`
 - `sidebar.php`, `sidebar-*.php`
@@ -460,6 +462,7 @@ Single-line text input.
 ```
 
 **Options:**
+
 - `minlength` - Minimum character length
 - `maxlength` - Maximum character length
 
@@ -476,6 +479,7 @@ Multi-line textarea.
 ```
 
 **Options:**
+
 - `maxlength` - Maximum character length
 
 ### Rich Text
@@ -501,6 +505,7 @@ Code editor with syntax highlighting.
 ```
 
 **Options:**
+
 - `language` - Syntax highlighting (html, css, javascript, php, python, etc.)
 
 ### Boolean
@@ -528,6 +533,7 @@ Number input with optional constraints.
 ```
 
 **Options:**
+
 - `min` - Minimum value
 - `max` - Maximum value
 
@@ -544,6 +550,7 @@ Date picker with optional time.
 ```
 
 **Options:**
+
 - `time` - Set to `true` to include time selection
 
 ### Select
@@ -566,6 +573,7 @@ Dropdown selection.
 ```
 
 **Options:**
+
 - `multiple` - Allow multiple selections
 - `values` - Array of options with `value` and `label` keys
 
@@ -602,25 +610,25 @@ Nested group of fields.
   label: Author Information
   type: object
   fields:
-  - name: name
-    label: Author Name
-    type: string
-  - name: bio
-    label: Biography
-    type: text
-  - name: photo
-    label: Author Photo
-    type: image
-  - name: social
-    label: Social Links
-    type: object
-    fields:
-    - name: twitter
-      label: Twitter
+    - name: name
+      label: Author Name
       type: string
-    - name: website
-      label: Website
-      type: string
+    - name: bio
+      label: Biography
+      type: text
+    - name: photo
+      label: Author Photo
+      type: image
+    - name: social
+      label: Social Links
+      type: object
+      fields:
+        - name: twitter
+          label: Twitter
+          type: string
+        - name: website
+          label: Website
+          type: string
 ```
 
 **Access nested fields:**
@@ -643,55 +651,56 @@ Repeater field with multiple block types. Perfect for flexible page builders!
   list: true
   blockKey: type
   blocks:
-  - name: hero
-    label: Hero Section
-    fields:
-    - name: title
-      label: Hero Title
-      type: string
-    - name: subtitle
-      label: Subtitle
-      type: string
-    - name: background_image
-      label: Background Image
-      type: image
-    - name: content
-      label: Hero Content
-      type: rich-text
+    - name: hero
+      label: Hero Section
+      fields:
+        - name: title
+          label: Hero Title
+          type: string
+        - name: subtitle
+          label: Subtitle
+          type: string
+        - name: background_image
+          label: Background Image
+          type: image
+        - name: content
+          label: Hero Content
+          type: rich-text
 
-  - name: two_column
-    label: Two Column Layout
-    fields:
-    - name: left_content
-      label: Left Column
-      type: rich-text
-    - name: right_content
-      label: Right Column
-      type: rich-text
+    - name: two_column
+      label: Two Column Layout
+      fields:
+        - name: left_content
+          label: Left Column
+          type: rich-text
+        - name: right_content
+          label: Right Column
+          type: rich-text
 
-  - name: gallery
-    label: Image Gallery
-    fields:
-    - name: images
-      label: Gallery Images
-      type: text
-      description: Enter image URLs, one per line
+    - name: gallery
+      label: Image Gallery
+      fields:
+        - name: images
+          label: Gallery Images
+          type: text
+          description: Enter image URLs, one per line
 
-  - name: cta
-    label: Call to Action
-    fields:
-    - name: heading
-      label: CTA Heading
-      type: string
-    - name: button_text
-      label: Button Text
-      type: string
-    - name: button_url
-      label: Button URL
-      type: string
+    - name: cta
+      label: Call to Action
+      fields:
+        - name: heading
+          label: CTA Heading
+          type: string
+        - name: button_text
+          label: Button Text
+          type: string
+        - name: button_url
+          label: Button URL
+          type: string
 ```
 
 **Properties:**
+
 - `list: true` - Makes it repeatable
 - `blockKey` - Field name that identifies block type (usually "type")
 - `blocks` - Array of available block definitions
@@ -762,12 +771,12 @@ if ($sections) {
 All field types support these properties:
 
 ```yaml
-- name: field_name      # Required - Unique machine name
-  label: Field Label    # Display name in admin
-  type: string       # Required - Field type
-  description: Help text   # Optional help text for editors
-  default: Default value   # Default value for new entries
-  required: true       # Make field required (not enforced yet)
+- name: field_name # Required - Unique machine name
+  label: Field Label # Display name in admin
+  type: string # Required - Field type
+  description: Help text # Optional help text for editors
+  default: Default value # Default value for new entries
+  required: true # Make field required (not enforced yet)
 ```
 
 ## Examples
@@ -876,16 +885,19 @@ fields:
 ## Data Storage
 
 ### Page Templates
+
 - **Location**: Post meta with key `_markdown_fm_data`
 - **Scope**: Per post/page
 - **Editing**: WordPress post/page editor
 
 ### Template Partials
+
 - **Location**: WordPress options with key `markdown_fm_partial_data`
 - **Scope**: Global (site-wide)
 - **Editing**: Markdown FM admin page → "Manage Data" button
 
 ### Plugin Settings
+
 - `markdown_fm_template_settings` - Tracks which templates have YAML enabled
 - `markdown_fm_schemas` - Stores YAML schemas for each template/partial
 
@@ -909,6 +921,7 @@ fields:
 ## Uninstallation
 
 When you **delete** (not deactivate) the plugin, it automatically cleans up:
+
 - Template settings (`markdown_fm_template_settings`)
 - Schemas (`markdown_fm_schemas`)
 - Partial data (`markdown_fm_partial_data`)
@@ -919,6 +932,7 @@ When you **delete** (not deactivate) the plugin, it automatically cleans up:
 ### Plugin activation error about Composer
 
 **Solution**: Navigate to the plugin directory and run:
+
 ```bash
 composer install
 ```
@@ -942,11 +956,39 @@ composer install
 2. Ensure you have permission to edit posts/options
 3. Verify WordPress AJAX is working
 
+## Contributing
+
+Contributions are welcome! If you'd like to contribute to Markdown FM:
+
+1. Fork the repository at [https://github.com/maliMirkec/markdown-fm](https://github.com/maliMirkec/markdown-fm)
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Please ensure your code follows WordPress coding standards and includes appropriate documentation.
+
+## Reporting Issues
+
+Found a bug or have a feature request? Please report it on GitHub:
+
+**[Report an Issue on GitHub](https://github.com/maliMirkec/markdown-fm/issues)**
+
+When reporting issues, please include:
+
+- WordPress version
+- PHP version
+- Plugin version
+- Steps to reproduce the issue
+- Expected behavior vs actual behavior
+- Any error messages or screenshots
+
 ## Credits
 
-* **Author**: [Silvestar Bistrović](https://www.silvestar.codes)
-* **Email**: me@silvestar.codes
-* **Inspired by**: [PagesCMS](https://pagescms.org/) - Open-source CMS for static websites
+- **Author**: [Silvestar Bistrović](https://www.silvestar.codes)
+- **Email**: me@silvestar.codes
+- **GitHub**: [maliMirkec/markdown-fm](https://github.com/maliMirkec/markdown-fm)
+- **Inspired by**: [PagesCMS](https://pagescms.org/) - Open-source CMS for static websites
 
 ## License
 
@@ -955,6 +997,7 @@ GPL v2 or later
 ## Changelog
 
 ### Version 1.0.0
+
 - Initial release
 - Support for 12+ field types from PagesCMS
 - Template and partial support

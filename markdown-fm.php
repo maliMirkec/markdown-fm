@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Markdown FM
- * Plugin URI: https://www.silvestar.codes
+ * Plugin URI: https://github.com/maliMirkec/markdown-fm
  * Description: A WordPress plugin for managing YAML frontmatter schemas in theme templates
  * Version: 1.0.0
  * Author: Silvestar Bistrović
@@ -49,7 +49,9 @@ class Markdown_FM {
   }
 
   private function init_hooks() {
+    add_action('admin_init', [$this, 'handle_form_submissions']);
     add_action('admin_menu', [$this, 'add_admin_menu']);
+    add_action('admin_head', [$this, 'hide_submenu_items']);
     add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
     add_action('add_meta_boxes', [$this, 'add_schema_meta_box']);
     add_action('edit_form_after_title', [$this, 'render_schema_meta_box_after_title']);
@@ -59,6 +61,12 @@ class Markdown_FM {
     add_action('wp_ajax_markdown_fm_get_schema', [$this, 'ajax_get_schema']);
     add_action('wp_ajax_markdown_fm_get_partial_data', [$this, 'ajax_get_partial_data']);
     add_action('wp_ajax_markdown_fm_save_partial_data', [$this, 'ajax_save_partial_data']);
+    add_action('wp_ajax_markdown_fm_export_settings', [$this, 'ajax_export_settings']);
+    add_action('wp_ajax_markdown_fm_import_settings', [$this, 'ajax_import_settings']);
+
+    // Highlight parent menu for dynamic pages
+    add_filter('parent_file', [$this, 'set_parent_file']);
+    add_filter('submenu_file', [$this, 'set_submenu_file']);
 
     // Clear cache on theme switch
     add_action('switch_theme', [$this, 'clear_template_cache']);
@@ -75,6 +83,26 @@ class Markdown_FM {
       30
     );
 
+    // Register hidden pages (accessible via URL but not shown in menu by default)
+    add_submenu_page(
+      'markdown-fm',
+      __('Edit Schema', 'markdown-fm'),
+      __('Edit Schema', 'markdown-fm'),
+      'manage_options',
+      'markdown-fm-edit-schema',
+      [$this, 'render_edit_schema_page']
+    );
+
+    add_submenu_page(
+      'markdown-fm',
+      __('Edit Partial', 'markdown-fm'),
+      __('Edit Partial', 'markdown-fm'),
+      'manage_options',
+      'markdown-fm-edit-partial',
+      [$this, 'render_edit_partial_page']
+    );
+
+    // Documentation (added last to appear at the bottom)
     add_submenu_page(
       'markdown-fm',
       __('Documentation', 'markdown-fm'),
@@ -85,10 +113,98 @@ class Markdown_FM {
     );
   }
 
+  public function hide_submenu_items() {
+    global $submenu;
+
+    if (isset($submenu['markdown-fm'])) {
+      $current_page = isset($_GET['page']) ? $_GET['page'] : '';
+
+      foreach ($submenu['markdown-fm'] as $key => $menu_item) {
+        $menu_slug = $menu_item[2];
+
+        // Hide "Edit Schema" if not on edit schema page
+        if ($menu_slug === 'markdown-fm-edit-schema' && $current_page !== 'markdown-fm-edit-schema') {
+          unset($submenu['markdown-fm'][$key]);
+        }
+
+        // Hide "Edit Partial" if not on edit partial page
+        if ($menu_slug === 'markdown-fm-edit-partial' && $current_page !== 'markdown-fm-edit-partial') {
+          unset($submenu['markdown-fm'][$key]);
+        }
+      }
+    }
+  }
+
+  public function set_parent_file($parent_file) {
+    global $submenu_file, $submenu;
+
+    if (isset($_GET['page']) && isset($_GET['template'])) {
+      // Update submenu titles and URLs dynamically
+      if ($_GET['page'] === 'markdown-fm-edit-schema' || $_GET['page'] === 'markdown-fm-edit-partial') {
+        $template = sanitize_text_field($_GET['template']);
+        $theme_files = $this->get_theme_templates();
+        $template_name = $template;
+
+        // Find template name
+        if ($_GET['page'] === 'markdown-fm-edit-schema') {
+          foreach (array_merge($theme_files['templates'], $theme_files['partials']) as $item) {
+            if ($item['file'] === $template) {
+              $template_name = $item['name'];
+              break;
+            }
+          }
+        } else {
+          foreach ($theme_files['partials'] as $partial) {
+            if ($partial['file'] === $template) {
+              $template_name = $partial['name'];
+              break;
+            }
+          }
+        }
+
+        // Update the submenu title and URL
+        if (isset($submenu['markdown-fm'])) {
+          foreach ($submenu['markdown-fm'] as $key => $menu_item) {
+            if ($menu_item[2] === $_GET['page']) {
+              if ($_GET['page'] === 'markdown-fm-edit-schema') {
+                $submenu['markdown-fm'][$key][0] = sprintf(__('Edit Schema: %s', 'markdown-fm'), $template_name);
+                // Use admin.php?page= format for proper WordPress menu handling
+                $submenu['markdown-fm'][$key][2] = 'admin.php?page=markdown-fm-edit-schema&template=' . urlencode($template);
+                $submenu['markdown-fm'][$key][3] = sprintf(__('Edit Schema: %s', 'markdown-fm'), $template_name);
+              } else {
+                $submenu['markdown-fm'][$key][0] = sprintf(__('Edit Partial: %s', 'markdown-fm'), $template_name);
+                $submenu['markdown-fm'][$key][2] = 'admin.php?page=markdown-fm-edit-partial&template=' . urlencode($template);
+                $submenu['markdown-fm'][$key][3] = sprintf(__('Edit Partial: %s', 'markdown-fm'), $template_name);
+              }
+              break;
+            }
+          }
+        }
+
+        $parent_file = 'markdown-fm';
+      }
+    }
+
+    return $parent_file;
+  }
+
+  public function set_submenu_file($submenu_file) {
+    if (isset($_GET['page']) && isset($_GET['template']) &&
+        ($_GET['page'] === 'markdown-fm-edit-schema' || $_GET['page'] === 'markdown-fm-edit-partial')) {
+      $template = sanitize_text_field($_GET['template']);
+      $submenu_file = 'admin.php?page=' . $_GET['page'] . '&template=' . urlencode($template);
+    }
+
+    return $submenu_file;
+  }
+
   public function enqueue_admin_assets($hook) {
     // Load on the plugin settings page
     $is_settings_page = ('toplevel_page_markdown-fm' === $hook);
     $is_docs_page = ('markdown-fm_page_markdown-fm-docs' === $hook);
+    $is_edit_template_page = (strpos($hook, 'markdown-fm-edit-template') !== false);
+    $is_edit_partial_page = (strpos($hook, 'markdown-fm-edit-partial') !== false);
+    $is_edit_schema_page = (strpos($hook, 'markdown-fm-edit-schema') !== false);
 
     // Load on post edit screens
     $current_screen = get_current_screen();
@@ -99,10 +215,13 @@ class Markdown_FM {
                       in_array($current_screen->post_type, ['page', 'post']);
     }
 
-    // Only load if on settings page, docs page, or post edit screen
-    if (!$is_settings_page && !$is_docs_page && !$is_post_edit) {
+    // Only load if on plugin pages or post edit screen
+    if (!$is_settings_page && !$is_docs_page && !$is_edit_template_page && !$is_edit_partial_page && !$is_edit_schema_page && !$is_post_edit) {
       return;
     }
+
+    // Enqueue WordPress media library (needed for image/file uploads)
+    wp_enqueue_media();
 
     wp_enqueue_style('markdown-fm-admin', MARKDOWN_FM_PLUGIN_URL . 'assets/admin.css', [], MARKDOWN_FM_VERSION);
     wp_enqueue_script('markdown-fm-admin', MARKDOWN_FM_PLUGIN_URL . 'assets/admin.js', ['jquery'], MARKDOWN_FM_VERSION, true);
@@ -124,6 +243,7 @@ class Markdown_FM {
 
     wp_localize_script('markdown-fm-admin', 'markdownFM', [
       'ajax_url' => admin_url('admin-ajax.php'),
+      'admin_url' => admin_url(),
       'nonce' => wp_create_nonce('markdown_fm_nonce'),
       'schema' => $schema_data
     ]);
@@ -150,12 +270,158 @@ class Markdown_FM {
     include MARKDOWN_FM_PLUGIN_DIR . 'templates/admin-page.php';
   }
 
+  public function render_edit_template_page() {
+    if (!current_user_can('manage_options')) {
+      wp_die(__('You do not have sufficient permissions to access this page.', 'markdown-fm'));
+    }
+
+    // This page is for future use - editing template-specific data
+    // For now, redirect to main page
+    wp_redirect(admin_url('admin.php?page=markdown-fm'));
+    exit;
+  }
+
+  public function render_edit_partial_page() {
+    if (!current_user_can('manage_options')) {
+      wp_die(__('You do not have sufficient permissions to access this page.', 'markdown-fm'));
+    }
+
+    if (!isset($_GET['template'])) {
+      wp_die(__('No template specified.', 'markdown-fm'));
+    }
+
+    $template = sanitize_text_field($_GET['template']);
+    $schemas = get_option('markdown_fm_schemas', []);
+
+    if (!isset($schemas[$template])) {
+      wp_die(__('No schema found for this template.', 'markdown-fm'));
+    }
+
+    $schema_yaml = $schemas[$template];
+    $schema = $this->parse_yaml_schema($schema_yaml);
+
+    if (!$schema || !isset($schema['fields'])) {
+      wp_die(__('Invalid schema for this template.', 'markdown-fm'));
+    }
+
+    // Get partial data
+    $partial_data = get_option('markdown_fm_partial_data', []);
+    $template_data = isset($partial_data[$template]) ? $partial_data[$template] : [];
+
+    // Get template name from theme files
+    $theme_files = $this->get_theme_templates();
+    $template_name = $template;
+    foreach ($theme_files['partials'] as $partial) {
+      if ($partial['file'] === $template) {
+        $template_name = $partial['name'];
+        break;
+      }
+    }
+
+    // Check for success message
+    $success_message = '';
+    if (isset($_GET['saved']) && $_GET['saved'] === '1') {
+      $success_message = __('Partial data saved successfully!', 'markdown-fm');
+    }
+
+    include MARKDOWN_FM_PLUGIN_DIR . 'templates/edit-partial-page.php';
+  }
+
+  public function render_edit_schema_page() {
+    if (!current_user_can('manage_options')) {
+      wp_die(__('You do not have sufficient permissions to access this page.', 'markdown-fm'));
+    }
+
+    if (!isset($_GET['template'])) {
+      wp_die(__('No template specified.', 'markdown-fm'));
+    }
+
+    $template = sanitize_text_field($_GET['template']);
+    $schemas = get_option('markdown_fm_schemas', []);
+    $schema_yaml = isset($schemas[$template]) ? $schemas[$template] : '';
+
+    // Get template name from theme files
+    $theme_files = $this->get_theme_templates();
+    $template_name = $template;
+    foreach (array_merge($theme_files['templates'], $theme_files['partials']) as $item) {
+      if ($item['file'] === $template) {
+        $template_name = $item['name'];
+        break;
+      }
+    }
+
+    // Check for success message
+    $success_message = '';
+    if (isset($_GET['saved']) && $_GET['saved'] === '1') {
+      $success_message = __('Schema saved successfully!', 'markdown-fm');
+    }
+
+    include MARKDOWN_FM_PLUGIN_DIR . 'templates/edit-schema-page.php';
+  }
+
   public function render_docs_page() {
     if (!current_user_can('manage_options')) {
       wp_die(__('You do not have sufficient permissions to access this page.', 'markdown-fm'));
     }
 
     include MARKDOWN_FM_PLUGIN_DIR . 'templates/docs-page.php';
+  }
+
+  public function handle_form_submissions() {
+    // Handle schema save
+    if (isset($_POST['markdown_fm_save_schema_nonce']) &&
+        wp_verify_nonce($_POST['markdown_fm_save_schema_nonce'], 'markdown_fm_save_schema')) {
+
+      if (!current_user_can('manage_options')) {
+        wp_die(__('Permission denied', 'markdown-fm'));
+      }
+
+      $template = sanitize_text_field($_POST['template']);
+      $schema = wp_unslash($_POST['schema']);
+
+      $schemas = get_option('markdown_fm_schemas', []);
+      $schemas[$template] = $schema;
+      update_option('markdown_fm_schemas', $schemas);
+
+      // Redirect with success message
+      wp_redirect(add_query_arg([
+        'page' => 'markdown-fm-edit-schema',
+        'template' => urlencode($template),
+        'saved' => '1'
+      ], admin_url('admin.php')));
+      exit;
+    }
+
+    // Handle partial data save
+    if (isset($_POST['markdown_fm_partial_nonce']) &&
+        wp_verify_nonce($_POST['markdown_fm_partial_nonce'], 'markdown_fm_save_partial')) {
+
+      if (!current_user_can('manage_options')) {
+        wp_die(__('Permission denied', 'markdown-fm'));
+      }
+
+      $template = sanitize_text_field($_POST['template']);
+      $field_data = [];
+
+      // Collect all field data
+      if (isset($_POST['markdown_fm']) && is_array($_POST['markdown_fm'])) {
+        foreach ($_POST['markdown_fm'] as $key => $value) {
+          $field_data[sanitize_text_field($key)] = wp_unslash($value);
+        }
+      }
+
+      $partial_data = get_option('markdown_fm_partial_data', []);
+      $partial_data[$template] = $field_data;
+      update_option('markdown_fm_partial_data', $partial_data);
+
+      // Redirect with success message
+      wp_redirect(add_query_arg([
+        'page' => 'markdown-fm-edit-partial',
+        'template' => urlencode($template),
+        'saved' => '1'
+      ], admin_url('admin.php')));
+      exit;
+    }
   }
 
   private function get_theme_templates() {
@@ -356,7 +622,13 @@ class Markdown_FM {
 
     update_option('markdown_fm_template_settings', $settings);
 
-    wp_send_json_success();
+    // Check if schema exists for this template
+    $schemas = get_option('markdown_fm_schemas', []);
+    $has_schema = isset($schemas[$template]) && !empty($schemas[$template]);
+
+    wp_send_json_success([
+      'has_schema' => $has_schema
+    ]);
   }
 
   public function ajax_save_schema() {
@@ -434,6 +706,7 @@ class Markdown_FM {
     echo '<div id="markdown-fm-meta-box" class="postbox" style="margin-bottom: 20px;">';
     echo '<div class="postbox-header"><h2 class="hndle">' . __('Markdown FM Schema', 'markdown-fm') . '</h2></div>';
     echo '<div class="inside">';
+
     echo '<div class="markdown-fm-meta-box-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">';
     echo '<p style="margin: 0;">';
     echo '<strong>' . __('Template:', 'markdown-fm') . '</strong> ' . esc_html($template);
@@ -467,7 +740,7 @@ class Markdown_FM {
     }
   }
 
-  private function render_schema_fields($fields, $saved_data, $prefix = '') {
+  public function render_schema_fields($fields, $saved_data, $prefix = '') {
     foreach ($fields as $field) {
       $field_name = $prefix . $field['name'];
       $field_id = 'mdfm_' . str_replace(['[', ']'], ['_', ''], $field_name);
@@ -475,7 +748,11 @@ class Markdown_FM {
       $field_label = isset($field['label']) ? $field['label'] : ucfirst($field['name']);
 
       echo '<div class="markdown-fm-field" data-type="' . esc_attr($field['type']) . '">';
-      echo '<label for="' . esc_attr($field_id) . '">' . esc_html($field_label) . '</label>';
+      if($field['type'] === 'image' || $field['type'] === 'file') {
+        echo '<p>' . esc_html($field_label) . '</p>';
+      } else {
+        echo '<label for="' . esc_attr($field_id) . '">' . esc_html($field_label) . '</label>';
+      }
 
       switch ($field['type']) {
         case 'boolean':
@@ -754,6 +1031,91 @@ class Markdown_FM {
     update_option('markdown_fm_partial_data', $partial_data);
 
     wp_send_json_success();
+  }
+
+  public function ajax_export_settings() {
+    check_ajax_referer('markdown_fm_nonce', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+      wp_send_json_error('Permission denied');
+    }
+
+    // Gather all settings
+    $export_data = [
+      'plugin' => 'markdown-fm',
+      'version' => MARKDOWN_FM_VERSION,
+      'exported_at' => current_time('mysql'),
+      'site_url' => get_site_url(),
+      'settings' => [
+        'template_settings' => get_option('markdown_fm_template_settings', []),
+        'schemas' => get_option('markdown_fm_schemas', []),
+        'partial_data' => get_option('markdown_fm_partial_data', [])
+      ]
+    ];
+
+    wp_send_json_success($export_data);
+  }
+
+  public function ajax_import_settings() {
+    check_ajax_referer('markdown_fm_nonce', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+      wp_send_json_error('Permission denied');
+    }
+
+    if (!isset($_POST['data'])) {
+      wp_send_json_error('No data provided');
+    }
+
+    $import_data = json_decode(wp_unslash($_POST['data']), true);
+
+    // Validate import data
+    if (!$import_data || !isset($import_data['plugin']) || $import_data['plugin'] !== 'markdown-fm') {
+      wp_send_json_error('Invalid import file format');
+    }
+
+    if (!isset($import_data['settings'])) {
+      wp_send_json_error('No settings found in import file');
+    }
+
+    $settings = $import_data['settings'];
+    $merge = isset($_POST['merge']) && $_POST['merge'] === 'true';
+
+    // Import template settings
+    if (isset($settings['template_settings'])) {
+      if ($merge) {
+        $existing = get_option('markdown_fm_template_settings', []);
+        $settings['template_settings'] = array_merge($existing, $settings['template_settings']);
+      }
+      update_option('markdown_fm_template_settings', $settings['template_settings']);
+    }
+
+    // Import schemas
+    if (isset($settings['schemas'])) {
+      if ($merge) {
+        $existing = get_option('markdown_fm_schemas', []);
+        $settings['schemas'] = array_merge($existing, $settings['schemas']);
+      }
+      update_option('markdown_fm_schemas', $settings['schemas']);
+    }
+
+    // Import partial data
+    if (isset($settings['partial_data'])) {
+      if ($merge) {
+        $existing = get_option('markdown_fm_partial_data', []);
+        $settings['partial_data'] = array_merge($existing, $settings['partial_data']);
+      }
+      update_option('markdown_fm_partial_data', $settings['partial_data']);
+    }
+
+    // Clear template cache
+    $this->clear_template_cache();
+
+    wp_send_json_success([
+      'message' => 'Settings imported successfully',
+      'imported_from' => isset($import_data['site_url']) ? $import_data['site_url'] : 'unknown',
+      'exported_at' => isset($import_data['exported_at']) ? $import_data['exported_at'] : 'unknown'
+    ]);
   }
 }
 

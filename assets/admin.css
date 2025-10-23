@@ -14,7 +14,7 @@
   border-radius: 8px;
   padding: 30px;
   margin-bottom: 30px;
-  box-shadow: 0 4px 6px rgba(0,0,0,.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .markdown-fm-header-content {
@@ -26,7 +26,7 @@
 .markdown-fm-logo {
   max-width: 80px;
   height: auto;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,.2));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .markdown-fm-header-text h1 {
@@ -34,11 +34,11 @@
   margin: 0 0 5px 0;
   font-size: 32px;
   font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0,0,0,.2);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .markdown-fm-tagline {
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   margin: 0;
   font-size: 16px;
   font-weight: 400;
@@ -49,7 +49,7 @@
   border-left: 4px solid #667eea;
   padding: 15px;
   margin-bottom: 20px;
-  box-shadow: 0 1px 1px rgba(0,0,0,.04);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 
 .markdown-fm-intro p {
@@ -91,19 +91,19 @@
   right: 0;
   bottom: 0;
   background-color: #ccc;
-  transition: .4s;
+  transition: 0.4s;
   border-radius: 24px;
 }
 
 .markdown-fm-slider:before {
   position: absolute;
-  content: "";
+  content: '';
   height: 18px;
   width: 18px;
   left: 3px;
   bottom: 3px;
   background-color: white;
-  transition: .4s;
+  transition: 0.4s;
   border-radius: 50%;
 }
 
@@ -120,7 +120,7 @@
   background: #fff;
   padding: 20px;
   margin-top: 30px;
-  box-shadow: 0 1px 1px rgba(0,0,0,.04);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 
 .markdown-fm-schema-examples pre {
@@ -155,7 +155,7 @@
   width: 100%;
   height: 100%;
   overflow: auto;
-  background-color: rgba(0,0,0,0.6);
+  background-color: rgba(0, 0, 0, 0.6);
 }
 
 .markdown-fm-modal-content {
@@ -164,7 +164,7 @@
   padding: 0;
   width: 80%;
   max-width: 900px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   border-radius: 4px;
 }
 
@@ -238,24 +238,26 @@
   border-bottom: none;
 }
 
-.markdown-fm-field label {
+.markdown-fm-field label,
+.markdown-fm-field p {
   display: block;
   font-weight: 600;
+  margin-top: 0;
   margin-bottom: 8px;
   color: #1d2327;
 }
 
-.markdown-fm-field input[type="text"],
-.markdown-fm-field input[type="number"],
-.markdown-fm-field input[type="date"],
-.markdown-fm-field input[type="datetime-local"],
+.markdown-fm-field input[type='text'],
+.markdown-fm-field input[type='number'],
+.markdown-fm-field input[type='date'],
+.markdown-fm-field input[type='datetime-local'],
 .markdown-fm-field textarea,
 .markdown-fm-field select {
   width: 100%;
   max-width: 600px;
 }
 
-.markdown-fm-field input[type="checkbox"] {
+.markdown-fm-field input[type='checkbox'] {
   width: auto;
   margin-right: 5px;
 }
@@ -287,6 +289,11 @@
 
 .markdown-fm-image-preview {
   margin-top: 10px;
+}
+
+.markdown-fm-upload-image + .markdown-fm-image-preview {
+  width: 100%;
+  margin-top: -10px;
 }
 
 .markdown-fm-image-preview img {
@@ -395,6 +402,57 @@
   pointer-events: none;
 }
 
+/* Unsaved Changes Indicator */
+.markdown-fm-unsaved-indicator {
+  display: none;
+  position: fixed;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #f0ad4e;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 999999;
+  font-weight: 600;
+  animation: slideDown 0.3s ease-out;
+}
+
+.markdown-fm-unsaved-indicator.visible {
+  display: block;
+}
+
+.markdown-fm-unsaved-indicator .dashicons {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateX(-50%) translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+.markdown-fm-has-changes .button-primary {
+  background: #f0ad4e;
+  border-color: #ec971f;
+  box-shadow: 0 1px 0 #ec971f;
+}
+
+.markdown-fm-has-changes .button-primary:hover {
+  background: #ec971f;
+  border-color: #d58512;
+}
+
 /* Success/Error Messages */
 #markdown-fm-notifications {
   position: fixed;
@@ -410,7 +468,7 @@
 .markdown-fm-message {
   padding: 12px 15px;
   border-radius: 3px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   min-width: 250px;
   animation: slideInRight 0.3s ease-out;
 }
@@ -438,50 +496,19 @@
   color: #761919;
 }
 
+.markdown-fm-message.warning {
+  background: #fff3cd;
+  border-left: 4px solid #f0ad4e;
+  color: #856404;
+}
+
 /* Documentation Page */
 .markdown-fm-docs-content {
   background: #fff;
   padding: 30px;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   line-height: 1.8;
-}
-
-.markdown-fm-docs-content h2 {
-  color: #1d2327;
-  font-size: 28px;
-  font-weight: 600;
-  margin-top: 40px;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #667eea;
-}
-
-.markdown-fm-docs-content h2:first-child {
-  margin-top: 0;
-}
-
-.markdown-fm-docs-content h3 {
-  color: #1d2327;
-  font-size: 22px;
-  font-weight: 600;
-  margin-top: 30px;
-  margin-bottom: 15px;
-}
-
-.markdown-fm-docs-content p {
-  margin-bottom: 15px;
-  color: #3c434a;
-}
-
-.markdown-fm-docs-content ul {
-  margin-left: 20px;
-  margin-bottom: 15px;
-}
-
-.markdown-fm-docs-content li {
-  margin-bottom: 8px;
-  color: #3c434a;
 }
 
 .markdown-fm-docs-content code {
@@ -509,6 +536,44 @@
   line-height: 1.6;
 }
 
+/*
+.markdown-fm-docs-content h2 {
+  color: #fdf3f7;
+  font-size: 28px;
+  font-weight: 600;
+  margin-top: 40px;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #667eea;
+}
+
+.markdown-fm-docs-content h2:first-child {
+  margin-top: 0;
+}
+
+.markdown-fm-docs-content h3 {
+  color: #fdf3f7;
+  font-size: 22px;
+  font-weight: 600;
+  margin-top: 30px;
+  margin-bottom: 15px;
+}
+
+.markdown-fm-docs-content p {
+  margin-bottom: 15px;
+  color: #fcf3fa;
+}
+
+.markdown-fm-docs-content ul {
+  margin-left: 20px;
+  margin-bottom: 15px;
+}
+
+.markdown-fm-docs-content li {
+  margin-bottom: 8px;
+  color: #fcf3fa;
+}
+
 .markdown-fm-docs-content a {
   color: #667eea;
   text-decoration: none;
@@ -521,8 +586,8 @@
 }
 
 .markdown-fm-docs-content strong {
-  font-weight: 600;
-  color: #1d2327;
+  font-weight: 500;
+  color: #fdf3f7;
 }
 
 .markdown-fm-docs-content blockquote {
@@ -532,7 +597,7 @@
   background: #f6f7f7;
   font-style: italic;
   color: #50575e;
-}
+} */
 
 /* Responsive */
 @media screen and (max-width: 782px) {
