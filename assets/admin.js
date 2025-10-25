@@ -1074,7 +1074,7 @@
       $button
         .prop('disabled', true)
         .html(
-          '<span class="dashicons dashicons-update" style="margin-top: 3px; animation: rotation 1s infinite linear;"></span> Exporting...'
+          '<span class="dashicons dashicons-update" style="animation: rotation 1s infinite linear;"></span> Exporting...'
         );
 
       $.ajax({

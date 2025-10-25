@@ -8,6 +8,12 @@
   margin: 20px 0;
 }
 
+.markdown-fm-admin-container .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
 /* Header with Logo */
 .markdown-fm-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -598,6 +604,17 @@
   font-style: italic;
   color: #50575e;
 } */
+
+@media screen and (max-width: 600px) {
+  .wp-table-wrap {
+    overflow-x: auto;
+  }
+
+  .markdown-fm-admin-container .wp-list-table td {
+    white-space: nowrap;
+    width: fit-content;
+  }
+}
 
 /* Responsive */
 @media screen and (max-width: 782px) {

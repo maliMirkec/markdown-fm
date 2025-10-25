@@ -28,6 +28,28 @@ if (!defined('ABSPATH')) {
   <li>🧹 <strong>Clean uninstall</strong> removes all database records</li>
 </ul>
 
+<h2>Screenshots</h2>
+
+<h3>1. Main Admin Page</h3>
+<p><img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/screenshot-1.png'); ?>" alt="Main Markdown FM admin page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><em>Main admin page showing page templates and template partials with enable/disable toggles</em></p>
+
+<h3>2. Schema Editor - Page Templates</h3>
+<p><img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/screenshot-2.png'); ?>" alt="Schema editor for page templates" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><em>Schema editor for main page templates with YAML syntax for defining custom fields</em></p>
+
+<h3>3. Schema Editor - Partial Templates</h3>
+<p><img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/screenshot-3.png'); ?>" alt="Schema editor for partials" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><em>Schema editor for partial templates (headers, footers, etc.)</em></p>
+
+<h3>4. Partial Data Editor</h3>
+<p><img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/screenshot-4.png'); ?>" alt="Partial data editor" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><em>Partial data editor for managing global content in template partials</em></p>
+
+<h3>5. Documentation Page</h3>
+<p><img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/screenshot-5.png'); ?>" alt="Documentation page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><em>Comprehensive documentation with guides and examples</em></p>
+
 <h2>Installation</h2>
 
 <h3>From WordPress Plugin Directory (Recommended)</h3>
@@ -132,7 +154,7 @@ composer install</code></pre>
 <pre><code>&lt;?php
 // Get individual fields using short alias
 $hero_title = mdfm_get_field('hero_title');
-$hero_image = mdfm_get_field('hero_image');
+$hero_image = mdfm_get_image('hero_image');
 $description = mdfm_get_field('description');
 $cta = mdfm_get_field('cta_button');
 $features = mdfm_get_field('features');
@@ -140,7 +162,10 @@ $features = mdfm_get_field('features');
 
 &lt;div class="hero"&gt;
   &lt;?php if ($hero_image): ?&gt;
-    &lt;img src="&lt;?php echo esc_url($hero_image); ?&gt;" alt="Hero"&gt;
+    &lt;img src="&lt;?php echo esc_url($hero_image['url']); ?&gt;"
+         alt="&lt;?php echo esc_attr($hero_image['alt']); ?&gt;"
+         width="&lt;?php echo esc_attr($hero_image['width']); ?&gt;"
+         height="&lt;?php echo esc_attr($hero_image['height']); ?&gt;"&gt;
   &lt;?php endif; ?&gt;
 
   &lt;h1&gt;&lt;?php echo esc_html($hero_title); ?&gt;&lt;/h1&gt;
@@ -655,7 +680,12 @@ if ($pdf) {
 <h2>Dependencies</h2>
 
 <ul>
-  <li><strong>Symfony YAML Component</strong> (^5.4|^6.0|^7.0) - YAML parsing</li>
+  <li><strong>Symfony YAML Component</strong> (v5.4) - YAML parsing
+    <ul>
+      <li>License: MIT (GPL-compatible)</li>
+      <li>Homepage: <a href="https://symfony.com/components/Yaml" target="_blank">https://symfony.com/components/Yaml</a></li>
+    </ul>
+  </li>
 </ul>
 
 <h2>Security</h2>

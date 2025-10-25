@@ -1,8 +1,8 @@
 === Markdown FM ===
-Contributors: silvestarbistrovic
+Contributors: starbist
 Tags: yaml, frontmatter, custom-fields, cms, page-builder
 Requires at least: 5.0
-Tested up to: 6.7
+Tested up to: 6.8
 Requires PHP: 7.4
 Stable tag: 1.0.0
 License: GPLv2 or later
@@ -46,12 +46,14 @@ In your theme template:
 
 `<?php
 $hero_title = mdfm_get_field('hero_title');
-$hero_image = mdfm_get_field('hero_image');
+$hero_image = mdfm_get_image('hero_image');
 $features = mdfm_get_field('features');
 ?>
 
 <div class="hero">
-  <img src="<?php echo esc_url($hero_image); ?>" alt="Hero">
+  <?php if ($hero_image): ?>
+    <img src="<?php echo esc_url($hero_image['url']); ?>" alt="<?php echo esc_attr($hero_image['alt']); ?>">
+  <?php endif; ?>
   <h1><?php echo esc_html($hero_title); ?></h1>
 </div>`
 
@@ -117,11 +119,11 @@ Please visit the [GitHub repository](https://github.com/maliMirkec/markdown-fm) 
 
 == Screenshots ==
 
-1. Admin interface showing template list with YAML toggle switches
-2. YAML schema editor for defining custom fields
-3. Custom fields displayed in the post editor
-4. Managing global data for template partials
-5. Block field type with multiple block variations
+1. Main Markdown FM admin page showing page templates and template partials with enable/disable toggles
+2. Schema editor for main page templates with YAML syntax for defining custom fields
+3. Schema editor for partial templates (headers, footers, etc.)
+4. Partial data editor for managing global content in template partials
+5. Documentation page with comprehensive guides and examples
 
 == Changelog ==
 
@@ -214,6 +216,14 @@ Then click "Refresh Template List" in the Markdown FM admin page.
 == Privacy Policy ==
 
 Markdown FM does not collect, store, or transmit any user data outside of your WordPress installation. All data is stored locally in your WordPress database.
+
+== Third-Party Libraries ==
+
+This plugin includes the following third-party libraries:
+
+* **Symfony YAML Component** (v5.4) - Licensed under MIT License (GPL-compatible)
+  - Homepage: https://symfony.com/components/Yaml
+  - License: https://github.com/symfony/yaml/blob/5.4/LICENSE
 
 == Credits ==
 

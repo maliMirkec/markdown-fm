@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
         <img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'icon-256x256.png'); ?>" alt="Markdown FM" class="markdown-fm-logo" />
         <div class="markdown-fm-header-text">
           <h1><?php echo esc_html($template_name); ?></h1>
-          <p class="markdown-fm-tagline"><?php _e('Edit global data for this partial', 'markdown-fm'); ?></p>
+          <p class="markdown-fm-tagline"><?php esc_html_e('Edit global data for this partial', 'markdown-fm'); ?></p>
         </div>
       </div>
     </div>
@@ -24,12 +24,12 @@ if (!defined('ABSPATH')) {
     <div class="markdown-fm-intro">
       <p>
         <a href="<?php echo esc_url(admin_url('admin.php?page=markdown-fm')); ?>" class="button">
-          <span class="dashicons dashicons-arrow-left-alt2" style="margin-top: 3px;"></span>
-          <?php _e('Back to Templates', 'markdown-fm'); ?>
+          <span class="dashicons dashicons-arrow-left-alt2"></span>
+          <?php esc_html_e('Back to Templates', 'markdown-fm'); ?>
         </a>
       </p>
-      <p><strong><?php _e('Template File:', 'markdown-fm'); ?></strong> <code><?php echo esc_html($template); ?></code></p>
-      <p><?php _e('This data is global and will be used wherever this partial is included in your theme.', 'markdown-fm'); ?></p>
+      <p><strong><?php esc_html_e('Template File:', 'markdown-fm'); ?></strong> <code><?php echo esc_html($template); ?></code></p>
+      <p><?php esc_html_e('This data is global and will be used wherever this partial is included in your theme.', 'markdown-fm'); ?></p>
     </div>
 
     <form id="markdown-fm-partial-form" method="post">
@@ -42,17 +42,17 @@ if (!defined('ABSPATH')) {
           $plugin = Markdown_FM::get_instance();
           $plugin->render_schema_fields($schema['fields'], $template_data);
         } else {
-          echo '<p>' . __('No fields defined in schema.', 'markdown-fm') . '</p>';
+          echo '<p>' . esc_html__('No fields defined in schema.', 'markdown-fm') . '</p>';
         }
         ?>
       </div>
 
       <p class="submit" style="margin-top: 20px;">
         <button type="submit" class="button button-primary button-large">
-          <?php _e('Save Partial Data', 'markdown-fm'); ?>
+          <?php esc_html_e('Save Partial Data', 'markdown-fm'); ?>
         </button>
         <a href="<?php echo esc_url(admin_url('admin.php?page=markdown-fm')); ?>" class="button button-large">
-          <?php _e('Cancel', 'markdown-fm'); ?>
+          <?php esc_html_e('Cancel', 'markdown-fm'); ?>
         </a>
       </p>
     </form>
@@ -108,7 +108,7 @@ jQuery(document).ready(function($) {
   function toggleUnsavedIndicator(show) {
     if (show) {
       if (typeof MarkdownFM !== 'undefined' && MarkdownFM.showMessage) {
-        MarkdownFM.showMessage('<?php _e('You have unsaved changes', 'markdown-fm'); ?>', 'warning', true);
+        MarkdownFM.showMessage('<?php echo esc_js(__('You have unsaved changes', 'markdown-fm')); ?>', 'warning', true);
       }
     } else {
       if (typeof MarkdownFM !== 'undefined' && MarkdownFM.hideMessage) {
@@ -130,7 +130,7 @@ jQuery(document).ready(function($) {
   // Warn before leaving page with unsaved changes
   $(window).on('beforeunload', function(e) {
     if (hasUnsavedChanges) {
-      const message = '<?php _e('You have unsaved changes. Are you sure you want to leave?', 'markdown-fm'); ?>';
+      const message = '<?php echo esc_js(__('You have unsaved changes. Are you sure you want to leave?', 'markdown-fm')); ?>';
       e.returnValue = message;
       return message;
     }
