@@ -343,6 +343,14 @@ class Markdown_FM {
     }
     // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
+    // Localize schema data for JavaScript
+    wp_localize_script('markdown-fm-admin', 'markdownFM', [
+      'ajax_url' => admin_url('admin-ajax.php'),
+      'admin_url' => admin_url(),
+      'nonce' => wp_create_nonce('markdown_fm_nonce'),
+      'schema' => $schema
+    ]);
+
     include MARKDOWN_FM_PLUGIN_DIR . 'templates/edit-partial-page.php';
   }
 
