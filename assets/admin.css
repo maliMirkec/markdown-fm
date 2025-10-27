@@ -1,21 +1,21 @@
 /**
- * Markdown FM Admin Styles
+ * YAML Custom Fields Admin Styles
  * File: assets/admin.css
  */
 
-.markdown-fm-admin-container {
+.yaml-cf-admin-container {
   max-width: 1200px;
   margin: 20px 0;
 }
 
-.markdown-fm-admin-container .button {
+.yaml-cf-admin-container .button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
 
 /* Header with Logo */
-.markdown-fm-header {
+.yaml-cf-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 8px;
   padding: 30px;
@@ -23,19 +23,20 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.markdown-fm-header-content {
+.yaml-cf-header-content {
   display: flex;
   align-items: center;
   gap: 20px;
 }
 
-.markdown-fm-logo {
+.yaml-cf-logo {
   max-width: 80px;
   height: auto;
+  border-radius: 5px;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
-.markdown-fm-header-text h1 {
+.yaml-cf-header-text h1 {
   color: #fff;
   margin: 0 0 5px 0;
   font-size: 32px;
@@ -43,14 +44,14 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.markdown-fm-tagline {
+.yaml-cf-tagline {
   color: rgba(255, 255, 255, 0.9);
   margin: 0;
   font-size: 16px;
   font-weight: 400;
 }
 
-.markdown-fm-intro {
+.yaml-cf-intro {
   background: #fff;
   border-left: 4px solid #667eea;
   padding: 15px;
@@ -58,7 +59,7 @@
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 
-.markdown-fm-intro p {
+.yaml-cf-intro p {
   margin: 10px 0;
 }
 
@@ -74,7 +75,7 @@
 }
 
 /* Toggle Switch */
-.markdown-fm-switch {
+.yaml-cf-switch {
   position: relative;
   display: inline-block;
   width: 50px;
@@ -83,13 +84,13 @@
   margin-bottom: 3px;
 }
 
-.markdown-fm-switch input {
+.yaml-cf-switch input {
   opacity: 0;
   width: 0;
   height: 0;
 }
 
-.markdown-fm-slider {
+.yaml-cf-slider {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -101,7 +102,7 @@
   border-radius: 24px;
 }
 
-.markdown-fm-slider:before {
+.yaml-cf-slider:before {
   position: absolute;
   content: '';
   height: 18px;
@@ -113,23 +114,23 @@
   border-radius: 50%;
 }
 
-.markdown-fm-switch input:checked + .markdown-fm-slider {
+.yaml-cf-switch input:checked + .yaml-cf-slider {
   background-color: #2271b1;
 }
 
-.markdown-fm-switch input:checked + .markdown-fm-slider:before {
+.yaml-cf-switch input:checked + .yaml-cf-slider:before {
   transform: translateX(26px);
 }
 
 /* Schema Examples */
-.markdown-fm-schema-examples {
+.yaml-cf-schema-examples {
   background: #fff;
   padding: 20px;
   margin-top: 30px;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 
-.markdown-fm-schema-examples pre {
+.yaml-cf-schema-examples pre {
   background: #f5f5f5;
   border: 1px solid #ddd;
   padding: 15px;
@@ -137,23 +138,23 @@
   border-radius: 3px;
 }
 
-.markdown-fm-schema-examples code {
+.yaml-cf-schema-examples code {
   font-family: 'Courier New', Courier, monospace;
   font-size: 13px;
   line-height: 1.6;
 }
 
-.markdown-fm-schema-examples ul {
+.yaml-cf-schema-examples ul {
   list-style: disc;
   margin-left: 30px;
 }
 
-.markdown-fm-schema-examples ul li {
+.yaml-cf-schema-examples ul li {
   margin: 8px 0;
 }
 
 /* Modal Styles */
-.markdown-fm-modal {
+.yaml-cf-modal {
   position: fixed;
   z-index: 999999;
   left: 0;
@@ -164,7 +165,7 @@
   background-color: rgba(0, 0, 0, 0.6);
 }
 
-.markdown-fm-modal-content {
+.yaml-cf-modal-content {
   background-color: #fff;
   margin: 5% auto;
   padding: 0;
@@ -174,18 +175,18 @@
   border-radius: 4px;
 }
 
-.markdown-fm-modal-header {
+.yaml-cf-modal-header {
   padding: 20px;
   border-bottom: 1px solid #ddd;
   position: relative;
 }
 
-.markdown-fm-modal-header h2 {
+.yaml-cf-modal-header h2 {
   margin: 0;
   font-size: 20px;
 }
 
-.markdown-fm-modal-close {
+.yaml-cf-modal-close {
   position: absolute;
   right: 20px;
   top: 20px;
@@ -201,26 +202,26 @@
   height: 30px;
 }
 
-.markdown-fm-modal-close:hover {
+.yaml-cf-modal-close:hover {
   color: #000;
 }
 
-.markdown-fm-modal-body {
+.yaml-cf-modal-body {
   padding: 20px;
 }
 
-.markdown-fm-modal-footer {
+.yaml-cf-modal-footer {
   padding: 15px 20px;
   border-top: 1px solid #ddd;
   background: #f9f9f9;
   text-align: right;
 }
 
-.markdown-fm-modal-footer .button {
+.yaml-cf-modal-footer .button {
   margin-left: 10px;
 }
 
-#markdown-fm-schema-editor {
+#yaml-cf-schema-editor {
   font-family: 'Courier New', Courier, monospace;
   font-size: 13px;
   line-height: 1.6;
@@ -230,22 +231,22 @@
 }
 
 /* Meta Box Fields */
-.markdown-fm-fields {
+.yaml-cf-fields {
   margin-top: 15px;
 }
 
-.markdown-fm-field {
+.yaml-cf-field {
   margin-bottom: 20px;
   padding-bottom: 20px;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.markdown-fm-field:last-child {
+.yaml-cf-field:last-child {
   border-bottom: none;
 }
 
-.markdown-fm-field label,
-.markdown-fm-field p {
+.yaml-cf-field label,
+.yaml-cf-field p {
   display: block;
   font-weight: 600;
   margin-top: 0;
@@ -253,62 +254,62 @@
   color: #1d2327;
 }
 
-.markdown-fm-field input[type='text'],
-.markdown-fm-field input[type='number'],
-.markdown-fm-field input[type='date'],
-.markdown-fm-field input[type='datetime-local'],
-.markdown-fm-field textarea,
-.markdown-fm-field select {
+.yaml-cf-field input[type='text'],
+.yaml-cf-field input[type='number'],
+.yaml-cf-field input[type='date'],
+.yaml-cf-field input[type='datetime-local'],
+.yaml-cf-field textarea,
+.yaml-cf-field select {
   width: 100%;
   max-width: 600px;
 }
 
-.markdown-fm-field input[type='checkbox'] {
+.yaml-cf-field input[type='checkbox'] {
   width: auto;
   margin-right: 5px;
 }
 
-.markdown-fm-field textarea.code {
+.yaml-cf-field textarea.code {
   font-family: 'Courier New', Courier, monospace;
   font-size: 13px;
   background: #f5f5f5;
 }
 
 /* Image and File Upload */
-.markdown-fm-media-buttons {
+.yaml-cf-media-buttons {
   display: flex;
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
 }
 
-.markdown-fm-clear-media {
+.yaml-cf-clear-media {
   color: #b32d2e;
   border-color: #b32d2e;
 }
 
-.markdown-fm-clear-media:hover {
+.yaml-cf-clear-media:hover {
   background: #b32d2e;
   color: #fff;
   border-color: #b32d2e;
 }
 
-.markdown-fm-image-preview {
+.yaml-cf-image-preview {
   margin-top: 10px;
 }
 
-.markdown-fm-upload-image + .markdown-fm-image-preview {
+.yaml-cf-upload-image + .yaml-cf-image-preview {
   width: 100%;
   margin-top: -10px;
 }
 
-.markdown-fm-image-preview img {
+.yaml-cf-image-preview img {
   border: 1px solid #ddd;
   padding: 5px;
   background: #fff;
 }
 
-.markdown-fm-file-name {
+.yaml-cf-file-name {
   margin-top: 10px;
   padding: 8px 12px;
   background: #f5f5f5;
@@ -318,38 +319,38 @@
 }
 
 /* Reset Data Button */
-.markdown-fm-reset-data {
+.yaml-cf-reset-data {
   display: flex;
   align-items: center;
   gap: 5px;
 }
 
-.markdown-fm-reset-data .dashicons {
+.yaml-cf-reset-data .dashicons {
   font-size: 20px;
   width: 20px;
   height: 20px;
 }
 
 /* Object Fields */
-.markdown-fm-object {
+.yaml-cf-object {
   margin-left: 20px;
   padding-left: 20px;
   border-left: 3px solid #2271b1;
 }
 
 /* Block/Repeater Fields */
-.markdown-fm-block-container {
+.yaml-cf-block-container {
   border: 1px solid #ddd;
   padding: 15px;
   background: #fafafa;
   border-radius: 3px;
 }
 
-.markdown-fm-block-list {
+.yaml-cf-block-list {
   margin-bottom: 15px;
 }
 
-.markdown-fm-block-item {
+.yaml-cf-block-item {
   background: #fff;
   border: 1px solid #ddd;
   padding: 15px;
@@ -357,7 +358,7 @@
   border-radius: 3px;
 }
 
-.markdown-fm-block-header {
+.yaml-cf-block-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -366,50 +367,50 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
-.markdown-fm-block-header strong {
+.yaml-cf-block-header strong {
   font-size: 14px;
   color: #1d2327;
 }
 
-.markdown-fm-remove-block {
+.yaml-cf-remove-block {
   color: #b32d2e;
   border-color: #b32d2e;
 }
 
-.markdown-fm-remove-block:hover {
+.yaml-cf-remove-block:hover {
   background: #b32d2e;
   color: #fff;
   border-color: #b32d2e;
 }
 
-.markdown-fm-block-fields {
+.yaml-cf-block-fields {
   margin-top: 10px;
 }
 
-.markdown-fm-block-fields .markdown-fm-field {
+.yaml-cf-block-fields .yaml-cf-field {
   margin-bottom: 15px;
   padding-bottom: 15px;
 }
 
-.markdown-fm-block-controls {
+.yaml-cf-block-controls {
   display: flex;
   gap: 10px;
   align-items: center;
 }
 
-.markdown-fm-block-type-select {
+.yaml-cf-block-type-select {
   flex: 1;
   max-width: 300px;
 }
 
 /* Loading State */
-.markdown-fm-loading {
+.yaml-cf-loading {
   opacity: 0.5;
   pointer-events: none;
 }
 
 /* Unsaved Changes Indicator */
-.markdown-fm-unsaved-indicator {
+.yaml-cf-unsaved-indicator {
   display: none;
   position: fixed;
   top: 32px;
@@ -425,11 +426,11 @@
   animation: slideDown 0.3s ease-out;
 }
 
-.markdown-fm-unsaved-indicator.visible {
+.yaml-cf-unsaved-indicator.visible {
   display: block;
 }
 
-.markdown-fm-unsaved-indicator .dashicons {
+.yaml-cf-unsaved-indicator .dashicons {
   font-size: 18px;
   width: 18px;
   height: 18px;
@@ -448,19 +449,19 @@
   }
 }
 
-.markdown-fm-has-changes .button-primary {
+.yaml-cf-has-changes .button-primary {
   background: #f0ad4e;
   border-color: #ec971f;
   box-shadow: 0 1px 0 #ec971f;
 }
 
-.markdown-fm-has-changes .button-primary:hover {
+.yaml-cf-has-changes .button-primary:hover {
   background: #ec971f;
   border-color: #d58512;
 }
 
 /* Success/Error Messages */
-#markdown-fm-notifications {
+#yaml-cf-notifications {
   position: fixed;
   top: 32px;
   right: 20px;
@@ -471,7 +472,7 @@
   max-width: 350px;
 }
 
-.markdown-fm-message {
+.yaml-cf-message {
   padding: 12px 15px;
   border-radius: 3px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -490,26 +491,26 @@
   }
 }
 
-.markdown-fm-message.success {
+.yaml-cf-message.success {
   background: #d7f4d7;
   border-left: 4px solid #46b450;
   color: #2c662d;
 }
 
-.markdown-fm-message.error {
+.yaml-cf-message.error {
   background: #fbeaea;
   border-left: 4px solid #dc3232;
   color: #761919;
 }
 
-.markdown-fm-message.warning {
+.yaml-cf-message.warning {
   background: #fff3cd;
   border-left: 4px solid #f0ad4e;
   color: #856404;
 }
 
 /* Documentation Page */
-.markdown-fm-docs-content {
+.yaml-cf-docs-content {
   background: #fff;
   padding: 30px;
   border-radius: 8px;
@@ -517,7 +518,7 @@
   line-height: 1.8;
 }
 
-.markdown-fm-docs-content code {
+.yaml-cf-docs-content code {
   background: #f6f7f7;
   padding: 2px 6px;
   border-radius: 3px;
@@ -526,7 +527,7 @@
   color: #d63638;
 }
 
-.markdown-fm-docs-content pre {
+.yaml-cf-docs-content pre {
   background: #1e1e1e;
   padding: 20px;
   border-radius: 6px;
@@ -534,7 +535,7 @@
   margin: 20px 0;
 }
 
-.markdown-fm-docs-content pre code {
+.yaml-cf-docs-content pre code {
   background: transparent;
   padding: 0;
   color: #d4d4d4;
@@ -543,7 +544,7 @@
 }
 
 /*
-.markdown-fm-docs-content h2 {
+.yaml-cf-docs-content h2 {
   color: #fdf3f7;
   font-size: 28px;
   font-weight: 600;
@@ -553,11 +554,11 @@
   border-bottom: 2px solid #667eea;
 }
 
-.markdown-fm-docs-content h2:first-child {
+.yaml-cf-docs-content h2:first-child {
   margin-top: 0;
 }
 
-.markdown-fm-docs-content h3 {
+.yaml-cf-docs-content h3 {
   color: #fdf3f7;
   font-size: 22px;
   font-weight: 600;
@@ -565,38 +566,38 @@
   margin-bottom: 15px;
 }
 
-.markdown-fm-docs-content p {
+.yaml-cf-docs-content p {
   margin-bottom: 15px;
   color: #fcf3fa;
 }
 
-.markdown-fm-docs-content ul {
+.yaml-cf-docs-content ul {
   margin-left: 20px;
   margin-bottom: 15px;
 }
 
-.markdown-fm-docs-content li {
+.yaml-cf-docs-content li {
   margin-bottom: 8px;
   color: #fcf3fa;
 }
 
-.markdown-fm-docs-content a {
+.yaml-cf-docs-content a {
   color: #667eea;
   text-decoration: none;
   border-bottom: 1px solid transparent;
   transition: border-color 0.2s;
 }
 
-.markdown-fm-docs-content a:hover {
+.yaml-cf-docs-content a:hover {
   border-bottom-color: #667eea;
 }
 
-.markdown-fm-docs-content strong {
+.yaml-cf-docs-content strong {
   font-weight: 500;
   color: #fdf3f7;
 }
 
-.markdown-fm-docs-content blockquote {
+.yaml-cf-docs-content blockquote {
   border-left: 4px solid #667eea;
   padding: 10px 20px;
   margin: 20px 0;
@@ -610,7 +611,7 @@
     overflow-x: auto;
   }
 
-  .markdown-fm-admin-container .wp-list-table td {
+  .yaml-cf-admin-container .wp-list-table td {
     white-space: nowrap;
     width: fit-content;
   }
@@ -618,72 +619,72 @@
 
 /* Responsive */
 @media screen and (max-width: 782px) {
-  .markdown-fm-header {
+  .yaml-cf-header {
     padding: 20px;
   }
 
-  .markdown-fm-header-content {
+  .yaml-cf-header-content {
     flex-direction: column;
     text-align: center;
   }
 
-  .markdown-fm-logo {
+  .yaml-cf-logo {
     max-width: 60px;
   }
 
-  .markdown-fm-header-text h1 {
+  .yaml-cf-header-text h1 {
     font-size: 24px;
   }
 
-  .markdown-fm-tagline {
+  .yaml-cf-tagline {
     font-size: 14px;
   }
 
-  #markdown-fm-notifications {
+  #yaml-cf-notifications {
     top: 46px;
     right: 10px;
     left: 10px;
     max-width: none;
   }
 
-  .markdown-fm-message {
+  .yaml-cf-message {
     min-width: auto;
   }
 
-  .markdown-fm-docs-content {
+  .yaml-cf-docs-content {
     padding: 20px;
   }
 
-  .markdown-fm-docs-content h2 {
+  .yaml-cf-docs-content h2 {
     font-size: 24px;
   }
 
-  .markdown-fm-docs-content h3 {
+  .yaml-cf-docs-content h3 {
     font-size: 20px;
   }
 
-  .markdown-fm-docs-content pre {
+  .yaml-cf-docs-content pre {
     padding: 15px;
     font-size: 12px;
   }
 
-  .markdown-fm-modal-content {
+  .yaml-cf-modal-content {
     width: 95%;
     margin: 2% auto;
   }
 
-  .markdown-fm-block-header {
+  .yaml-cf-block-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
 
-  .markdown-fm-block-controls {
+  .yaml-cf-block-controls {
     flex-direction: column;
     width: 100%;
   }
 
-  .markdown-fm-block-type-select {
+  .yaml-cf-block-type-select {
     max-width: 100%;
     width: 100%;
   }

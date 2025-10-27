@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 }
 ?>
 
-<p>A WordPress plugin for managing YAML frontmatter schemas in theme templates and partials. Inspired by <a href="https://pagescms.org/docs/" target="_blank">PagesCMS</a>, Markdown FM allows you to define structured content schemas with an intuitive interface and ACF-like template functions.</p>
+<p>A WordPress plugin for managing YAML frontmatter schemas in theme templates and partials. Inspired by <a href="https://pagescms.org/docs/" target="_blank">PagesCMS</a>, YAML Custom Fields allows you to define structured content schemas with an intuitive interface and ACF-like template functions.</p>
 
 <blockquote>Vibe-coded with Claude.</blockquote>
 
@@ -31,23 +31,23 @@ if (!defined('ABSPATH')) {
 <h2>Screenshots</h2>
 
 <h3>1. Main Admin Page</h3>
-<p><img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/screenshot-1.png'); ?>" alt="Main Markdown FM admin page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-1.png'); ?>" alt="Main YAML Custom Fields admin page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Main admin page showing page templates and template partials with enable/disable toggles</em></p>
 
 <h3>2. Schema Editor - Page Templates</h3>
-<p><img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/screenshot-2.png'); ?>" alt="Schema editor for page templates" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-2.png'); ?>" alt="Schema editor for page templates" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Schema editor for main page templates with YAML syntax for defining custom fields</em></p>
 
 <h3>3. Schema Editor - Partial Templates</h3>
-<p><img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/screenshot-3.png'); ?>" alt="Schema editor for partials" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-3.png'); ?>" alt="Schema editor for partials" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Schema editor for partial templates (headers, footers, etc.)</em></p>
 
 <h3>4. Partial Data Editor</h3>
-<p><img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/screenshot-4.png'); ?>" alt="Partial data editor" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-4.png'); ?>" alt="Partial data editor" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Partial data editor for managing global content in template partials</em></p>
 
 <h3>5. Documentation Page</h3>
-<p><img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'assets/screenshot-5.png'); ?>" alt="Documentation page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-5.png'); ?>" alt="Documentation page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Comprehensive documentation with guides and examples</em></p>
 
 <h2>Installation</h2>
@@ -57,10 +57,10 @@ if (!defined('ABSPATH')) {
 <ol>
   <li>Log in to your WordPress admin dashboard</li>
   <li>Navigate to <strong>Plugins → Add New</strong></li>
-  <li>Search for "Markdown FM"</li>
-  <li>Click <strong>Install Now</strong> next to the Markdown FM plugin</li>
+  <li>Search for "YAML Custom Fields"</li>
+  <li>Click <strong>Install Now</strong> next to the YAML Custom Fields plugin</li>
   <li>Click <strong>Activate</strong> after installation completes</li>
-  <li>Go to <strong>Markdown FM</strong> in the admin menu to configure your schemas</li>
+  <li>Go to <strong>YAML Custom Fields</strong> in the admin menu to configure your schemas</li>
 </ol>
 
 <h3>Manual Installation</h3>
@@ -68,14 +68,14 @@ if (!defined('ABSPATH')) {
 <p>If you're installing from source or a ZIP file:</p>
 
 <ol>
-  <li>Upload the <code>markdown-fm</code> folder to <code>/wp-content/plugins/</code></li>
+  <li>Upload the <code>yaml-custom-fields</code> folder to <code>/wp-content/plugins/</code></li>
   <li>If installing from source, navigate to the plugin directory and install dependencies:
-    <pre><code>cd wp-content/plugins/markdown-fm
+    <pre><code>cd wp-content/plugins/yaml-custom-fields
 composer install</code></pre>
     <strong>Note:</strong> If you downloaded from the WordPress plugin directory, dependencies are already included.
   </li>
   <li>Activate the plugin through the <strong>Plugins</strong> menu in WordPress</li>
-  <li>Go to <strong>Markdown FM</strong> in the admin menu to configure your schemas</li>
+  <li>Go to <strong>YAML Custom Fields</strong> in the admin menu to configure your schemas</li>
 </ol>
 
 <h2>Quick Start</h2>
@@ -83,7 +83,7 @@ composer install</code></pre>
 <h3>1. Enable YAML for a Template</h3>
 
 <ol>
-  <li>Go to <strong>Markdown FM</strong> in your WordPress admin</li>
+  <li>Go to <strong>YAML Custom Fields</strong> in your WordPress admin</li>
   <li>Find your template in the "Page Templates" section</li>
   <li>Toggle the "Enable YAML" switch</li>
   <li>Click "Add Schema" or "Edit Schema"</li>
@@ -142,7 +142,7 @@ composer install</code></pre>
 <ol>
   <li>Create or edit a page/post</li>
   <li>Select your template from the <strong>Template</strong> dropdown</li>
-  <li>The <strong>Markdown FM Schema</strong> meta box appears below the editor</li>
+  <li>The <strong>YAML Custom Fields Schema</strong> meta box appears below the editor</li>
   <li>Fill in your custom fields</li>
   <li>Publish!</li>
 </ol>
@@ -153,11 +153,11 @@ composer install</code></pre>
 
 <pre><code>&lt;?php
 // Get individual fields using short alias
-$hero_title = mdfm_get_field('hero_title');
-$hero_image = mdfm_get_image('hero_image');
-$description = mdfm_get_field('description');
-$cta = mdfm_get_field('cta_button');
-$features = mdfm_get_field('features');
+$hero_title = ycf_get_field('hero_title');
+$hero_image = ycf_get_image('hero_image');
+$description = ycf_get_field('description');
+$cta = ycf_get_field('cta_button');
+$features = ycf_get_field('features');
 ?&gt;
 
 &lt;div class="hero"&gt;
@@ -194,63 +194,63 @@ $features = mdfm_get_field('features');
 
 <h2>Template Functions</h2>
 
-<p>Markdown FM provides ACF-like template functions for retrieving your data:</p>
+<p>YAML Custom Fields provides ACF-like template functions for retrieving your data:</p>
 
-<h3><code>mdfm_get_field($field_name, $post_id = null)</code></h3>
+<h3><code>ycf_get_field($field_name, $post_id = null)</code></h3>
 
 <p>Get a single field value.</p>
 
 <pre><code>// For current page/post
-$title = mdfm_get_field('hero_title');
+$title = ycf_get_field('hero_title');
 
 // For specific post ID
-$title = mdfm_get_field('hero_title', 123);
+$title = ycf_get_field('hero_title', 123);
 
 // For partials
-$logo = mdfm_get_field('logo', 'partial:header.php');
-$copyright = mdfm_get_field('copyright', 'partial:footer.php');
+$logo = ycf_get_field('logo', 'partial:header.php');
+$copyright = ycf_get_field('copyright', 'partial:footer.php');
 
 // For partials in subdirectories
-$menu = mdfm_get_field('menu_items', 'partial:partials/navigation.php');</code></pre>
+$menu = ycf_get_field('menu_items', 'partial:partials/navigation.php');</code></pre>
 
-<h3><code>mdfm_get_fields($post_id = null)</code></h3>
+<h3><code>ycf_get_fields($post_id = null)</code></h3>
 
 <p>Get all fields at once.</p>
 
 <pre><code>// For current page/post
-$fields = mdfm_get_fields();
+$fields = ycf_get_fields();
 // Returns: ['hero_title' => 'Welcome', 'description' => '...', ...]
 
 // For partials
-$header_data = mdfm_get_fields('partial:header.php');</code></pre>
+$header_data = ycf_get_fields('partial:header.php');</code></pre>
 
-<h3><code>mdfm_has_field($field_name, $post_id = null)</code></h3>
+<h3><code>ycf_has_field($field_name, $post_id = null)</code></h3>
 
 <p>Check if a field exists and has a value.</p>
 
-<pre><code>if (mdfm_has_field('hero_title')) {
-  echo '&lt;h1&gt;' . esc_html(mdfm_get_field('hero_title')) . '&lt;/h1&gt;';
+<pre><code>if (ycf_has_field('hero_title')) {
+  echo '&lt;h1&gt;' . esc_html(ycf_get_field('hero_title')) . '&lt;/h1&gt;';
 }
 
 // For partials
-if (mdfm_has_field('logo', 'partial:header.php')) {
-  $logo = mdfm_get_field('logo', 'partial:header.php');
+if (ycf_has_field('logo', 'partial:header.php')) {
+  $logo = ycf_get_field('logo', 'partial:header.php');
 }</code></pre>
 
 <p><strong>Long-form aliases</strong> are also available:</p>
 <ul>
-  <li><code>markdown_fm_get_field()</code></li>
-  <li><code>markdown_fm_get_fields()</code></li>
-  <li><code>markdown_fm_has_field()</code></li>
+  <li><code>yaml_cf_get_field()</code></li>
+  <li><code>yaml_cf_get_fields()</code></li>
+  <li><code>yaml_cf_has_field()</code></li>
 </ul>
 
 <h2>Working with Partials</h2>
 
-<p>Partials (like <code>header.php</code>, <code>footer.php</code>, <code>sidebar.php</code>) have <strong>global, site-wide data</strong> that you manage from the Markdown FM admin page.</p>
+<p>Partials (like <code>header.php</code>, <code>footer.php</code>, <code>sidebar.php</code>) have <strong>global, site-wide data</strong> that you manage from the YAML Custom Fields admin page.</p>
 
 <h3>Partial Detection</h3>
 
-<p>Markdown FM automatically detects partials in two ways:</p>
+<p>YAML Custom Fields automatically detects partials in two ways:</p>
 
 <h4>Automatic Detection (Standard Partials)</h4>
 
@@ -265,12 +265,12 @@ if (mdfm_has_field('logo', 'partial:header.php')) {
 
 <h4>Manual Detection (Custom Partials)</h4>
 
-<p>For custom partials with non-standard names, add the <code>@mdfm</code> marker in the file header:</p>
+<p>For custom partials with non-standard names, add the <code>@ycf</code> marker in the file header:</p>
 
 <pre><code>&lt;?php
 /**
  * Custom Navigation Partial
- * @mdfm
+ * @ycf
  */
 
 // Your template code here</code></pre>
@@ -278,16 +278,16 @@ if (mdfm_has_field('logo', 'partial:header.php')) {
 <p>The marker can appear anywhere in the <strong>first 30 lines</strong> of the file, in any comment style:</p>
 
 <pre><code>&lt;?php
-// @mdfm - Enable Markdown FM for this partial
+// @ycf - Enable YAML Custom Fields for this partial
 
-/* @mdfm */
+/* @ycf */
 
 /**
  * Some description
- * @mdfm
+ * @ycf
  */</code></pre>
 
-<p>After adding the marker, click the <strong>"Refresh Template List"</strong> button in the Markdown FM admin page.</p>
+<p>After adding the marker, click the <strong>"Refresh Template List"</strong> button in the YAML Custom Fields admin page.</p>
 
 <h3>Example: Header Partial</h3>
 
@@ -317,10 +317,10 @@ if (mdfm_has_field('logo', 'partial:header.php')) {
 <p><strong>Usage</strong> in <code>header.php</code>:</p>
 
 <pre><code>&lt;?php
-$logo = mdfm_get_field('logo', 'partial:header.php');
-$site_title = mdfm_get_field('site_title', 'partial:header.php');
-$show_search = mdfm_get_field('show_search', 'partial:header.php');
-$menu_cta = mdfm_get_field('menu_cta', 'partial:header.php');
+$logo = ycf_get_field('logo', 'partial:header.php');
+$site_title = ycf_get_field('site_title', 'partial:header.php');
+$show_search = ycf_get_field('show_search', 'partial:header.php');
+$menu_cta = ycf_get_field('menu_cta', 'partial:header.php');
 ?&gt;
 
 &lt;header class="site-header"&gt;
@@ -349,7 +349,7 @@ $menu_cta = mdfm_get_field('menu_cta', 'partial:header.php');
 
 <h2>Field Types</h2>
 
-<p>Markdown FM supports all field types from Pages CMS:</p>
+<p>YAML Custom Fields supports all field types from Pages CMS:</p>
 
 <h3>String</h3>
 
@@ -478,7 +478,7 @@ $menu_cta = mdfm_get_field('menu_cta', 'partial:header.php');
   label: Featured Image
   type: image</code></pre>
 
-<p>Returns the attachment ID. Use <code>mdfm_get_image()</code> helper function to get full image data.</p>
+<p>Returns the attachment ID. Use <code>ycf_get_image()</code> helper function to get full image data.</p>
 
 <h3>File</h3>
 
@@ -488,7 +488,7 @@ $menu_cta = mdfm_get_field('menu_cta', 'partial:header.php');
   label: PDF Brochure
   type: file</code></pre>
 
-<p>Returns the attachment ID. Use <code>mdfm_get_file()</code> helper function to get full file data.</p>
+<p>Returns the attachment ID. Use <code>ycf_get_file()</code> helper function to get full file data.</p>
 
 <h3>Object</h3>
 
@@ -510,7 +510,7 @@ $menu_cta = mdfm_get_field('menu_cta', 'partial:header.php');
 
 <p><strong>Access nested fields:</strong></p>
 
-<pre><code>$author = mdfm_get_field('author');
+<pre><code>$author = ycf_get_field('author');
 echo $author['name'];
 echo $author['bio'];</code></pre>
 
@@ -553,7 +553,7 @@ echo $author['bio'];</code></pre>
 <p><strong>Usage in templates:</strong></p>
 
 <pre><code>&lt;?php
-$sections = mdfm_get_field('page_sections');
+$sections = ycf_get_field('page_sections');
 
 if ($sections) {
   foreach ($sections as $section) {
@@ -585,13 +585,13 @@ if ($sections) {
 
 <h2>Helper Functions for Images and Files</h2>
 
-<p>Since image and file fields store attachment IDs, Markdown FM provides helper functions to retrieve full attachment data:</p>
+<p>Since image and file fields store attachment IDs, YAML Custom Fields provides helper functions to retrieve full attachment data:</p>
 
-<h3><code>mdfm_get_image($field_name, $post_id = null, $size = 'full')</code></h3>
+<h3><code>ycf_get_image($field_name, $post_id = null, $size = 'full')</code></h3>
 
 <p>Get comprehensive image data including URL, alt text, dimensions, and more.</p>
 
-<pre><code>$image = mdfm_get_image('featured_image');
+<pre><code>$image = ycf_get_image('featured_image');
 
 if ($image) {
   echo '&lt;img src="' . esc_url($image['url']) . '"
@@ -612,11 +612,11 @@ if ($image) {
   <li><code>height</code> - Image height</li>
 </ul>
 
-<h3><code>mdfm_get_file($field_name, $post_id = null)</code></h3>
+<h3><code>ycf_get_file($field_name, $post_id = null)</code></h3>
 
 <p>Get comprehensive file data including URL, path, size, and MIME type.</p>
 
-<pre><code>$pdf = mdfm_get_file('pdf_brochure');
+<pre><code>$pdf = ycf_get_file('pdf_brochure');
 
 if ($pdf) {
   echo '&lt;a href="' . esc_url($pdf['url']) . '" download&gt;';
@@ -651,22 +651,22 @@ if ($pdf) {
 
 <h3>Page Templates</h3>
 <ul>
-  <li><strong>Location</strong>: Post meta with key <code>_markdown_fm_data</code></li>
+  <li><strong>Location</strong>: Post meta with key <code>_yaml_cf_data</code></li>
   <li><strong>Scope</strong>: Per post/page</li>
   <li><strong>Editing</strong>: WordPress post/page editor</li>
 </ul>
 
 <h3>Template Partials</h3>
 <ul>
-  <li><strong>Location</strong>: WordPress options with key <code>markdown_fm_partial_data</code></li>
+  <li><strong>Location</strong>: WordPress options with key <code>yaml_cf_partial_data</code></li>
   <li><strong>Scope</strong>: Global (site-wide)</li>
-  <li><strong>Editing</strong>: Markdown FM admin page → "Manage Data" button</li>
+  <li><strong>Editing</strong>: YAML Custom Fields admin page → "Manage Data" button</li>
 </ul>
 
 <h3>Plugin Settings</h3>
 <ul>
-  <li><code>markdown_fm_template_settings</code> - Tracks which templates have YAML enabled</li>
-  <li><code>markdown_fm_schemas</code> - Stores YAML schemas for each template/partial</li>
+  <li><code>yaml_cf_template_settings</code> - Tracks which templates have YAML enabled</li>
+  <li><code>yaml_cf_schemas</code> - Stores YAML schemas for each template/partial</li>
 </ul>
 
 <h2>Requirements</h2>
@@ -701,10 +701,10 @@ if ($pdf) {
 
 <p>When you <strong>delete</strong> (not deactivate) the plugin, it automatically cleans up:</p>
 <ul>
-  <li>Template settings (<code>markdown_fm_template_settings</code>)</li>
-  <li>Schemas (<code>markdown_fm_schemas</code>)</li>
-  <li>Partial data (<code>markdown_fm_partial_data</code>)</li>
-  <li>All post meta data (<code>_markdown_fm_data</code>)</li>
+  <li>Template settings (<code>yaml_cf_template_settings</code>)</li>
+  <li>Schemas (<code>yaml_cf_schemas</code>)</li>
+  <li>Partial data (<code>yaml_cf_partial_data</code>)</li>
+  <li>All post meta data (<code>_yaml_cf_data</code>)</li>
 </ul>
 
 <h2>Troubleshooting</h2>
@@ -741,10 +741,10 @@ if ($pdf) {
 
 <h2>Contributing</h2>
 
-<p>Contributions are welcome! If you'd like to contribute to Markdown FM:</p>
+<p>Contributions are welcome! If you'd like to contribute to YAML Custom Fields:</p>
 
 <ol>
-  <li>Fork the repository at <a href="https://github.com/maliMirkec/markdown-fm" target="_blank">https://github.com/maliMirkec/markdown-fm</a></li>
+  <li>Fork the repository at <a href="https://github.com/maliMirkec/yaml-custom-fields" target="_blank">https://github.com/maliMirkec/yaml-custom-fields</a></li>
   <li>Create a feature branch (<code>git checkout -b feature/amazing-feature</code>)</li>
   <li>Commit your changes (<code>git commit -m 'Add amazing feature'</code>)</li>
   <li>Push to the branch (<code>git push origin feature/amazing-feature</code>)</li>
@@ -757,7 +757,7 @@ if ($pdf) {
 
 <p>Found a bug or have a feature request? Please report it on GitHub:</p>
 
-<p><a href="https://github.com/maliMirkec/markdown-fm/issues" target="_blank" class="button button-primary">Report an Issue on GitHub</a></p>
+<p><a href="https://github.com/maliMirkec/yaml-custom-fields/issues" target="_blank" class="button button-primary">Report an Issue on GitHub</a></p>
 
 <p>When reporting issues, please include:</p>
 <ul>
@@ -774,7 +774,7 @@ if ($pdf) {
 <ul>
   <li><strong>Author</strong>: <a href="https://www.silvestar.codes" target="_blank">Silvestar Bistrović</a></li>
   <li><strong>Email</strong>: me@silvestar.codes</li>
-  <li><strong>GitHub</strong>: <a href="https://github.com/maliMirkec/markdown-fm" target="_blank">maliMirkec/markdown-fm</a></li>
+  <li><strong>GitHub</strong>: <a href="https://github.com/maliMirkec/yaml-custom-fields" target="_blank">maliMirkec/yaml-custom-fields</a></li>
   <li><strong>Inspired by</strong>: <a href="https://pagescms.org/" target="_blank">PagesCMS</a> - Open-source CMS for static websites</li>
 </ul>
 
@@ -792,7 +792,7 @@ if ($pdf) {
   <li>ACF-like template functions</li>
   <li>Block/repeater functionality</li>
   <li>WordPress media integration with attachment ID storage</li>
-  <li>Helper functions for images and files (<code>mdfm_get_image()</code>, <code>mdfm_get_file()</code>)</li>
+  <li>Helper functions for images and files (<code>ycf_get_image()</code>, <code>ycf_get_file()</code>)</li>
   <li>Administrator-only access</li>
   <li>Clean uninstall</li>
   <li>Clear buttons for image and file fields</li>

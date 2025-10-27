@@ -1,5 +1,5 @@
 {
-  "name": "silvestar/markdown-fm",
+  "name": "silvestar/yaml-custom-fields",
   "description": "A WordPress plugin for managing YAML frontmatter schemas in theme templates",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
@@ -10,7 +10,7 @@
   },
   "autoload": {
     "psr-4": {
-      "MarkdownFM\\": "src/"
+      "YamlCF\\": "src/"
     }
   },
   "config": {

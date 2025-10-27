@@ -1,12 +1,12 @@
 /**
- * Markdown FM Admin JavaScript
+ * YAML Custom Fields Admin JavaScript
  * File: assets/admin.js
  */
 
 (function ($) {
   'use strict';
 
-  const MarkdownFM = {
+  const YamlCF = {
     hasMetaBoxChanges: false,
     originalMetaBoxData: {},
 
@@ -18,51 +18,51 @@
 
     bindEvents: function () {
       // Enable/Disable YAML for templates
-      $(document).on('change', '.markdown-fm-enable-yaml', this.toggleYAML);
+      $(document).on('change', '.yaml-cf-enable-yaml', this.toggleYAML);
 
       // Edit Schema button
-      $(document).on('click', '.markdown-fm-edit-schema', this.openSchemaModal);
+      $(document).on('click', '.yaml-cf-edit-schema', this.openSchemaModal);
 
       // Save Schema
-      $(document).on('click', '.markdown-fm-save-schema', this.saveSchema);
+      $(document).on('click', '.yaml-cf-save-schema', this.saveSchema);
 
-      // Note: Partial data editing moved to dedicated page (markdown-fm-edit-partial)
+      // Note: Partial data editing moved to dedicated page (yaml-cf-edit-partial)
 
       // Close Schema Modal
-      $(document).on('click', '.markdown-fm-modal-close', this.closeModal);
-      $(document).on('click', '.markdown-fm-modal', function (e) {
-        if ($(e.target).hasClass('markdown-fm-modal')) {
-          MarkdownFM.closeModal();
+      $(document).on('click', '.yaml-cf-modal-close', this.closeModal);
+      $(document).on('click', '.yaml-cf-modal', function (e) {
+        if ($(e.target).hasClass('yaml-cf-modal')) {
+          YamlCF.closeModal();
         }
       });
 
       // Block Controls
-      $(document).on('click', '.markdown-fm-add-block', this.addBlock);
-      $(document).on('click', '.markdown-fm-remove-block', this.removeBlock);
+      $(document).on('click', '.yaml-cf-add-block', this.addBlock);
+      $(document).on('click', '.yaml-cf-remove-block', this.removeBlock);
 
       // Clear Media
-      $(document).on('click', '.markdown-fm-clear-media', this.clearMedia);
+      $(document).on('click', '.yaml-cf-clear-media', this.clearMedia);
 
       // Reset All Data
-      $(document).on('click', '.markdown-fm-reset-data', this.resetAllData);
+      $(document).on('click', '.yaml-cf-reset-data', this.resetAllData);
 
       // Export/Import Settings
       $(document).on(
         'click',
-        '.markdown-fm-export-settings',
+        '.yaml-cf-export-settings',
         this.exportSettings
       );
       $(document).on(
         'click',
-        '.markdown-fm-import-settings-trigger',
+        '.yaml-cf-import-settings-trigger',
         this.triggerImport
       );
-      $(document).on('change', '#markdown-fm-import-file', this.importSettings);
+      $(document).on('change', '#yaml-cf-import-file', this.importSettings);
 
       // Escape key to close modal
       $(document).on('keydown', function (e) {
         if (e.key === 'Escape') {
-          MarkdownFM.closeModal();
+          YamlCF.closeModal();
         }
       });
     },
@@ -73,11 +73,11 @@
       const enabled = $checkbox.is(':checked');
 
       $.ajax({
-        url: markdownFM.ajax_url,
+        url: yamlCF.ajax_url,
         type: 'POST',
         data: {
-          action: 'markdown_fm_save_template_settings',
-          nonce: markdownFM.nonce,
+          action: 'yaml_cf_save_template_settings',
+          nonce: yamlCF.nonce,
           template: template,
           enabled: enabled,
         },
@@ -95,8 +95,8 @@
 
             if (enabled) {
               const editSchemaUrl =
-                markdownFM.admin_url +
-                'admin.php?page=markdown-fm-edit-schema&template=' +
+                yamlCF.admin_url +
+                'admin.php?page=yaml-cf-edit-schema&template=' +
                 encodeURIComponent(template);
               const hasSchema = response.data && response.data.has_schema;
               const buttonText = hasSchema ? 'Edit Schema' : 'Add Schema';
@@ -117,8 +117,8 @@
               if ($dataCell.length) {
                 if (hasSchema) {
                   const manageDataUrl =
-                    markdownFM.admin_url +
-                    'admin.php?page=markdown-fm-edit-partial&template=' +
+                    yamlCF.admin_url +
+                    'admin.php?page=yaml-cf-edit-partial&template=' +
                     encodeURIComponent(template);
                   $dataCell.html(
                     '<a href="' +
@@ -144,15 +144,15 @@
               }
             }
 
-            MarkdownFM.showMessage('Settings saved successfully', 'success');
+            YamlCF.showMessage('Settings saved successfully', 'success');
           } else {
             $checkbox.prop('checked', !enabled);
-            MarkdownFM.showMessage('Error saving settings', 'error');
+            YamlCF.showMessage('Error saving settings', 'error');
           }
         },
         error: function () {
           $checkbox.prop('checked', !enabled);
-          MarkdownFM.showMessage('Error saving settings', 'error');
+          YamlCF.showMessage('Error saving settings', 'error');
         },
       });
     },
@@ -162,72 +162,72 @@
       const template = $button.data('template');
       const templateName = $button.data('name');
 
-      $('#markdown-fm-template-name').text(templateName);
-      $('#markdown-fm-current-template').val(template);
+      $('#yaml-cf-template-name').text(templateName);
+      $('#yaml-cf-current-template').val(template);
 
       // Load existing schema
       $.ajax({
-        url: markdownFM.ajax_url,
+        url: yamlCF.ajax_url,
         type: 'POST',
         data: {
-          action: 'markdown_fm_get_schema',
-          nonce: markdownFM.nonce,
+          action: 'yaml_cf_get_schema',
+          nonce: yamlCF.nonce,
           template: template,
         },
         success: function (response) {
           if (response.success) {
-            $('#markdown-fm-schema-editor').val(response.data.schema || '');
+            $('#yaml-cf-schema-editor').val(response.data.schema || '');
           }
         },
       });
 
-      $('#markdown-fm-schema-modal').fadeIn(300);
+      $('#yaml-cf-schema-modal').fadeIn(300);
     },
 
     closeModal: function () {
-      $('.markdown-fm-modal').fadeOut(300);
+      $('.yaml-cf-modal').fadeOut(300);
     },
 
     saveSchema: function () {
-      const template = $('#markdown-fm-current-template').val();
-      const schema = $('#markdown-fm-schema-editor').val();
+      const template = $('#yaml-cf-current-template').val();
+      const schema = $('#yaml-cf-schema-editor').val();
 
       if (!schema.trim()) {
         alert('Please enter a schema');
         return;
       }
 
-      $('.markdown-fm-save-schema').prop('disabled', true).text('Saving...');
+      $('.yaml-cf-save-schema').prop('disabled', true).text('Saving...');
 
       $.ajax({
-        url: markdownFM.ajax_url,
+        url: yamlCF.ajax_url,
         type: 'POST',
         data: {
-          action: 'markdown_fm_save_schema',
-          nonce: markdownFM.nonce,
+          action: 'yaml_cf_save_schema',
+          nonce: yamlCF.nonce,
           template: template,
           schema: schema,
         },
         success: function (response) {
           if (response.success) {
-            MarkdownFM.showMessage('Schema saved successfully', 'success');
-            MarkdownFM.closeModal();
+            YamlCF.showMessage('Schema saved successfully', 'success');
+            YamlCF.closeModal();
 
             // Update the button text to "Edit Schema"
-            $('.markdown-fm-edit-schema[data-template="' + template + '"]')
+            $('.yaml-cf-edit-schema[data-template="' + template + '"]')
               .text('Edit Schema')
               .after(
                 '<span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span>'
               );
           } else {
-            MarkdownFM.showMessage('Error saving schema', 'error');
+            YamlCF.showMessage('Error saving schema', 'error');
           }
         },
         error: function () {
-          MarkdownFM.showMessage('Error saving schema', 'error');
+          YamlCF.showMessage('Error saving schema', 'error');
         },
         complete: function () {
-          $('.markdown-fm-save-schema')
+          $('.yaml-cf-save-schema')
             .prop('disabled', false)
             .text('Save Schema');
         },
@@ -235,8 +235,8 @@
     },
 
     addBlock: function () {
-      const $container = $(this).closest('.markdown-fm-block-container');
-      const $select = $container.find('.markdown-fm-block-type-select');
+      const $container = $(this).closest('.yaml-cf-block-container');
+      const $select = $container.find('.yaml-cf-block-type-select');
       const blockType = $select.val();
 
       if (!blockType) {
@@ -244,9 +244,9 @@
         return;
       }
 
-      const $blockList = $container.find('.markdown-fm-block-list');
+      const $blockList = $container.find('.yaml-cf-block-list');
       const fieldName = $container.data('field-name');
-      const index = $blockList.find('.markdown-fm-block-item').length;
+      const index = $blockList.find('.yaml-cf-block-item').length;
 
       // Generate unique ID for this block instance
       const uniqueId =
@@ -254,8 +254,8 @@
 
       // Get block definition from schema
       let blockDef = null;
-      if (markdownFM.schema && markdownFM.schema.fields) {
-        for (let field of markdownFM.schema.fields) {
+      if (yamlCF.schema && yamlCF.schema.fields) {
+        for (let field of yamlCF.schema.fields) {
           if (field.name === fieldName && field.blocks) {
             for (let block of field.blocks) {
               if (block.name === blockType) {
@@ -277,16 +277,16 @@
 
       // Create new block item
       const $blockItem = $('<div>', {
-        class: 'markdown-fm-block-item',
+        class: 'yaml-cf-block-item',
         'data-block-type': blockType,
       });
 
-      const $header = $('<div>', { class: 'markdown-fm-block-header' });
+      const $header = $('<div>', { class: 'yaml-cf-block-header' });
       $header.append($('<strong>').text(blockLabel));
       $header.append(
         $('<button>', {
           type: 'button',
-          class: 'button markdown-fm-remove-block',
+          class: 'button yaml-cf-remove-block',
           text: 'Remove',
         })
       );
@@ -295,7 +295,7 @@
       $blockItem.append(
         $('<input>', {
           type: 'hidden',
-          name: 'markdown_fm[' + fieldName + '][' + index + '][type]',
+          name: 'yaml_cf[' + fieldName + '][' + index + '][type]',
           value: blockType,
         })
       );
@@ -303,12 +303,12 @@
       // Add fields from block definition
       if (blockDef.fields && blockDef.fields.length > 0) {
         const $fieldsContainer = $('<div>', {
-          class: 'markdown-fm-block-fields',
+          class: 'yaml-cf-block-fields',
         });
 
         for (let blockField of blockDef.fields) {
-          const $field = $('<div>', { class: 'markdown-fm-field' });
-          const blockFieldId = 'mdfm_' + uniqueId + '_' + blockField.name;
+          const $field = $('<div>', { class: 'yaml-cf-field' });
+          const blockFieldId = 'ycf_' + uniqueId + '_' + blockField.name;
 
           $field.append(
             $('<label>', {
@@ -332,7 +332,7 @@
               $('<input>', {
                 type: 'hidden',
                 name:
-                  'markdown_fm[' +
+                  'yaml_cf[' +
                   fieldName +
                   '][' +
                   index +
@@ -349,7 +349,7 @@
             $field.append(
               $('<textarea>', {
                 name:
-                  'markdown_fm[' +
+                  'yaml_cf[' +
                   fieldName +
                   '][' +
                   index +
@@ -366,7 +366,7 @@
               $('<input>', {
                 type: 'number',
                 name:
-                  'markdown_fm[' +
+                  'yaml_cf[' +
                   fieldName +
                   '][' +
                   index +
@@ -383,7 +383,7 @@
               $('<input>', {
                 type: 'text',
                 name:
-                  'markdown_fm[' +
+                  'yaml_cf[' +
                   fieldName +
                   '][' +
                   index +
@@ -413,20 +413,20 @@
         )
       ) {
         $(this)
-          .closest('.markdown-fm-block-item')
+          .closest('.yaml-cf-block-item')
           .fadeOut(300, function () {
             $(this).remove();
             // Re-index remaining blocks
-            MarkdownFM.reindexBlocks();
+            YamlCF.reindexBlocks();
           });
       }
     },
 
     reindexBlocks: function () {
-      $('.markdown-fm-block-container').each(function () {
+      $('.yaml-cf-block-container').each(function () {
         const fieldName = $(this).data('field-name');
         $(this)
-          .find('.markdown-fm-block-item')
+          .find('.yaml-cf-block-item')
           .each(function (index) {
             // Update input names with new index
             $(this)
@@ -447,7 +447,7 @@
       let mediaUploader;
 
       // Image Upload
-      $(document).on('click', '.markdown-fm-upload-image', function (e) {
+      $(document).on('click', '.yaml-cf-upload-image', function (e) {
         e.preventDefault();
 
         const $button = $(this);
@@ -479,12 +479,12 @@
           $('#' + targetId).val(attachment.id);
 
           // Update preview
-          const $preview = $button.siblings('.markdown-fm-image-preview');
+          const $preview = $button.siblings('.yaml-cf-image-preview');
           if ($preview.length) {
             $preview.find('img').attr('src', attachment.url);
           } else {
             $button.after(
-              '<div class="markdown-fm-image-preview">' +
+              '<div class="yaml-cf-image-preview">' +
                 '<img src="' +
                 attachment.url +
                 '" style="max-width: 200px; display: block; margin-top: 10px;" />' +
@@ -497,7 +497,7 @@
       });
 
       // File Upload
-      $(document).on('click', '.markdown-fm-upload-file', function (e) {
+      $(document).on('click', '.yaml-cf-upload-file', function (e) {
         e.preventDefault();
 
         const $button = $(this);
@@ -526,12 +526,12 @@
           $('#' + targetId).val(attachment.id);
 
           // Update file name display
-          const $fileDisplay = $button.siblings('.markdown-fm-file-name');
+          const $fileDisplay = $button.siblings('.yaml-cf-file-name');
           if ($fileDisplay.length) {
             $fileDisplay.text(attachment.filename);
           } else {
             $button.after(
-              '<div class="markdown-fm-file-name">' +
+              '<div class="yaml-cf-file-name">' +
                 attachment.filename +
                 '</div>'
             );
@@ -562,12 +562,12 @@
 
       // Remove the preview/filename display
       $button
-        .closest('.markdown-fm-field')
-        .find('.markdown-fm-image-preview')
+        .closest('.yaml-cf-field')
+        .find('.yaml-cf-image-preview')
         .remove();
       $button
-        .closest('.markdown-fm-field')
-        .find('.markdown-fm-file-name')
+        .closest('.yaml-cf-field')
+        .find('.yaml-cf-file-name')
         .remove();
 
       // Remove the clear button itself
@@ -602,14 +602,14 @@
         $input.val(attachment.id);
 
         // Update/add preview
-        const $field = $button.closest('.markdown-fm-field');
-        let $preview = $field.find('.markdown-fm-image-preview');
+        const $field = $button.closest('.yaml-cf-field');
+        let $preview = $field.find('.yaml-cf-image-preview');
         if ($preview.length) {
           $preview.find('img').attr('src', attachment.url);
         } else {
           $field.append(
             $('<div>', {
-              class: 'markdown-fm-image-preview',
+              class: 'yaml-cf-image-preview',
               html:
                 '<img src="' +
                 attachment.url +
@@ -619,12 +619,12 @@
         }
 
         // Add clear button if it doesn't exist
-        const $buttonsDiv = $button.closest('.markdown-fm-media-buttons');
-        if (!$buttonsDiv.find('.markdown-fm-clear-media').length) {
+        const $buttonsDiv = $button.closest('.yaml-cf-media-buttons');
+        if (!$buttonsDiv.find('.yaml-cf-clear-media').length) {
           $buttonsDiv.append(
             $('<button>', {
               type: 'button',
-              class: 'button markdown-fm-clear-media',
+              class: 'button yaml-cf-clear-media',
               'data-target': targetId,
               text: 'Clear',
             })
@@ -660,26 +660,26 @@
         $input.val(attachment.id);
 
         // Update/add file name display
-        const $field = $button.closest('.markdown-fm-field');
-        let $fileDisplay = $field.find('.markdown-fm-file-name');
+        const $field = $button.closest('.yaml-cf-field');
+        let $fileDisplay = $field.find('.yaml-cf-file-name');
         if ($fileDisplay.length) {
           $fileDisplay.text(attachment.filename);
         } else {
           $field.append(
             $('<div>', {
-              class: 'markdown-fm-file-name',
+              class: 'yaml-cf-file-name',
               text: attachment.filename,
             })
           );
         }
 
         // Add clear button if it doesn't exist
-        const $buttonsDiv = $button.closest('.markdown-fm-media-buttons');
-        if (!$buttonsDiv.find('.markdown-fm-clear-media').length) {
+        const $buttonsDiv = $button.closest('.yaml-cf-media-buttons');
+        if (!$buttonsDiv.find('.yaml-cf-clear-media').length) {
           $buttonsDiv.append(
             $('<button>', {
               type: 'button',
-              class: 'button markdown-fm-clear-media',
+              class: 'button yaml-cf-clear-media',
               'data-target': targetId,
               text: 'Clear',
             })
@@ -704,7 +704,7 @@
       }
 
       // Reset all fields in the meta box
-      $('#markdown-fm-meta-box .markdown-fm-fields')
+      $('#yaml-cf-meta-box .yaml-cf-fields')
         .find('input, textarea, select')
         .each(function () {
           const $input = $(this);
@@ -715,11 +715,11 @@
           } else if (
             type === 'hidden' &&
             ($input
-              .closest('.markdown-fm-field')
-              .find('.markdown-fm-upload-image').length ||
+              .closest('.yaml-cf-field')
+              .find('.yaml-cf-upload-image').length ||
               $input
-                .closest('.markdown-fm-field')
-                .find('.markdown-fm-upload-file').length)
+                .closest('.yaml-cf-field')
+                .find('.yaml-cf-upload-file').length)
           ) {
             // Clear image/file fields
             $input.val('');
@@ -738,13 +738,13 @@
         });
 
       // Clear image previews and file names
-      $('#markdown-fm-meta-box .markdown-fm-image-preview').remove();
-      $('#markdown-fm-meta-box .markdown-fm-file-name').remove();
-      $('#markdown-fm-meta-box .markdown-fm-clear-media').remove();
+      $('#yaml-cf-meta-box .yaml-cf-image-preview').remove();
+      $('#yaml-cf-meta-box .yaml-cf-file-name').remove();
+      $('#yaml-cf-meta-box .yaml-cf-clear-media').remove();
 
       // Clear WordPress editors (if any)
       if (typeof tinymce !== 'undefined') {
-        $('#markdown-fm-meta-box .markdown-fm-fields')
+        $('#yaml-cf-meta-box .yaml-cf-fields')
           .find('textarea')
           .each(function () {
             const editorId = $(this).attr('id');
@@ -755,7 +755,7 @@
       }
 
       // Remove all blocks
-      $('#markdown-fm-meta-box .markdown-fm-block-item').remove();
+      $('#yaml-cf-meta-box .yaml-cf-block-item').remove();
 
       alert(
         'All custom field data has been cleared. Remember to save the page to make this change permanent.'
@@ -767,21 +767,21 @@
       const template = $button.data('template');
       const templateName = $button.data('name');
 
-      $('#markdown-fm-partial-name').text(templateName);
-      $('#markdown-fm-current-partial').val(template);
+      $('#yaml-cf-partial-name').text(templateName);
+      $('#yaml-cf-current-partial').val(template);
 
       // Load schema and existing data
       $.ajax({
-        url: markdownFM.ajax_url,
+        url: yamlCF.ajax_url,
         type: 'POST',
         data: {
-          action: 'markdown_fm_get_partial_data',
-          nonce: markdownFM.nonce,
+          action: 'yaml_cf_get_partial_data',
+          nonce: yamlCF.nonce,
           template: template,
         },
         success: function (response) {
           if (response.success) {
-            MarkdownFM.renderPartialFields(
+            YamlCF.renderPartialFields(
               response.data.schema,
               response.data.data || {}
             );
@@ -794,11 +794,11 @@
         },
       });
 
-      $('#markdown-fm-partial-data-modal').fadeIn(300);
+      $('#yaml-cf-partial-data-modal').fadeIn(300);
     },
 
     renderPartialFields: function (schema, data) {
-      const $container = $('#markdown-fm-partial-fields');
+      const $container = $('#yaml-cf-partial-fields');
       $container.empty();
 
       if (!schema || !schema.fields) {
@@ -809,7 +809,7 @@
       schema.fields.forEach(function (field) {
         const fieldValue = data[field.name] || field.default || '';
         const fieldId = 'partial_' + field.name;
-        const $fieldDiv = $('<div>', { class: 'markdown-fm-field' });
+        const $fieldDiv = $('<div>', { class: 'yaml-cf-field' });
 
         $fieldDiv.append(
           $('<label>', {
@@ -828,11 +828,11 @@
               value: fieldValue,
             });
             const $imageButtonsDiv = $('<div>', {
-              class: 'markdown-fm-media-buttons',
+              class: 'yaml-cf-media-buttons',
             });
             const $imageUploadBtn = $('<button>', {
               type: 'button',
-              class: 'button markdown-fm-upload-image-partial',
+              class: 'button yaml-cf-upload-image-partial',
               'data-target': fieldId,
               text: 'Upload Image',
             });
@@ -841,7 +841,7 @@
             if (fieldValue) {
               const $imageClearBtn = $('<button>', {
                 type: 'button',
-                class: 'button markdown-fm-clear-media',
+                class: 'button yaml-cf-clear-media',
                 'data-target': fieldId,
                 text: 'Clear',
               });
@@ -853,7 +853,7 @@
             if (fieldValue) {
               $fieldDiv.append(
                 $('<div>', {
-                  class: 'markdown-fm-image-preview',
+                  class: 'yaml-cf-image-preview',
                   html:
                     '<img src="' +
                     fieldValue +
@@ -871,11 +871,11 @@
               value: fieldValue,
             });
             const $fileButtonsDiv = $('<div>', {
-              class: 'markdown-fm-media-buttons',
+              class: 'yaml-cf-media-buttons',
             });
             const $fileUploadBtn = $('<button>', {
               type: 'button',
-              class: 'button markdown-fm-upload-file-partial',
+              class: 'button yaml-cf-upload-file-partial',
               'data-target': fieldId,
               text: 'Upload File',
             });
@@ -884,7 +884,7 @@
             if (fieldValue) {
               const $fileClearBtn = $('<button>', {
                 type: 'button',
-                class: 'button markdown-fm-clear-media',
+                class: 'button yaml-cf-clear-media',
                 'data-target': fieldId,
                 text: 'Clear',
               });
@@ -897,7 +897,7 @@
               const fileName = fieldValue.split('/').pop();
               $fieldDiv.append(
                 $('<div>', {
-                  class: 'markdown-fm-file-name',
+                  class: 'yaml-cf-file-name',
                   text: fileName,
                 })
               );
@@ -1012,8 +1012,8 @@
     },
 
     savePartialData: function () {
-      const template = $('#markdown-fm-current-partial').val();
-      const $fields = $('#markdown-fm-partial-fields').find(
+      const template = $('#yaml-cf-current-partial').val();
+      const $fields = $('#yaml-cf-partial-fields').find(
         'input, textarea, select'
       );
       const data = {};
@@ -1031,35 +1031,35 @@
         }
       });
 
-      $('.markdown-fm-save-partial-data')
+      $('.yaml-cf-save-partial-data')
         .prop('disabled', true)
         .text('Saving...');
 
       $.ajax({
-        url: markdownFM.ajax_url,
+        url: yamlCF.ajax_url,
         type: 'POST',
         data: {
-          action: 'markdown_fm_save_partial_data',
-          nonce: markdownFM.nonce,
+          action: 'yaml_cf_save_partial_data',
+          nonce: yamlCF.nonce,
           template: template,
           data: JSON.stringify(data),
         },
         success: function (response) {
           if (response.success) {
-            MarkdownFM.showMessage(
+            YamlCF.showMessage(
               'Partial data saved successfully',
               'success'
             );
-            MarkdownFM.closeModal();
+            YamlCF.closeModal();
           } else {
-            MarkdownFM.showMessage('Error saving partial data', 'error');
+            YamlCF.showMessage('Error saving partial data', 'error');
           }
         },
         error: function () {
-          MarkdownFM.showMessage('Error saving partial data', 'error');
+          YamlCF.showMessage('Error saving partial data', 'error');
         },
         complete: function () {
-          $('.markdown-fm-save-partial-data')
+          $('.yaml-cf-save-partial-data')
             .prop('disabled', false)
             .text('Save Data');
         },
@@ -1078,11 +1078,11 @@
         );
 
       $.ajax({
-        url: markdownFM.ajax_url,
+        url: yamlCF.ajax_url,
         type: 'POST',
         data: {
-          action: 'markdown_fm_export_settings',
-          nonce: markdownFM.nonce,
+          action: 'yaml_cf_export_settings',
+          nonce: yamlCF.nonce,
         },
         success: function (response) {
           if (response.success) {
@@ -1096,22 +1096,22 @@
               .replace(/[:.]/g, '-')
               .slice(0, -5);
             link.href = url;
-            link.download = 'markdown-fm-settings-' + timestamp + '.json';
+            link.download = 'yaml-cf-settings-' + timestamp + '.json';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
-            MarkdownFM.showMessage('Settings exported successfully', 'success');
+            YamlCF.showMessage('Settings exported successfully', 'success');
           } else {
-            MarkdownFM.showMessage(
+            YamlCF.showMessage(
               'Error exporting settings: ' + (response.data || 'Unknown error'),
               'error'
             );
           }
         },
         error: function () {
-          MarkdownFM.showMessage('AJAX error occurred during export', 'error');
+          YamlCF.showMessage('AJAX error occurred during export', 'error');
         },
         complete: function () {
           $button.prop('disabled', false).html(originalText);
@@ -1121,7 +1121,7 @@
 
     triggerImport: function (e) {
       e.preventDefault();
-      $('#markdown-fm-import-file').click();
+      $('#yaml-cf-import-file').click();
     },
 
     importSettings: function (e) {
@@ -1130,7 +1130,7 @@
 
       // Validate file type
       if (!file.name.endsWith('.json')) {
-        MarkdownFM.showMessage('Please select a valid JSON file', 'error');
+        YamlCF.showMessage('Please select a valid JSON file', 'error');
         return;
       }
 
@@ -1163,11 +1163,11 @@
           const importData = JSON.parse(evt.target.result);
 
           $.ajax({
-            url: markdownFM.ajax_url,
+            url: yamlCF.ajax_url,
             type: 'POST',
             data: {
-              action: 'markdown_fm_import_settings',
-              nonce: markdownFM.nonce,
+              action: 'yaml_cf_import_settings',
+              nonce: yamlCF.nonce,
               data: JSON.stringify(importData),
               merge: merge,
             },
@@ -1182,7 +1182,7 @@
                   message += '\nExported at: ' + info.exported_at;
                 }
                 alert(message);
-                MarkdownFM.showMessage(
+                YamlCF.showMessage(
                   'Settings imported successfully',
                   'success'
                 );
@@ -1192,7 +1192,7 @@
                   window.location.reload();
                 }, 1500);
               } else {
-                MarkdownFM.showMessage(
+                YamlCF.showMessage(
                   'Error importing settings: ' +
                     (response.data || 'Unknown error'),
                   'error'
@@ -1200,19 +1200,19 @@
               }
             },
             error: function () {
-              MarkdownFM.showMessage(
+              YamlCF.showMessage(
                 'AJAX error occurred during import',
                 'error'
               );
             },
             complete: function () {
               // Reset file input
-              $('#markdown-fm-import-file').val('');
+              $('#yaml-cf-import-file').val('');
             },
           });
         } catch (err) {
-          MarkdownFM.showMessage('Invalid JSON file: ' + err.message, 'error');
-          $('#markdown-fm-import-file').val('');
+          YamlCF.showMessage('Invalid JSON file: ' + err.message, 'error');
+          $('#yaml-cf-import-file').val('');
         }
       };
 
@@ -1221,7 +1221,7 @@
 
     initMetaBoxChangeTracking: function () {
       const self = this;
-      const $metaBox = $('#markdown-fm-meta-box');
+      const $metaBox = $('#yaml-cf-meta-box');
 
       // Only run on post editor
       if (!$metaBox.length) return;
@@ -1230,7 +1230,7 @@
       function captureMetaBoxState() {
         const data = {};
         $metaBox
-          .find('.markdown-fm-fields')
+          .find('.yaml-cf-fields')
           .find('input, textarea, select')
           .each(function () {
             const $field = $(this);
@@ -1266,7 +1266,7 @@
               // Gutenberg
               wp.data
                 .dispatch('core/editor')
-                .editPost({ meta: { _mdfm_changed: Date.now() } });
+                .editPost({ meta: { _ycf_changed: Date.now() } });
             } else {
               // Classic editor - trigger WordPress's own warning
               $('#post').trigger('change');
@@ -1278,13 +1278,13 @@
       // Show/hide indicator
       function toggleMetaBoxIndicator(show) {
         if (show) {
-          MarkdownFM.showMessage(
-            'You have unsaved changes in Markdown FM fields',
+          YamlCF.showMessage(
+            'You have unsaved changes in YAML Custom Fields fields',
             'warning',
             true
           );
         } else {
-          MarkdownFM.hideMessage('warning');
+          YamlCF.hideMessage('warning');
         }
       }
 
@@ -1322,21 +1322,21 @@
 
     showMessage: function (message, type, persistent) {
       // Create notification container if it doesn't exist
-      let $container = $('#markdown-fm-notifications');
+      let $container = $('#yaml-cf-notifications');
       if (!$container.length) {
         $container = $('<div>', {
-          id: 'markdown-fm-notifications',
+          id: 'yaml-cf-notifications',
         });
         $('body').append($container);
       }
 
       // Remove existing message of the same type if persistent
       if (persistent) {
-        $container.find('.markdown-fm-message.' + type).remove();
+        $container.find('.yaml-cf-message.' + type).remove();
       }
 
       const $message = $('<div>', {
-        class: 'markdown-fm-message ' + type,
+        class: 'yaml-cf-message ' + type,
         text: message,
         'data-type': type,
       });
@@ -1354,7 +1354,7 @@
     },
 
     hideMessage: function (type) {
-      $('#markdown-fm-notifications .markdown-fm-message.' + type).fadeOut(
+      $('#yaml-cf-notifications .yaml-cf-message.' + type).fadeOut(
         300,
         function () {
           $(this).remove();
@@ -1365,9 +1365,29 @@
 
   // Initialize on document ready
   $(document).ready(function () {
-    MarkdownFM.init();
+    YamlCF.init();
+
+    // Fix duplicate nonce IDs created by multiple wp_editor() instances
+    YamlCF.removeDuplicateNonces();
   });
 
-  // Make MarkdownFM globally accessible
-  window.MarkdownFM = MarkdownFM;
+  // Remove duplicate nonce fields with the same ID
+  YamlCF.removeDuplicateNonces = function() {
+    const seenIds = {};
+    $('input[type="hidden"]').each(function() {
+      const id = $(this).attr('id');
+      if (id && id.includes('nonce')) {
+        if (seenIds[id]) {
+          // Remove duplicate
+          $(this).remove();
+        } else {
+          // Mark as seen
+          seenIds[id] = true;
+        }
+      }
+    });
+  };
+
+  // Make YamlCF globally accessible
+  window.YamlCF = YamlCF;
 })(jQuery);

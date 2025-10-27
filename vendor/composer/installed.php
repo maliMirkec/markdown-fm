@@ -1,6 +1,6 @@
 <?php return array(
     'root' => array(
-        'name' => 'silvestar/markdown-fm',
+        'name' => 'silvestar/yaml-custom-fields',
         'pretty_version' => 'dev-develop',
         'version' => 'dev-develop',
         'reference' => 'a501f7d57f49d4acbe21a431c29a1f70804ec98f',
@@ -10,7 +10,7 @@
         'dev' => false,
     ),
     'versions' => array(
-        'silvestar/markdown-fm' => array(
+        'silvestar/yaml-custom-fields' => array(
             'pretty_version' => 'dev-develop',
             'version' => 'dev-develop',
             'reference' => 'a501f7d57f49d4acbe21a431c29a1f70804ec98f',

@@ -1,14 +1,14 @@
 <?php
 /**
- * Plugin Name: Markdown FM
- * Plugin URI: https://github.com/maliMirkec/markdown-fm
+ * Plugin Name: YAML Custom Fields
+ * Plugin URI: https://github.com/maliMirkec/yaml-custom-fields
  * Description: A WordPress plugin for managing YAML frontmatter schemas in theme templates
  * Version: 1.0.0
  * Author: Silvestar Bistrović
  * Author URI: https://www.silvestar.codes
  * Author Email: me@silvestar.codes
  * License: GPL v2 or later
- * Text Domain: markdown-fm
+ * Text Domain: yaml-custom-fields
  */
 
 if (!defined('ABSPATH')) {
@@ -21,7 +21,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 } else {
   add_action('admin_notices', function() {
     echo '<div class="notice notice-error"><p>';
-    echo '<strong>Markdown FM:</strong> Please run <code>composer install</code> in the plugin directory to install dependencies.';
+    echo '<strong>YAML Custom Fields:</strong> Please run <code>composer install</code> in the plugin directory to install dependencies.';
     echo '</p></div>';
   });
   return;
@@ -30,11 +30,11 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 
-define('MARKDOWN_FM_VERSION', '1.0.0');
-define('MARKDOWN_FM_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('MARKDOWN_FM_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('YAML_CF_VERSION', '1.0.0');
+define('YAML_CF_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('YAML_CF_PLUGIN_URL', plugin_dir_url(__FILE__));
 
-class Markdown_FM {
+class YAML_Custom_Fields {
   private static $instance = null;
 
   public static function get_instance() {
@@ -53,16 +53,16 @@ class Markdown_FM {
     add_action('admin_menu', [$this, 'add_admin_menu']);
     add_action('admin_head', [$this, 'hide_submenu_items']);
     add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
-    add_action('add_meta_boxes', [$this, 'add_schema_meta_box']);
+    // Only use edit_form_after_title to avoid duplicate rendering
     add_action('edit_form_after_title', [$this, 'render_schema_meta_box_after_title']);
     add_action('save_post', [$this, 'save_schema_data']);
-    add_action('wp_ajax_markdown_fm_save_template_settings', [$this, 'ajax_save_template_settings']);
-    add_action('wp_ajax_markdown_fm_save_schema', [$this, 'ajax_save_schema']);
-    add_action('wp_ajax_markdown_fm_get_schema', [$this, 'ajax_get_schema']);
-    add_action('wp_ajax_markdown_fm_get_partial_data', [$this, 'ajax_get_partial_data']);
-    add_action('wp_ajax_markdown_fm_save_partial_data', [$this, 'ajax_save_partial_data']);
-    add_action('wp_ajax_markdown_fm_export_settings', [$this, 'ajax_export_settings']);
-    add_action('wp_ajax_markdown_fm_import_settings', [$this, 'ajax_import_settings']);
+    add_action('wp_ajax_yaml_cf_save_template_settings', [$this, 'ajax_save_template_settings']);
+    add_action('wp_ajax_yaml_cf_save_schema', [$this, 'ajax_save_schema']);
+    add_action('wp_ajax_yaml_cf_get_schema', [$this, 'ajax_get_schema']);
+    add_action('wp_ajax_yaml_cf_get_partial_data', [$this, 'ajax_get_partial_data']);
+    add_action('wp_ajax_yaml_cf_save_partial_data', [$this, 'ajax_save_partial_data']);
+    add_action('wp_ajax_yaml_cf_export_settings', [$this, 'ajax_export_settings']);
+    add_action('wp_ajax_yaml_cf_import_settings', [$this, 'ajax_import_settings']);
 
     // Highlight parent menu for dynamic pages
     add_filter('parent_file', [$this, 'set_parent_file']);
@@ -74,10 +74,10 @@ class Markdown_FM {
 
   public function add_admin_menu() {
     add_menu_page(
-      __('Markdown FM', 'markdown-fm'),
-      __('Markdown FM', 'markdown-fm'),
+      __('YAML Custom Fields', 'yaml-custom-fields'),
+      __('YAML CF', 'yaml-custom-fields'),
       'manage_options',
-      'markdown-fm',
+      'yaml-custom-fields',
       [$this, 'render_admin_page'],
       'dashicons-edit-page',
       30
@@ -85,30 +85,30 @@ class Markdown_FM {
 
     // Register hidden pages (accessible via URL but not shown in menu by default)
     add_submenu_page(
-      'markdown-fm',
-      __('Edit Schema', 'markdown-fm'),
-      __('Edit Schema', 'markdown-fm'),
+      'yaml-custom-fields',
+      __('Edit Schema', 'yaml-custom-fields'),
+      __('Edit Schema', 'yaml-custom-fields'),
       'manage_options',
-      'markdown-fm-edit-schema',
+      'yaml-cf-edit-schema',
       [$this, 'render_edit_schema_page']
     );
 
     add_submenu_page(
-      'markdown-fm',
-      __('Edit Partial', 'markdown-fm'),
-      __('Edit Partial', 'markdown-fm'),
+      'yaml-custom-fields',
+      __('Edit Partial', 'yaml-custom-fields'),
+      __('Edit Partial', 'yaml-custom-fields'),
       'manage_options',
-      'markdown-fm-edit-partial',
+      'yaml-cf-edit-partial',
       [$this, 'render_edit_partial_page']
     );
 
     // Documentation (added last to appear at the bottom)
     add_submenu_page(
-      'markdown-fm',
-      __('Documentation', 'markdown-fm'),
-      __('Documentation', 'markdown-fm'),
+      'yaml-custom-fields',
+      __('Documentation', 'yaml-custom-fields'),
+      __('Documentation', 'yaml-custom-fields'),
       'manage_options',
-      'markdown-fm-docs',
+      'yaml-cf-docs',
       [$this, 'render_docs_page']
     );
   }
@@ -116,22 +116,22 @@ class Markdown_FM {
   public function hide_submenu_items() {
     global $submenu;
 
-    if (isset($submenu['markdown-fm'])) {
+    if (isset($submenu['yaml-custom-fields'])) {
       // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Admin menu navigation, no nonce needed
       $current_page = isset($_GET['page']) ? sanitize_text_field(wp_unslash($_GET['page'])) : '';
       // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-      foreach ($submenu['markdown-fm'] as $key => $menu_item) {
+      foreach ($submenu['yaml-custom-fields'] as $key => $menu_item) {
         $menu_slug = $menu_item[2];
 
         // Hide "Edit Schema" if not on edit schema page
-        if ($menu_slug === 'markdown-fm-edit-schema' && $current_page !== 'markdown-fm-edit-schema') {
-          unset($submenu['markdown-fm'][$key]);
+        if ($menu_slug === 'yaml-cf-edit-schema' && $current_page !== 'yaml-cf-edit-schema') {
+          unset($submenu['yaml-custom-fields'][$key]);
         }
 
         // Hide "Edit Partial" if not on edit partial page
-        if ($menu_slug === 'markdown-fm-edit-partial' && $current_page !== 'markdown-fm-edit-partial') {
-          unset($submenu['markdown-fm'][$key]);
+        if ($menu_slug === 'yaml-cf-edit-partial' && $current_page !== 'yaml-cf-edit-partial') {
+          unset($submenu['yaml-custom-fields'][$key]);
         }
       }
     }
@@ -144,13 +144,13 @@ class Markdown_FM {
     if (isset($_GET['page']) && isset($_GET['template'])) {
       $page = sanitize_text_field(wp_unslash($_GET['page']));
       // Update submenu titles and URLs dynamically
-      if ($page === 'markdown-fm-edit-schema' || $page === 'markdown-fm-edit-partial') {
+      if ($page === 'yaml-cf-edit-schema' || $page === 'yaml-cf-edit-partial') {
         $template = sanitize_text_field(wp_unslash($_GET['template']));
         $theme_files = $this->get_theme_templates();
         $template_name = $template;
 
         // Find template name
-        if ($page === 'markdown-fm-edit-schema') {
+        if ($page === 'yaml-cf-edit-schema') {
           foreach (array_merge($theme_files['templates'], $theme_files['partials']) as $item) {
             if ($item['file'] === $template) {
               $template_name = $item['name'];
@@ -167,29 +167,29 @@ class Markdown_FM {
         }
 
         // Update the submenu title and URL
-        if (isset($submenu['markdown-fm'])) {
-          foreach ($submenu['markdown-fm'] as $key => $menu_item) {
+        if (isset($submenu['yaml-custom-fields'])) {
+          foreach ($submenu['yaml-custom-fields'] as $key => $menu_item) {
             if ($menu_item[2] === $page) {
-              if ($page === 'markdown-fm-edit-schema') {
+              if ($page === 'yaml-cf-edit-schema') {
                 /* translators: %s: template name */
-                $submenu['markdown-fm'][$key][0] = sprintf(__('Edit Schema: %s', 'markdown-fm'), $template_name);
+                $submenu['yaml-custom-fields'][$key][0] = sprintf(__('Edit Schema: %s', 'yaml-custom-fields'), $template_name);
                 // Use admin.php?page= format for proper WordPress menu handling
-                $submenu['markdown-fm'][$key][2] = 'admin.php?page=markdown-fm-edit-schema&template=' . urlencode($template);
+                $submenu['yaml-custom-fields'][$key][2] = 'admin.php?page=yaml-cf-edit-schema&template=' . urlencode($template);
                 /* translators: %s: template name */
-                $submenu['markdown-fm'][$key][3] = sprintf(__('Edit Schema: %s', 'markdown-fm'), $template_name);
+                $submenu['yaml-custom-fields'][$key][3] = sprintf(__('Edit Schema: %s', 'yaml-custom-fields'), $template_name);
               } else {
                 /* translators: %s: template name */
-                $submenu['markdown-fm'][$key][0] = sprintf(__('Edit Partial: %s', 'markdown-fm'), $template_name);
-                $submenu['markdown-fm'][$key][2] = 'admin.php?page=markdown-fm-edit-partial&template=' . urlencode($template);
+                $submenu['yaml-custom-fields'][$key][0] = sprintf(__('Edit Partial: %s', 'yaml-custom-fields'), $template_name);
+                $submenu['yaml-custom-fields'][$key][2] = 'admin.php?page=yaml-cf-edit-partial&template=' . urlencode($template);
                 /* translators: %s: template name */
-                $submenu['markdown-fm'][$key][3] = sprintf(__('Edit Partial: %s', 'markdown-fm'), $template_name);
+                $submenu['yaml-custom-fields'][$key][3] = sprintf(__('Edit Partial: %s', 'yaml-custom-fields'), $template_name);
               }
               break;
             }
           }
         }
 
-        $parent_file = 'markdown-fm';
+        $parent_file = 'yaml-custom-fields';
       }
     }
     // phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -201,7 +201,7 @@ class Markdown_FM {
     // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Admin menu navigation, no nonce needed
     if (isset($_GET['page']) && isset($_GET['template'])) {
       $page = sanitize_text_field(wp_unslash($_GET['page']));
-      if ($page === 'markdown-fm-edit-schema' || $page === 'markdown-fm-edit-partial') {
+      if ($page === 'yaml-cf-edit-schema' || $page === 'yaml-cf-edit-partial') {
         $template = sanitize_text_field(wp_unslash($_GET['template']));
         $submenu_file = 'admin.php?page=' . $page . '&template=' . urlencode($template);
       }
@@ -213,11 +213,11 @@ class Markdown_FM {
 
   public function enqueue_admin_assets($hook) {
     // Load on the plugin settings page
-    $is_settings_page = ('toplevel_page_markdown-fm' === $hook);
-    $is_docs_page = ('markdown-fm_page_markdown-fm-docs' === $hook);
-    $is_edit_template_page = (strpos($hook, 'markdown-fm-edit-template') !== false);
-    $is_edit_partial_page = (strpos($hook, 'markdown-fm-edit-partial') !== false);
-    $is_edit_schema_page = (strpos($hook, 'markdown-fm-edit-schema') !== false);
+    $is_settings_page = ('toplevel_page_yaml-custom-fields' === $hook);
+    $is_docs_page = ('yaml-custom-fields_page_yaml-custom-fields-docs' === $hook);
+    $is_edit_template_page = (strpos($hook, 'yaml-cf-edit-template') !== false);
+    $is_edit_partial_page = (strpos($hook, 'yaml-cf-edit-partial') !== false);
+    $is_edit_schema_page = (strpos($hook, 'yaml-cf-edit-schema') !== false);
 
     // Load on post edit screens
     $current_screen = get_current_screen();
@@ -236,8 +236,8 @@ class Markdown_FM {
     // Enqueue WordPress media library (needed for image/file uploads)
     wp_enqueue_media();
 
-    wp_enqueue_style('markdown-fm-admin', MARKDOWN_FM_PLUGIN_URL . 'assets/admin.css', [], MARKDOWN_FM_VERSION);
-    wp_enqueue_script('markdown-fm-admin', MARKDOWN_FM_PLUGIN_URL . 'assets/admin.js', ['jquery'], MARKDOWN_FM_VERSION, true);
+    wp_enqueue_style('yaml-cf-admin', YAML_CF_PLUGIN_URL . 'assets/admin.css', [], YAML_CF_VERSION);
+    wp_enqueue_script('yaml-cf-admin', YAML_CF_PLUGIN_URL . 'assets/admin.js', ['jquery'], YAML_CF_VERSION, true);
 
     // Get current template and schema for post edit screens
     $schema_data = null;
@@ -250,80 +250,80 @@ class Markdown_FM {
         $template = 'page.php';
       }
 
-      $schemas = get_option('markdown_fm_schemas', []);
+      $schemas = get_option('yaml_cf_schemas', []);
       if (isset($schemas[$template]) && !empty($schemas[$template])) {
         $schema_data = $this->parse_yaml_schema($schemas[$template]);
       }
     }
 
-    wp_localize_script('markdown-fm-admin', 'markdownFM', [
+    wp_localize_script('yaml-cf-admin', 'yamlCF', [
       'ajax_url' => admin_url('admin-ajax.php'),
       'admin_url' => admin_url(),
-      'nonce' => wp_create_nonce('markdown_fm_nonce'),
+      'nonce' => wp_create_nonce('yaml_cf_nonce'),
       'schema' => $schema_data
     ]);
   }
 
   public function render_admin_page() {
     if (!current_user_can('manage_options')) {
-      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'markdown-fm'));
+      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
     }
 
     // Handle refresh action
     $refresh_message = '';
     // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Admin action, capability already checked
-    if (isset($_GET['refresh_mdfm']) && sanitize_text_field(wp_unslash($_GET['refresh_mdfm'])) === '1') {
+    if (isset($_GET['refresh_ycf']) && sanitize_text_field(wp_unslash($_GET['refresh_ycf'])) === '1') {
       // phpcs:enable WordPress.Security.NonceVerification.Recommended
       $this->clear_template_cache();
-      $refresh_message = esc_html__('Template list refreshed successfully!', 'markdown-fm');
+      $refresh_message = esc_html__('Template list refreshed successfully!', 'yaml-custom-fields');
     }
 
     $theme_files = $this->get_theme_templates();
     $templates = $theme_files['templates'];
     $partials = $theme_files['partials'];
-    $template_settings = get_option('markdown_fm_template_settings', []);
-    $schemas = get_option('markdown_fm_schemas', []);
+    $template_settings = get_option('yaml_cf_template_settings', []);
+    $schemas = get_option('yaml_cf_schemas', []);
 
-    include MARKDOWN_FM_PLUGIN_DIR . 'templates/admin-page.php';
+    include YAML_CF_PLUGIN_DIR . 'templates/admin-page.php';
   }
 
   public function render_edit_template_page() {
     if (!current_user_can('manage_options')) {
-      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'markdown-fm'));
+      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
     }
 
     // This page is for future use - editing template-specific data
     // For now, redirect to main page
-    wp_redirect(admin_url('admin.php?page=markdown-fm'));
+    wp_redirect(admin_url('admin.php?page=yaml-custom-fields'));
     exit;
   }
 
   public function render_edit_partial_page() {
     if (!current_user_can('manage_options')) {
-      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'markdown-fm'));
+      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
     }
 
     // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Admin page render, capability already checked
     if (!isset($_GET['template'])) {
-      wp_die(esc_html__('No template specified.', 'markdown-fm'));
+      wp_die(esc_html__('No template specified.', 'yaml-custom-fields'));
     }
 
     $template = sanitize_text_field(wp_unslash($_GET['template']));
-    $schemas = get_option('markdown_fm_schemas', []);
+    $schemas = get_option('yaml_cf_schemas', []);
 
     if (!isset($schemas[$template])) {
-      wp_die(esc_html__('No schema found for this template.', 'markdown-fm'));
+      wp_die(esc_html__('No schema found for this template.', 'yaml-custom-fields'));
     }
 
     $schema_yaml = $schemas[$template];
     $schema = $this->parse_yaml_schema($schema_yaml);
 
     if (!$schema || !isset($schema['fields'])) {
-      wp_die(esc_html__('Invalid schema for this template.', 'markdown-fm'));
+      wp_die(esc_html__('Invalid schema for this template.', 'yaml-custom-fields'));
     }
 
     // Get partial data
-    $partial_data = get_option('markdown_fm_partial_data', []);
+    $partial_data = get_option('yaml_cf_partial_data', []);
     $template_data = isset($partial_data[$template]) ? $partial_data[$template] : [];
 
     // Get template name from theme files
@@ -339,33 +339,33 @@ class Markdown_FM {
     // Check for success message
     $success_message = '';
     if (isset($_GET['saved']) && sanitize_text_field(wp_unslash($_GET['saved'])) === '1') {
-      $success_message = __('Partial data saved successfully!', 'markdown-fm');
+      $success_message = __('Partial data saved successfully!', 'yaml-custom-fields');
     }
     // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
     // Localize schema data for JavaScript
-    wp_localize_script('markdown-fm-admin', 'markdownFM', [
+    wp_localize_script('yaml-cf-admin', 'yamlCF', [
       'ajax_url' => admin_url('admin-ajax.php'),
       'admin_url' => admin_url(),
-      'nonce' => wp_create_nonce('markdown_fm_nonce'),
+      'nonce' => wp_create_nonce('yaml_cf_nonce'),
       'schema' => $schema
     ]);
 
-    include MARKDOWN_FM_PLUGIN_DIR . 'templates/edit-partial-page.php';
+    include YAML_CF_PLUGIN_DIR . 'templates/edit-partial-page.php';
   }
 
   public function render_edit_schema_page() {
     if (!current_user_can('manage_options')) {
-      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'markdown-fm'));
+      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
     }
 
     // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Admin page render, capability already checked
     if (!isset($_GET['template'])) {
-      wp_die(esc_html__('No template specified.', 'markdown-fm'));
+      wp_die(esc_html__('No template specified.', 'yaml-custom-fields'));
     }
 
     $template = sanitize_text_field(wp_unslash($_GET['template']));
-    $schemas = get_option('markdown_fm_schemas', []);
+    $schemas = get_option('yaml_cf_schemas', []);
     $schema_yaml = isset($schemas[$template]) ? $schemas[$template] : '';
 
     // Get template name from theme files
@@ -381,40 +381,40 @@ class Markdown_FM {
     // Check for success message
     $success_message = '';
     if (isset($_GET['saved']) && sanitize_text_field(wp_unslash($_GET['saved'])) === '1') {
-      $success_message = __('Schema saved successfully!', 'markdown-fm');
+      $success_message = __('Schema saved successfully!', 'yaml-custom-fields');
     }
     // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-    include MARKDOWN_FM_PLUGIN_DIR . 'templates/edit-schema-page.php';
+    include YAML_CF_PLUGIN_DIR . 'templates/edit-schema-page.php';
   }
 
   public function render_docs_page() {
     if (!current_user_can('manage_options')) {
-      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'markdown-fm'));
+      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
     }
 
-    include MARKDOWN_FM_PLUGIN_DIR . 'templates/docs-page.php';
+    include YAML_CF_PLUGIN_DIR . 'templates/docs-page.php';
   }
 
   public function handle_form_submissions() {
     // Handle schema save
-    if (isset($_POST['markdown_fm_save_schema_nonce']) &&
-        wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['markdown_fm_save_schema_nonce'])), 'markdown_fm_save_schema')) {
+    if (isset($_POST['yaml_cf_save_schema_nonce']) &&
+        wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['yaml_cf_save_schema_nonce'])), 'yaml_cf_save_schema')) {
 
       if (!current_user_can('manage_options')) {
-        wp_die(esc_html__('Permission denied', 'markdown-fm'));
+        wp_die(esc_html__('Permission denied', 'yaml-custom-fields'));
       }
 
       $template = isset($_POST['template']) ? sanitize_text_field(wp_unslash($_POST['template'])) : '';
       $schema = isset($_POST['schema']) ? sanitize_textarea_field(wp_unslash($_POST['schema'])) : '';
 
-      $schemas = get_option('markdown_fm_schemas', []);
+      $schemas = get_option('yaml_cf_schemas', []);
       $schemas[$template] = $schema;
-      update_option('markdown_fm_schemas', $schemas);
+      update_option('yaml_cf_schemas', $schemas);
 
       // Redirect with success message
       wp_redirect(add_query_arg([
-        'page' => 'markdown-fm-edit-schema',
+        'page' => 'yaml-cf-edit-schema',
         'template' => urlencode($template),
         'saved' => '1'
       ], admin_url('admin.php')));
@@ -422,29 +422,29 @@ class Markdown_FM {
     }
 
     // Handle partial data save
-    if (isset($_POST['markdown_fm_partial_nonce']) &&
-        wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['markdown_fm_partial_nonce'])), 'markdown_fm_save_partial')) {
+    if (isset($_POST['yaml_cf_partial_nonce']) &&
+        wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['yaml_cf_partial_nonce'])), 'yaml_cf_save_partial')) {
 
       if (!current_user_can('manage_options')) {
-        wp_die(esc_html__('Permission denied', 'markdown-fm'));
+        wp_die(esc_html__('Permission denied', 'yaml-custom-fields'));
       }
 
       $template = isset($_POST['template']) ? sanitize_text_field(wp_unslash($_POST['template'])) : '';
       $field_data = [];
 
       // Collect all field data
-      if (isset($_POST['markdown_fm']) && is_array($_POST['markdown_fm'])) {
+      if (isset($_POST['yaml_cf']) && is_array($_POST['yaml_cf'])) {
         // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via sanitize_field_data()
-        $field_data = $this->sanitize_field_data(wp_unslash($_POST['markdown_fm']));
+        $field_data = $this->sanitize_field_data(wp_unslash($_POST['yaml_cf']));
       }
 
-      $partial_data = get_option('markdown_fm_partial_data', []);
+      $partial_data = get_option('yaml_cf_partial_data', []);
       $partial_data[$template] = $field_data;
-      update_option('markdown_fm_partial_data', $partial_data);
+      update_option('yaml_cf_partial_data', $partial_data);
 
       // Redirect with success message
       wp_redirect(add_query_arg([
-        'page' => 'markdown-fm-edit-partial',
+        'page' => 'yaml-cf-edit-partial',
         'template' => urlencode($template),
         'saved' => '1'
       ], admin_url('admin.php')));
@@ -468,11 +468,11 @@ class Markdown_FM {
 
   private function get_theme_templates() {
     // Check cache first
-    $cache_key = 'markdown_fm_templates_' . get_stylesheet();
+    $cache_key = 'yaml_cf_templates_' . get_stylesheet();
     $cached = get_transient($cache_key);
 
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Cache invalidation parameter check
-    if ($cached !== false && !isset($_GET['refresh_mdfm'])) {
+    if ($cached !== false && !isset($_GET['refresh_ycf'])) {
       return $cached;
     }
 
@@ -555,8 +555,8 @@ class Markdown_FM {
         }
       }
 
-      // Also check for @mdfm marker in file header (custom partials)
-      if (!$is_partial && $this->has_mdfm_marker($path)) {
+      // Also check for @ycf marker in file header (custom partials)
+      if (!$is_partial && $this->has_ycf_marker($path)) {
         $is_partial = true;
       }
 
@@ -605,10 +605,10 @@ class Markdown_FM {
   }
 
   /**
-   * Check if a file has the @mdfm marker in its header
+   * Check if a file has the @ycf marker in its header
    * Only reads first 30 lines for performance
    */
-  private function has_mdfm_marker($file_path) {
+  private function has_ycf_marker($file_path) {
     if (!file_exists($file_path) || !is_readable($file_path)) {
       return false;
     }
@@ -618,12 +618,12 @@ class Markdown_FM {
       return false;
     }
 
-    // Check first 30 lines for @mdfm marker
+    // Check first 30 lines for @ycf marker
     $lines = explode("\n", $content);
     $lines_to_check = min(30, count($lines));
 
     for ($i = 0; $i < $lines_to_check; $i++) {
-      if (preg_match('/@mdfm/i', $lines[$i])) {
+      if (preg_match('/@ycf/i', $lines[$i])) {
         return true;
       }
     }
@@ -635,7 +635,7 @@ class Markdown_FM {
    * Clear the template cache
    */
   public function clear_template_cache() {
-    $cache_key = 'markdown_fm_templates_' . get_stylesheet();
+    $cache_key = 'yaml_cf_templates_' . get_stylesheet();
     delete_transient($cache_key);
   }
 
@@ -645,7 +645,7 @@ class Markdown_FM {
   }
 
   public function ajax_save_template_settings() {
-    check_ajax_referer('markdown_fm_nonce', 'nonce');
+    check_ajax_referer('yaml_cf_nonce', 'nonce');
 
     if (!current_user_can('manage_options')) {
       wp_send_json_error('Permission denied');
@@ -654,13 +654,13 @@ class Markdown_FM {
     $template = isset($_POST['template']) ? sanitize_text_field(wp_unslash($_POST['template'])) : '';
     $enabled = isset($_POST['enabled']) && sanitize_text_field(wp_unslash($_POST['enabled'])) === 'true';
 
-    $settings = get_option('markdown_fm_template_settings', []);
+    $settings = get_option('yaml_cf_template_settings', []);
     $settings[$template] = $enabled;
 
-    update_option('markdown_fm_template_settings', $settings);
+    update_option('yaml_cf_template_settings', $settings);
 
     // Check if schema exists for this template
-    $schemas = get_option('markdown_fm_schemas', []);
+    $schemas = get_option('yaml_cf_schemas', []);
     $has_schema = isset($schemas[$template]) && !empty($schemas[$template]);
 
     wp_send_json_success([
@@ -669,7 +669,7 @@ class Markdown_FM {
   }
 
   public function ajax_save_schema() {
-    check_ajax_referer('markdown_fm_nonce', 'nonce');
+    check_ajax_referer('yaml_cf_nonce', 'nonce');
 
     if (!current_user_can('manage_options')) {
       wp_send_json_error('Permission denied');
@@ -678,48 +678,27 @@ class Markdown_FM {
     $template = isset($_POST['template']) ? sanitize_text_field(wp_unslash($_POST['template'])) : '';
     $schema = isset($_POST['schema']) ? sanitize_textarea_field(wp_unslash($_POST['schema'])) : '';
 
-    $schemas = get_option('markdown_fm_schemas', []);
+    $schemas = get_option('yaml_cf_schemas', []);
     $schemas[$template] = $schema;
 
-    update_option('markdown_fm_schemas', $schemas);
+    update_option('yaml_cf_schemas', $schemas);
 
     wp_send_json_success();
   }
 
   public function ajax_get_schema() {
-    check_ajax_referer('markdown_fm_nonce', 'nonce');
+    check_ajax_referer('yaml_cf_nonce', 'nonce');
 
     if (!current_user_can('manage_options')) {
       wp_send_json_error('Permission denied');
     }
 
     $template = isset($_POST['template']) ? sanitize_text_field(wp_unslash($_POST['template'])) : '';
-    $schemas = get_option('markdown_fm_schemas', []);
+    $schemas = get_option('yaml_cf_schemas', []);
 
     wp_send_json_success([
       'schema' => isset($schemas[$template]) ? $schemas[$template] : ''
     ]);
-  }
-
-  public function add_schema_meta_box() {
-    // Add meta box for both classic editor and Gutenberg
-    $post_types = ['page', 'post'];
-
-    foreach ($post_types as $post_type) {
-      add_meta_box(
-        'markdown_fm_schema',
-        __('Markdown FM Fields', 'markdown-fm'),
-        [$this, 'render_schema_meta_box'],
-        $post_type,
-        'normal',
-        'high'
-      );
-    }
-  }
-
-  public function render_schema_meta_box($post) {
-    // Render the meta box content
-    $this->render_schema_meta_box_after_title($post);
   }
 
   public function render_schema_meta_box_after_title($post) {
@@ -728,20 +707,20 @@ class Markdown_FM {
       return;
     }
 
-    wp_nonce_field('markdown_fm_meta_box', 'markdown_fm_meta_box_nonce');
+    wp_nonce_field('yaml_cf_meta_box', 'yaml_cf_meta_box_nonce');
 
     $template = get_post_meta($post->ID, '_wp_page_template', true);
     if (empty($template) || $template === 'default') {
       $template = 'page.php';
     }
 
-    $template_settings = get_option('markdown_fm_template_settings', []);
+    $template_settings = get_option('yaml_cf_template_settings', []);
 
     if (!isset($template_settings[$template]) || !$template_settings[$template]) {
       return;
     }
 
-    $schemas = get_option('markdown_fm_schemas', []);
+    $schemas = get_option('yaml_cf_schemas', []);
 
     if (!isset($schemas[$template]) || empty($schemas[$template])) {
       return;
@@ -755,30 +734,30 @@ class Markdown_FM {
     }
 
     // Add link to edit schema
-    $edit_schema_url = admin_url('admin.php?page=markdown-fm');
+    $edit_schema_url = admin_url('admin.php?page=yaml-cf-edit-schema&template=' . urlencode($template));
 
-    echo '<div id="markdown-fm-meta-box" class="postbox" style="margin-bottom: 20px;">';
-    echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__('Markdown FM Schema', 'markdown-fm') . '</h2></div>';
+    echo '<div id="yaml-cf-meta-box" class="postbox" style="margin-bottom: 20px;">';
+    echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__('YAML Custom Fields Schema', 'yaml-custom-fields') . '</h2></div>';
     echo '<div class="inside">';
 
-    echo '<div class="markdown-fm-meta-box-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">';
+    echo '<div class="yaml-cf-meta-box-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">';
     echo '<p style="margin: 0;">';
-    echo '<strong>' . esc_html__('Template:', 'markdown-fm') . '</strong> ' . esc_html($template);
+    echo '<strong>' . esc_html__('Template:', 'yaml-custom-fields') . '</strong> ' . esc_html($template);
     echo ' | ';
-    echo '<a href="' . esc_url($edit_schema_url) . '" target="_blank">' . esc_html__('Edit Schema', 'markdown-fm') . '</a>';
+    echo '<a href="' . esc_url($edit_schema_url) . '" target="_blank">' . esc_html__('Edit Schema', 'yaml-custom-fields') . '</a>';
     echo '</p>';
-    echo '<button type="button" class="button button-secondary markdown-fm-reset-data" data-post-id="' . esc_attr($post->ID) . '">';
+    echo '<button type="button" class="button button-secondary yaml-cf-reset-data" data-post-id="' . esc_attr($post->ID) . '">';
     echo '<span class="dashicons dashicons-update-alt" style="margin-top: 3px;"></span> ';
-    echo esc_html__('Reset All Data', 'markdown-fm');
+    echo esc_html__('Reset All Data', 'yaml-custom-fields');
     echo '</button>';
     echo '</div>';
 
-    $saved_data = get_post_meta($post->ID, '_markdown_fm_data', true);
+    $saved_data = get_post_meta($post->ID, '_yaml_cf_data', true);
     if (empty($saved_data)) {
       $saved_data = [];
     }
 
-    echo '<div class="markdown-fm-fields">';
+    echo '<div class="yaml-cf-fields">';
     $this->render_schema_fields($schema['fields'], $saved_data);
     echo '</div>';
     echo '</div>';
@@ -792,7 +771,7 @@ class Markdown_FM {
       // Log error for debugging but fail gracefully
       if (defined('WP_DEBUG') && WP_DEBUG) {
         // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Only logs when WP_DEBUG is enabled
-        error_log('Markdown FM: YAML parsing error - ' . $e->getMessage());
+        error_log('YAML Custom Fields: YAML parsing error - ' . $e->getMessage());
       }
       return null;
     }
@@ -801,11 +780,11 @@ class Markdown_FM {
   public function render_schema_fields($fields, $saved_data, $prefix = '') {
     foreach ($fields as $field) {
       $field_name = $prefix . $field['name'];
-      $field_id = 'mdfm_' . str_replace(['[', ']'], ['_', ''], $field_name);
+      $field_id = 'ycf_' . str_replace(['[', ']'], ['_', ''], $field_name);
       $field_value = isset($saved_data[$field['name']]) ? $saved_data[$field['name']] : (isset($field['default']) ? $field['default'] : '');
       $field_label = isset($field['label']) ? $field['label'] : ucfirst($field['name']);
 
-      echo '<div class="markdown-fm-field" data-type="' . esc_attr($field['type']) . '">';
+      echo '<div class="yaml-cf-field" data-type="' . esc_attr($field['type']) . '">';
       if($field['type'] === 'image' || $field['type'] === 'file') {
         echo '<p>' . esc_html($field_label) . '</p>';
       } else {
@@ -814,7 +793,7 @@ class Markdown_FM {
 
       switch ($field['type']) {
         case 'boolean':
-          echo '<input type="checkbox" name="markdown_fm[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="1" ' . checked($field_value, 1, false) . ' />';
+          echo '<input type="checkbox" name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="1" ' . checked($field_value, 1, false) . ' />';
           break;
 
         case 'string':
@@ -822,27 +801,32 @@ class Markdown_FM {
           $minlength = isset($options['minlength']) ? 'minlength="' . intval($options['minlength']) . '"' : '';
           $maxlength = isset($options['maxlength']) ? 'maxlength="' . intval($options['maxlength']) . '"' : '';
           // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<input type="text" name="markdown_fm[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" ' . $minlength . ' ' . $maxlength . ' class="regular-text" />';
+          echo '<input type="text" name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" ' . $minlength . ' ' . $maxlength . ' class="regular-text" />';
           break;
 
         case 'text':
           $options = isset($field['options']) ? $field['options'] : [];
           $maxlength = isset($options['maxlength']) ? 'maxlength="' . intval($options['maxlength']) . '"' : '';
           // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<textarea name="markdown_fm[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" rows="5" class="large-text" ' . $maxlength . '>' . esc_textarea($field_value) . '</textarea>';
+          echo '<textarea name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" rows="5" class="large-text" ' . $maxlength . '>' . esc_textarea($field_value) . '</textarea>';
           break;
 
         case 'rich-text':
           wp_editor($field_value, $field_id, [
-            'textarea_name' => 'markdown_fm[' . $field['name'] . ']',
-            'textarea_rows' => 10
+            'textarea_name' => 'yaml_cf[' . $field['name'] . ']',
+            'textarea_rows' => 10,
+            'media_buttons' => true,
+            'tinymce' => [
+              'toolbar1' => 'formatselect,bold,italic,bullist,numlist,link,unlink',
+            ],
+            '_content_editor_dfw' => false
           ]);
           break;
 
         case 'code':
           $options = isset($field['options']) ? $field['options'] : [];
           $language = isset($options['language']) ? $options['language'] : 'html';
-          echo '<textarea name="markdown_fm[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" rows="10" class="large-text code" data-language="' . esc_attr($language) . '">' . esc_textarea($field_value) . '</textarea>';
+          echo '<textarea name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" rows="10" class="large-text code" data-language="' . esc_attr($language) . '">' . esc_textarea($field_value) . '</textarea>';
           break;
 
         case 'number':
@@ -850,7 +834,7 @@ class Markdown_FM {
           $min = isset($options['min']) ? 'min="' . intval($options['min']) . '"' : '';
           $max = isset($options['max']) ? 'max="' . intval($options['max']) . '"' : '';
           // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<input type="number" name="markdown_fm[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" ' . $min . ' ' . $max . ' class="small-text" />';
+          echo '<input type="number" name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" ' . $min . ' ' . $max . ' class="small-text" />';
           break;
 
         case 'date':
@@ -858,7 +842,7 @@ class Markdown_FM {
           $has_time = isset($options['time']) && $options['time'];
           $type = $has_time ? 'datetime-local' : 'date';
           // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<input type="' . esc_attr($type) . '" name="markdown_fm[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" />';
+          echo '<input type="' . esc_attr($type) . '" name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" />';
           break;
 
         case 'select':
@@ -866,7 +850,7 @@ class Markdown_FM {
           $multiple = isset($field['multiple']) && $field['multiple'];
           $values = isset($field['values']) ? $field['values'] : [];
 
-          echo '<select name="markdown_fm[' . esc_attr($field['name']) . ']' . ($multiple ? '[]' : '') . '" id="' . esc_attr($field_id) . '" ' . ($multiple ? 'multiple' : '') . '>';
+          echo '<select name="yaml_cf[' . esc_attr($field['name']) . ']' . ($multiple ? '[]' : '') . '" id="' . esc_attr($field_id) . '" ' . ($multiple ? 'multiple' : '') . '>';
           echo '<option value="">-- Select --</option>';
 
           if (is_array($values)) {
@@ -890,42 +874,42 @@ class Markdown_FM {
           break;
 
         case 'image':
-          echo '<input type="hidden" name="markdown_fm[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" />';
-          echo '<div class="markdown-fm-media-buttons">';
-          echo '<button type="button" class="button markdown-fm-upload-image" data-target="' . esc_attr($field_id) . '">Upload Image</button>';
+          echo '<input type="hidden" name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" />';
+          echo '<div class="yaml-cf-media-buttons">';
+          echo '<button type="button" class="button yaml-cf-upload-image" data-target="' . esc_attr($field_id) . '">Upload Image</button>';
           if ($field_value) {
-            echo '<button type="button" class="button markdown-fm-clear-media" data-target="' . esc_attr($field_id) . '">Clear</button>';
+            echo '<button type="button" class="button yaml-cf-clear-media" data-target="' . esc_attr($field_id) . '">Clear</button>';
           }
           echo '</div>';
           if ($field_value) {
             // Field value is now attachment ID, get the image URL
             $image_url = wp_get_attachment_image_url($field_value, 'medium');
             if ($image_url) {
-              echo '<div class="markdown-fm-image-preview"><img src="' . esc_url($image_url) . '" style="max-width: 200px; display: block; margin-top: 10px;" /></div>';
+              echo '<div class="yaml-cf-image-preview"><img src="' . esc_url($image_url) . '" style="max-width: 200px; display: block; margin-top: 10px;" /></div>';
             }
           }
           break;
 
         case 'file':
-          echo '<input type="hidden" name="markdown_fm[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" />';
-          echo '<div class="markdown-fm-media-buttons">';
-          echo '<button type="button" class="button markdown-fm-upload-file" data-target="' . esc_attr($field_id) . '">Upload File</button>';
+          echo '<input type="hidden" name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" />';
+          echo '<div class="yaml-cf-media-buttons">';
+          echo '<button type="button" class="button yaml-cf-upload-file" data-target="' . esc_attr($field_id) . '">Upload File</button>';
           if ($field_value) {
-            echo '<button type="button" class="button markdown-fm-clear-media" data-target="' . esc_attr($field_id) . '">Clear</button>';
+            echo '<button type="button" class="button yaml-cf-clear-media" data-target="' . esc_attr($field_id) . '">Clear</button>';
           }
           echo '</div>';
           if ($field_value) {
             // Field value is now attachment ID, get the filename
             $file_path = get_attached_file($field_value);
             if ($file_path) {
-              echo '<div class="markdown-fm-file-name">' . esc_html(basename($file_path)) . '</div>';
+              echo '<div class="yaml-cf-file-name">' . esc_html(basename($file_path)) . '</div>';
             }
           }
           break;
 
         case 'object':
           if (isset($field['fields'])) {
-            echo '<div class="markdown-fm-object">';
+            echo '<div class="yaml-cf-object">';
             $object_data = is_array($field_value) ? $field_value : [];
             $this->render_schema_fields($field['fields'], $object_data, $field['name'] . '_');
             echo '</div>';
@@ -937,25 +921,25 @@ class Markdown_FM {
           $blocks = isset($field['blocks']) ? $field['blocks'] : [];
           $block_key = isset($field['blockKey']) ? $field['blockKey'] : 'type';
 
-          echo '<div class="markdown-fm-block-container" data-field-name="' . esc_attr($field['name']) . '">';
+          echo '<div class="yaml-cf-block-container" data-field-name="' . esc_attr($field['name']) . '">';
 
           if ($is_list) {
             $block_values = is_array($field_value) ? $field_value : [];
-            echo '<div class="markdown-fm-block-list">';
+            echo '<div class="yaml-cf-block-list">';
 
             foreach ($block_values as $index => $block_data) {
               $this->render_block_item($field, $blocks, $block_data, $index, $block_key);
             }
 
             echo '</div>';
-            echo '<div class="markdown-fm-block-controls">';
-            echo '<select class="markdown-fm-block-type-select">';
+            echo '<div class="yaml-cf-block-controls">';
+            echo '<select class="yaml-cf-block-type-select">';
             echo '<option value="">-- Add Block --</option>';
             foreach ($blocks as $block) {
               echo '<option value="' . esc_attr($block['name']) . '">' . esc_html($block['label']) . '</option>';
             }
             echo '</select>';
-            echo '<button type="button" class="button markdown-fm-add-block">Add Block</button>';
+            echo '<button type="button" class="button yaml-cf-add-block">Add Block</button>';
             echo '</div>';
           }
 
@@ -982,40 +966,45 @@ class Markdown_FM {
       return;
     }
 
-    echo '<div class="markdown-fm-block-item" data-block-type="' . esc_attr($block_type) . '">';
-    echo '<div class="markdown-fm-block-header">';
+    echo '<div class="yaml-cf-block-item" data-block-type="' . esc_attr($block_type) . '">';
+    echo '<div class="yaml-cf-block-header">';
     echo '<strong>' . esc_html($block_def['label']) . '</strong>';
-    echo '<button type="button" class="button markdown-fm-remove-block">Remove</button>';
+    echo '<button type="button" class="button yaml-cf-remove-block">Remove</button>';
     echo '</div>';
     // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-    echo '<input type="hidden" name="markdown_fm[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_key) . ']" value="' . esc_attr($block_type) . '" />';
+    echo '<input type="hidden" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_key) . ']" value="' . esc_attr($block_type) . '" />';
 
     if (isset($block_def['fields']) && is_array($block_def['fields'])) {
-      echo '<div class="markdown-fm-block-fields">';
+      echo '<div class="yaml-cf-block-fields">';
 
       foreach ($block_def['fields'] as $block_field) {
-        $block_field_id = 'mdfm_' . $field['name'] . '_' . $index . '_' . $block_field['name'];
+        $block_field_id = 'ycf_' . $field['name'] . '_' . $index . '_' . $block_field['name'];
         $block_field_value = isset($block_data[$block_field['name']]) ? $block_data[$block_field['name']] : '';
         $block_field_type = isset($block_field['type']) ? $block_field['type'] : 'string';
 
-        echo '<div class="markdown-fm-field">';
+        echo '<div class="yaml-cf-field">';
         echo '<label for="' . esc_attr($block_field_id) . '">' . esc_html($block_field['label']) . '</label>';
 
         if ($block_field_type === 'rich-text') {
           wp_editor($block_field_value, $block_field_id, [
-            'textarea_name' => 'markdown_fm[' . $field['name'] . '][' . $index . '][' . $block_field['name'] . ']',
-            'textarea_rows' => 5
+            'textarea_name' => 'yaml_cf[' . $field['name'] . '][' . $index . '][' . $block_field['name'] . ']',
+            'textarea_rows' => 5,
+            'media_buttons' => true,
+            'tinymce' => [
+              'toolbar1' => 'formatselect,bold,italic,bullist,numlist,link,unlink',
+            ],
+            '_content_editor_dfw' => false
           ]);
         } elseif ($block_field_type === 'text') {
           // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<textarea name="markdown_fm[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" rows="5" class="large-text">' . esc_textarea($block_field_value) . '</textarea>';
+          echo '<textarea name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" rows="5" class="large-text">' . esc_textarea($block_field_value) . '</textarea>';
         } elseif ($block_field_type === 'number') {
           // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<input type="number" name="markdown_fm[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" class="small-text" />';
+          echo '<input type="number" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" class="small-text" />';
         } else {
           // Default to text input for string and other types
           // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<input type="text" name="markdown_fm[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" class="regular-text" />';
+          echo '<input type="text" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" class="regular-text" />';
         }
 
         echo '</div>';
@@ -1027,11 +1016,11 @@ class Markdown_FM {
   }
 
   public function save_schema_data($post_id) {
-    if (!isset($_POST['markdown_fm_meta_box_nonce'])) {
+    if (!isset($_POST['yaml_cf_meta_box_nonce'])) {
       return;
     }
 
-    if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['markdown_fm_meta_box_nonce'])), 'markdown_fm_meta_box')) {
+    if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['yaml_cf_meta_box_nonce'])), 'yaml_cf_meta_box')) {
       return;
     }
 
@@ -1043,15 +1032,15 @@ class Markdown_FM {
       return;
     }
 
-    if (isset($_POST['markdown_fm'])) {
+    if (isset($_POST['yaml_cf'])) {
       // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via sanitize_field_data()
-      $sanitized_data = $this->sanitize_field_data(wp_unslash($_POST['markdown_fm']));
-      update_post_meta($post_id, '_markdown_fm_data', $sanitized_data);
+      $sanitized_data = $this->sanitize_field_data(wp_unslash($_POST['yaml_cf']));
+      update_post_meta($post_id, '_yaml_cf_data', $sanitized_data);
     }
   }
 
   public function ajax_get_partial_data() {
-    check_ajax_referer('markdown_fm_nonce', 'nonce');
+    check_ajax_referer('yaml_cf_nonce', 'nonce');
 
     if (!current_user_can('manage_options')) {
       wp_send_json_error('Permission denied');
@@ -1060,7 +1049,7 @@ class Markdown_FM {
     $template = isset($_POST['template']) ? sanitize_text_field(wp_unslash($_POST['template'])) : '';
 
     // Get schema
-    $schemas = get_option('markdown_fm_schemas', []);
+    $schemas = get_option('yaml_cf_schemas', []);
     $schema_yaml = isset($schemas[$template]) ? $schemas[$template] : '';
 
     if (empty($schema_yaml)) {
@@ -1071,7 +1060,7 @@ class Markdown_FM {
     $schema = $this->parse_yaml_schema($schema_yaml);
 
     // Get existing data
-    $partial_data = get_option('markdown_fm_partial_data', []);
+    $partial_data = get_option('yaml_cf_partial_data', []);
     $data = isset($partial_data[$template]) ? $partial_data[$template] : [];
 
     wp_send_json_success([
@@ -1081,7 +1070,7 @@ class Markdown_FM {
   }
 
   public function ajax_save_partial_data() {
-    check_ajax_referer('markdown_fm_nonce', 'nonce');
+    check_ajax_referer('yaml_cf_nonce', 'nonce');
 
     if (!current_user_can('manage_options')) {
       wp_send_json_error('Permission denied');
@@ -1095,19 +1084,19 @@ class Markdown_FM {
     }
 
     // Get existing partial data
-    $partial_data = get_option('markdown_fm_partial_data', []);
+    $partial_data = get_option('yaml_cf_partial_data', []);
 
     // Update data for this partial
     $partial_data[$template] = $data;
 
     // Save back to options
-    update_option('markdown_fm_partial_data', $partial_data);
+    update_option('yaml_cf_partial_data', $partial_data);
 
     wp_send_json_success();
   }
 
   public function ajax_export_settings() {
-    check_ajax_referer('markdown_fm_nonce', 'nonce');
+    check_ajax_referer('yaml_cf_nonce', 'nonce');
 
     if (!current_user_can('manage_options')) {
       wp_send_json_error('Permission denied');
@@ -1115,14 +1104,14 @@ class Markdown_FM {
 
     // Gather all settings
     $export_data = [
-      'plugin' => 'markdown-fm',
-      'version' => MARKDOWN_FM_VERSION,
+      'plugin' => 'yaml-custom-fields',
+      'version' => YAML_CF_VERSION,
       'exported_at' => current_time('mysql'),
       'site_url' => get_site_url(),
       'settings' => [
-        'template_settings' => get_option('markdown_fm_template_settings', []),
-        'schemas' => get_option('markdown_fm_schemas', []),
-        'partial_data' => get_option('markdown_fm_partial_data', [])
+        'template_settings' => get_option('yaml_cf_template_settings', []),
+        'schemas' => get_option('yaml_cf_schemas', []),
+        'partial_data' => get_option('yaml_cf_partial_data', [])
       ]
     ];
 
@@ -1130,7 +1119,7 @@ class Markdown_FM {
   }
 
   public function ajax_import_settings() {
-    check_ajax_referer('markdown_fm_nonce', 'nonce');
+    check_ajax_referer('yaml_cf_nonce', 'nonce');
 
     if (!current_user_can('manage_options')) {
       wp_send_json_error('Permission denied');
@@ -1143,7 +1132,7 @@ class Markdown_FM {
     $import_data = json_decode(sanitize_textarea_field(wp_unslash($_POST['data'])), true);
 
     // Validate import data
-    if (!$import_data || !isset($import_data['plugin']) || $import_data['plugin'] !== 'markdown-fm') {
+    if (!$import_data || !isset($import_data['plugin']) || $import_data['plugin'] !== 'yaml-custom-fields') {
       wp_send_json_error('Invalid import file format');
     }
 
@@ -1157,28 +1146,28 @@ class Markdown_FM {
     // Import template settings
     if (isset($settings['template_settings'])) {
       if ($merge) {
-        $existing = get_option('markdown_fm_template_settings', []);
+        $existing = get_option('yaml_cf_template_settings', []);
         $settings['template_settings'] = array_merge($existing, $settings['template_settings']);
       }
-      update_option('markdown_fm_template_settings', $settings['template_settings']);
+      update_option('yaml_cf_template_settings', $settings['template_settings']);
     }
 
     // Import schemas
     if (isset($settings['schemas'])) {
       if ($merge) {
-        $existing = get_option('markdown_fm_schemas', []);
+        $existing = get_option('yaml_cf_schemas', []);
         $settings['schemas'] = array_merge($existing, $settings['schemas']);
       }
-      update_option('markdown_fm_schemas', $settings['schemas']);
+      update_option('yaml_cf_schemas', $settings['schemas']);
     }
 
     // Import partial data
     if (isset($settings['partial_data'])) {
       if ($merge) {
-        $existing = get_option('markdown_fm_partial_data', []);
+        $existing = get_option('yaml_cf_partial_data', []);
         $settings['partial_data'] = array_merge($existing, $settings['partial_data']);
       }
-      update_option('markdown_fm_partial_data', $settings['partial_data']);
+      update_option('yaml_cf_partial_data', $settings['partial_data']);
     }
 
     // Clear template cache
@@ -1192,29 +1181,29 @@ class Markdown_FM {
   }
 }
 
-function markdown_fm_init() {
-  return Markdown_FM::get_instance();
+function yaml_cf_init() {
+  return YAML_Custom_Fields::get_instance();
 }
 
-add_action('plugins_loaded', 'markdown_fm_init');
+add_action('plugins_loaded', 'yaml_cf_init');
 
 /**
- * Get a specific field value from Markdown FM data
+ * Get a specific field value from YAML Custom Fields data
  *
  * @param string $field_name The name of the field to retrieve
  * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
  * @return mixed The field value, or null if not found
  *
  * Usage in templates:
- * - For page/post: $hero = markdown_fm_get_field('hero');
- * - For specific post: $hero = markdown_fm_get_field('hero', 123);
- * - For partial: $logo = markdown_fm_get_field('logo', 'partial:header.php');
+ * - For page/post: $hero = yaml_cf_get_field('hero');
+ * - For specific post: $hero = yaml_cf_get_field('hero', 123);
+ * - For partial: $logo = yaml_cf_get_field('logo', 'partial:header.php');
  */
-function markdown_fm_get_field($field_name, $post_id = null) {
+function yaml_cf_get_field($field_name, $post_id = null) {
   // Handle partials
   if (is_string($post_id) && strpos($post_id, 'partial:') === 0) {
     $partial_file = str_replace('partial:', '', $post_id);
-    $partial_data = get_option('markdown_fm_partial_data', []);
+    $partial_data = get_option('yaml_cf_partial_data', []);
 
     if (isset($partial_data[$partial_file][$field_name])) {
       return $partial_data[$partial_file][$field_name];
@@ -1232,7 +1221,7 @@ function markdown_fm_get_field($field_name, $post_id = null) {
     return null;
   }
 
-  $data = get_post_meta($post_id, '_markdown_fm_data', true);
+  $data = get_post_meta($post_id, '_yaml_cf_data', true);
 
   if (is_array($data) && isset($data[$field_name])) {
     return $data[$field_name];
@@ -1242,21 +1231,21 @@ function markdown_fm_get_field($field_name, $post_id = null) {
 }
 
 /**
- * Get all Markdown FM fields for the current post or partial
+ * Get all YAML Custom Fields fields for the current post or partial
  *
  * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
  * @return array Array of all field values
  *
  * Usage in templates:
- * - For page/post: $fields = markdown_fm_get_fields();
- * - For specific post: $fields = markdown_fm_get_fields(123);
- * - For partial: $fields = markdown_fm_get_fields('partial:header.php');
+ * - For page/post: $fields = yaml_cf_get_fields();
+ * - For specific post: $fields = yaml_cf_get_fields(123);
+ * - For partial: $fields = yaml_cf_get_fields('partial:header.php');
  */
-function markdown_fm_get_fields($post_id = null) {
+function yaml_cf_get_fields($post_id = null) {
   // Handle partials
   if (is_string($post_id) && strpos($post_id, 'partial:') === 0) {
     $partial_file = str_replace('partial:', '', $post_id);
-    $partial_data = get_option('markdown_fm_partial_data', []);
+    $partial_data = get_option('yaml_cf_partial_data', []);
 
     return isset($partial_data[$partial_file]) ? $partial_data[$partial_file] : [];
   }
@@ -1270,7 +1259,7 @@ function markdown_fm_get_fields($post_id = null) {
     return [];
   }
 
-  $data = get_post_meta($post_id, '_markdown_fm_data', true);
+  $data = get_post_meta($post_id, '_yaml_cf_data', true);
 
   return is_array($data) ? $data : [];
 }
@@ -1282,36 +1271,36 @@ function markdown_fm_get_fields($post_id = null) {
  * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
  * @return bool True if field exists, false otherwise
  */
-function markdown_fm_has_field($field_name, $post_id = null) {
-  $value = markdown_fm_get_field($field_name, $post_id);
+function yaml_cf_has_field($field_name, $post_id = null) {
+  $value = yaml_cf_get_field($field_name, $post_id);
   return $value !== null;
 }
 
 // Shorter aliases for convenience
-if (!function_exists('mdfm_get_field')) {
+if (!function_exists('ycf_get_field')) {
   /**
-   * Alias for markdown_fm_get_field()
+   * Alias for yaml_cf_get_field()
    */
-  function mdfm_get_field($field_name, $post_id = null) {
-    return markdown_fm_get_field($field_name, $post_id);
+  function ycf_get_field($field_name, $post_id = null) {
+    return yaml_cf_get_field($field_name, $post_id);
   }
 }
 
-if (!function_exists('mdfm_get_fields')) {
+if (!function_exists('ycf_get_fields')) {
   /**
-   * Alias for markdown_fm_get_fields()
+   * Alias for yaml_cf_get_fields()
    */
-  function mdfm_get_fields($post_id = null) {
-    return markdown_fm_get_fields($post_id);
+  function ycf_get_fields($post_id = null) {
+    return yaml_cf_get_fields($post_id);
   }
 }
 
-if (!function_exists('mdfm_has_field')) {
+if (!function_exists('ycf_has_field')) {
   /**
-   * Alias for markdown_fm_has_field()
+   * Alias for yaml_cf_has_field()
    */
-  function mdfm_has_field($field_name, $post_id = null) {
-    return markdown_fm_has_field($field_name, $post_id);
+  function ycf_has_field($field_name, $post_id = null) {
+    return yaml_cf_has_field($field_name, $post_id);
   }
 }
 
@@ -1324,8 +1313,8 @@ if (!function_exists('mdfm_has_field')) {
  * @param string $size Optional. Image size (thumbnail, medium, large, full). Defaults to 'full'.
  * @return array|null Array with 'id', 'url', 'alt', 'width', 'height' keys or null if not found
  */
-function mdfm_get_image($field_name, $post_id = null, $size = 'full') {
-  $attachment_id = mdfm_get_field($field_name, $post_id);
+function ycf_get_image($field_name, $post_id = null, $size = 'full') {
+  $attachment_id = ycf_get_field($field_name, $post_id);
 
   if (!$attachment_id || !is_numeric($attachment_id)) {
     return null;
@@ -1363,8 +1352,8 @@ function mdfm_get_image($field_name, $post_id = null, $size = 'full') {
  * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
  * @return array|null Array with 'id', 'url', 'filename', 'filesize', 'mime_type' keys or null if not found
  */
-function mdfm_get_file($field_name, $post_id = null) {
-  $attachment_id = mdfm_get_field($field_name, $post_id);
+function ycf_get_file($field_name, $post_id = null) {
+  $attachment_id = ycf_get_field($field_name, $post_id);
 
   if (!$attachment_id || !is_numeric($attachment_id)) {
     return null;
@@ -1388,16 +1377,16 @@ function mdfm_get_file($field_name, $post_id = null) {
   ];
 }
 
-register_uninstall_hook(__FILE__, 'markdown_fm_uninstall');
+register_uninstall_hook(__FILE__, 'yaml_cf_uninstall');
 
-function markdown_fm_uninstall() {
-  delete_option('markdown_fm_template_settings');
-  delete_option('markdown_fm_schemas');
-  delete_option('markdown_fm_partial_data');
+function yaml_cf_uninstall() {
+  delete_option('yaml_cf_template_settings');
+  delete_option('yaml_cf_schemas');
+  delete_option('yaml_cf_partial_data');
 
   // Delete all post meta for this plugin across all posts
-  delete_post_meta_by_key('_markdown_fm_data');
+  delete_post_meta_by_key('_yaml_cf_data');
 
   // Clear template cache
-  delete_transient('markdown_fm_templates_' . get_stylesheet());
+  delete_transient('yaml_cf_templates_' . get_stylesheet());
 }

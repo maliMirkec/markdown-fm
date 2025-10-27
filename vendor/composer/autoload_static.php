@@ -17,9 +17,9 @@ class ComposerStaticInit6ed106f430c3c75fbc12ce4fdb37a13c
             'Symfony\\Polyfill\\Ctype\\' => 23,
             'Symfony\\Component\\Yaml\\' => 23,
         ),
-        'M' => 
+        'Y' =>
         array (
-            'MarkdownFM\\' => 11,
+            'YamlCF\\' => 7,
         ),
     );
 
@@ -32,7 +32,7 @@ class ComposerStaticInit6ed106f430c3c75fbc12ce4fdb37a13c
         array (
             0 => __DIR__ . '/..' . '/symfony/yaml',
         ),
-        'MarkdownFM\\' => 
+        'YamlCF\\' =>
         array (
             0 => __DIR__ . '/../..' . '/src',
         ),

@@ -10,49 +10,49 @@ if (!defined('ABSPATH')) {
 ?>
 
 <div class="wrap">
-  <div class="markdown-fm-admin-container">
-    <div class="markdown-fm-header">
-      <div class="markdown-fm-header-content">
-        <img src="<?php echo esc_url(MARKDOWN_FM_PLUGIN_URL . 'icon-256x256.png'); ?>" alt="Markdown FM" class="markdown-fm-logo" />
-        <div class="markdown-fm-header-text">
+  <div class="yaml-cf-admin-container">
+    <div class="yaml-cf-header">
+      <div class="yaml-cf-header-content">
+        <img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'icon-256x256.png'); ?>" alt="YAML Custom Fields" class="yaml-cf-logo" />
+        <div class="yaml-cf-header-text">
           <h1><?php echo esc_html($template_name); ?></h1>
-          <p class="markdown-fm-tagline"><?php esc_html_e('Edit global data for this partial', 'markdown-fm'); ?></p>
+          <p class="yaml-cf-tagline"><?php esc_html_e('Edit global data for this partial', 'yaml-custom-fields'); ?></p>
         </div>
       </div>
     </div>
 
-    <div class="markdown-fm-intro">
+    <div class="yaml-cf-intro">
       <p>
-        <a href="<?php echo esc_url(admin_url('admin.php?page=markdown-fm')); ?>" class="button">
+        <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-custom-fields')); ?>" class="button">
           <span class="dashicons dashicons-arrow-left-alt2"></span>
-          <?php esc_html_e('Back to Templates', 'markdown-fm'); ?>
+          <?php esc_html_e('Back to Templates', 'yaml-custom-fields'); ?>
         </a>
       </p>
-      <p><strong><?php esc_html_e('Template File:', 'markdown-fm'); ?></strong> <code><?php echo esc_html($template); ?></code></p>
-      <p><?php esc_html_e('This data is global and will be used wherever this partial is included in your theme.', 'markdown-fm'); ?></p>
+      <p><strong><?php esc_html_e('Template File:', 'yaml-custom-fields'); ?></strong> <code><?php echo esc_html($template); ?></code></p>
+      <p><?php esc_html_e('This data is global and will be used wherever this partial is included in your theme.', 'yaml-custom-fields'); ?></p>
     </div>
 
-    <form id="markdown-fm-partial-form" method="post">
-      <?php wp_nonce_field('markdown_fm_save_partial', 'markdown_fm_partial_nonce'); ?>
+    <form id="yaml-cf-partial-form" method="post">
+      <?php wp_nonce_field('yaml_cf_save_partial', 'yaml_cf_partial_nonce'); ?>
       <input type="hidden" name="template" value="<?php echo esc_attr($template); ?>" />
 
-      <div class="markdown-fm-fields" style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.1);">
+      <div class="yaml-cf-fields" style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.1);">
         <?php
         if (!empty($schema['fields'])) {
-          $plugin = Markdown_FM::get_instance();
+          $plugin = YAML_Custom_Fields::get_instance();
           $plugin->render_schema_fields($schema['fields'], $template_data);
         } else {
-          echo '<p>' . esc_html__('No fields defined in schema.', 'markdown-fm') . '</p>';
+          echo '<p>' . esc_html__('No fields defined in schema.', 'yaml-custom-fields') . '</p>';
         }
         ?>
       </div>
 
       <p class="submit" style="margin-top: 20px;">
         <button type="submit" class="button button-primary button-large">
-          <?php esc_html_e('Save Partial Data', 'markdown-fm'); ?>
+          <?php esc_html_e('Save Partial Data', 'yaml-custom-fields'); ?>
         </button>
-        <a href="<?php echo esc_url(admin_url('admin.php?page=markdown-fm')); ?>" class="button button-large">
-          <?php esc_html_e('Cancel', 'markdown-fm'); ?>
+        <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-custom-fields')); ?>" class="button button-large">
+          <?php esc_html_e('Cancel', 'yaml-custom-fields'); ?>
         </a>
       </p>
     </form>
@@ -62,8 +62,8 @@ if (!defined('ABSPATH')) {
 <?php if (!empty($success_message)) : ?>
 <script>
 jQuery(document).ready(function($) {
-  if (typeof MarkdownFM !== 'undefined' && MarkdownFM.showMessage) {
-    MarkdownFM.showMessage('<?php echo esc_js($success_message); ?>', 'success');
+  if (typeof YamlCF !== 'undefined' && YamlCF.showMessage) {
+    YamlCF.showMessage('<?php echo esc_js($success_message); ?>', 'success');
   }
 });
 </script>
@@ -77,7 +77,7 @@ jQuery(document).ready(function($) {
   // Capture original form state
   function captureFormState() {
     const formData = {};
-    $('#markdown-fm-partial-form .markdown-fm-fields').find('input, textarea, select').each(function() {
+    $('#yaml-cf-partial-form .yaml-cf-fields').find('input, textarea, select').each(function() {
       const $field = $(this);
       const name = $field.attr('name');
       if (!name) return;
@@ -107,12 +107,12 @@ jQuery(document).ready(function($) {
   // Show/hide unsaved changes indicator
   function toggleUnsavedIndicator(show) {
     if (show) {
-      if (typeof MarkdownFM !== 'undefined' && MarkdownFM.showMessage) {
-        MarkdownFM.showMessage('<?php echo esc_js(__('You have unsaved changes', 'markdown-fm')); ?>', 'warning', true);
+      if (typeof YamlCF !== 'undefined' && YamlCF.showMessage) {
+        YamlCF.showMessage('<?php echo esc_js(__('You have unsaved changes', 'yaml-custom-fields')); ?>', 'warning', true);
       }
     } else {
-      if (typeof MarkdownFM !== 'undefined' && MarkdownFM.hideMessage) {
-        MarkdownFM.hideMessage('warning');
+      if (typeof YamlCF !== 'undefined' && YamlCF.hideMessage) {
+        YamlCF.hideMessage('warning');
       }
     }
   }
@@ -123,21 +123,21 @@ jQuery(document).ready(function($) {
   }, 500);
 
   // Watch for changes
-  $('#markdown-fm-partial-form').on('input change', 'input, textarea, select', function() {
+  $('#yaml-cf-partial-form').on('input change', 'input, textarea, select', function() {
     checkForChanges();
   });
 
   // Warn before leaving page with unsaved changes
   $(window).on('beforeunload', function(e) {
     if (hasUnsavedChanges) {
-      const message = '<?php echo esc_js(__('You have unsaved changes. Are you sure you want to leave?', 'markdown-fm')); ?>';
+      const message = '<?php echo esc_js(__('You have unsaved changes. Are you sure you want to leave?', 'yaml-custom-fields')); ?>';
       e.returnValue = message;
       return message;
     }
   });
 
   // Clear unsaved flag on submit
-  $('#markdown-fm-partial-form').on('submit', function() {
+  $('#yaml-cf-partial-form').on('submit', function() {
     hasUnsavedChanges = false;
   });
 });
