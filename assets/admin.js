@@ -43,6 +43,10 @@
       // Clear Media
       $(document).on('click', '.yaml-cf-clear-media', this.clearMedia);
 
+      // Partial Image/File Upload (for modal-based editing - if still used)
+      $(document).on('click', '.yaml-cf-upload-image-partial', this.uploadImagePartial);
+      $(document).on('click', '.yaml-cf-upload-file-partial', this.uploadFilePartial);
+
       // Reset All Data
       $(document).on('click', '.yaml-cf-reset-data', this.resetAllData);
 
@@ -58,6 +62,11 @@
         this.triggerImport
       );
       $(document).on('change', '#yaml-cf-import-file', this.importSettings);
+
+      // Code Snippet Copy
+      $(document).on('click', '.yaml-cf-copy-snippet', this.copySnippet);
+      $(document).on('mouseenter', '.yaml-cf-copy-snippet', this.showSnippetPopover);
+      $(document).on('mouseleave', '.yaml-cf-copy-snippet', this.hideSnippetPopover);
 
       // Escape key to close modal
       $(document).on('keydown', function (e) {
@@ -318,7 +327,23 @@
           );
 
           // Render field based on type
-          if (blockField.type === 'rich-text') {
+          if (blockField.type === 'boolean') {
+            $field.append(
+              $('<input>', {
+                type: 'checkbox',
+                name:
+                  'yaml_cf[' +
+                  fieldName +
+                  '][' +
+                  index +
+                  '][' +
+                  blockField.name +
+                  ']',
+                id: blockFieldId,
+                value: '1',
+              })
+            );
+          } else if (blockField.type === 'rich-text') {
             // For rich-text, we need to use WordPress editor which requires page reload
             $field.append(
               $('<div>', {
@@ -361,7 +386,27 @@
                 class: 'large-text',
               })
             );
+          } else if (blockField.type === 'code') {
+            const options = blockField.options || {};
+            const language = options.language || 'html';
+            $field.append(
+              $('<textarea>', {
+                name:
+                  'yaml_cf[' +
+                  fieldName +
+                  '][' +
+                  index +
+                  '][' +
+                  blockField.name +
+                  ']',
+                id: blockFieldId,
+                rows: 10,
+                class: 'large-text code',
+                'data-language': language,
+              })
+            );
           } else if (blockField.type === 'number') {
+            const options = blockField.options || {};
             $field.append(
               $('<input>', {
                 type: 'number',
@@ -375,10 +420,140 @@
                   ']',
                 id: blockFieldId,
                 class: 'small-text',
+                min: options.min || '',
+                max: options.max || '',
+              })
+            );
+          } else if (blockField.type === 'date') {
+            const options = blockField.options || {};
+            const hasTime = options.time || false;
+            $field.append(
+              $('<input>', {
+                type: hasTime ? 'datetime-local' : 'date',
+                name:
+                  'yaml_cf[' +
+                  fieldName +
+                  '][' +
+                  index +
+                  '][' +
+                  blockField.name +
+                  ']',
+                id: blockFieldId,
+              })
+            );
+          } else if (blockField.type === 'select') {
+            const options = blockField.options || {};
+            const multiple = blockField.multiple || false;
+            const values = blockField.values || [];
+
+            const $select = $('<select>', {
+              name:
+                'yaml_cf[' +
+                fieldName +
+                '][' +
+                index +
+                '][' +
+                blockField.name +
+                ']' +
+                (multiple ? '[]' : ''),
+              id: blockFieldId,
+              multiple: multiple,
+            });
+
+            $select.append($('<option>', { value: '', text: '-- Select --' }));
+
+            if (Array.isArray(values)) {
+              values.forEach(function (option) {
+                const optValue =
+                  typeof option === 'object' ? option.value || '' : option;
+                const optLabel =
+                  typeof option === 'object' ? option.label || optValue : option;
+                $select.append(
+                  $('<option>', { value: optValue, text: optLabel })
+                );
+              });
+            }
+
+            $field.append($select);
+          } else if (blockField.type === 'image') {
+            // Image upload field
+            $field.append(
+              $('<input>', {
+                type: 'hidden',
+                name:
+                  'yaml_cf[' +
+                  fieldName +
+                  '][' +
+                  index +
+                  '][' +
+                  blockField.name +
+                  ']',
+                id: blockFieldId,
+                value: '',
+              })
+            );
+            const $mediaButtons = $('<div>', {
+              class: 'yaml-cf-media-buttons',
+            });
+            $mediaButtons.append(
+              $('<button>', {
+                type: 'button',
+                class: 'button yaml-cf-upload-image',
+                'data-target': blockFieldId,
+                text: 'Upload Image',
+              })
+            );
+            $field.append($mediaButtons);
+          } else if (blockField.type === 'file') {
+            // File upload field
+            $field.append(
+              $('<input>', {
+                type: 'hidden',
+                name:
+                  'yaml_cf[' +
+                  fieldName +
+                  '][' +
+                  index +
+                  '][' +
+                  blockField.name +
+                  ']',
+                id: blockFieldId,
+                value: '',
+              })
+            );
+            const $mediaButtons = $('<div>', {
+              class: 'yaml-cf-media-buttons',
+            });
+            $mediaButtons.append(
+              $('<button>', {
+                type: 'button',
+                class: 'button yaml-cf-upload-file',
+                'data-target': blockFieldId,
+                text: 'Upload File',
+              })
+            );
+            $field.append($mediaButtons);
+          } else if (blockField.type === 'string') {
+            const options = blockField.options || {};
+            $field.append(
+              $('<input>', {
+                type: 'text',
+                name:
+                  'yaml_cf[' +
+                  fieldName +
+                  '][' +
+                  index +
+                  '][' +
+                  blockField.name +
+                  ']',
+                id: blockFieldId,
+                class: 'regular-text',
+                minlength: options.minlength || '',
+                maxlength: options.maxlength || '',
               })
             );
           } else {
-            // Default to text input for string and other types
+            // Default to text input for unknown types
             $field.append(
               $('<input>', {
                 type: 'text',
@@ -444,8 +619,6 @@
     },
 
     initMediaUploader: function () {
-      let mediaUploader;
-
       // Image Upload
       $(document).on('click', '.yaml-cf-upload-image', function (e) {
         e.preventDefault();
@@ -453,12 +626,8 @@
         const $button = $(this);
         const targetId = $button.data('target');
 
-        if (mediaUploader) {
-          mediaUploader.open();
-          return;
-        }
-
-        mediaUploader = wp.media({
+        // Always create a new media uploader instance to avoid target conflicts
+        const mediaUploader = wp.media({
           title: 'Select Image',
           button: {
             text: 'Use This Image',
@@ -491,6 +660,19 @@
                 '</div>'
             );
           }
+
+          // Add clear button if it doesn't exist
+          const $buttonsDiv = $button.closest('.yaml-cf-media-buttons');
+          if (!$buttonsDiv.find('.yaml-cf-clear-media').length) {
+            $buttonsDiv.append(
+              $('<button>', {
+                type: 'button',
+                class: 'button yaml-cf-clear-media',
+                'data-target': targetId,
+                text: 'Clear',
+              })
+            );
+          }
         });
 
         mediaUploader.open();
@@ -503,12 +685,8 @@
         const $button = $(this);
         const targetId = $button.data('target');
 
-        if (mediaUploader) {
-          mediaUploader.open();
-          return;
-        }
-
-        mediaUploader = wp.media({
+        // Always create a new media uploader instance to avoid target conflicts
+        const mediaUploader = wp.media({
           title: 'Select File',
           button: {
             text: 'Use This File',
@@ -534,6 +712,19 @@
               '<div class="yaml-cf-file-name">' +
                 attachment.filename +
                 '</div>'
+            );
+          }
+
+          // Add clear button if it doesn't exist
+          const $buttonsDiv = $button.closest('.yaml-cf-media-buttons');
+          if (!$buttonsDiv.find('.yaml-cf-clear-media').length) {
+            $buttonsDiv.append(
+              $('<button>', {
+                type: 'button',
+                class: 'button yaml-cf-clear-media',
+                'data-target': targetId,
+                text: 'Clear',
+              })
             );
           }
         });
@@ -1360,6 +1551,160 @@
           $(this).remove();
         }
       );
+    },
+
+    showSnippetPopover: function (e) {
+      const $button = $(this);
+      const popoverId = $button.data('popover');
+
+      if (!popoverId) {
+        return;
+      }
+
+      const $popover = $('#' + popoverId);
+
+      if (!$popover.length) {
+        return;
+      }
+
+      // Clear any hide timeout
+      if ($popover.data('hideTimeout')) {
+        clearTimeout($popover.data('hideTimeout'));
+      }
+
+      // Show the popover
+      $popover.addClass('visible');
+
+      // Add hover handlers to the popover itself
+      $popover.off('mouseenter mouseleave');
+
+      $popover.on('mouseenter', function () {
+        // Clear hide timeout when entering popover
+        if ($(this).data('hideTimeout')) {
+          clearTimeout($(this).data('hideTimeout'));
+        }
+        $(this).addClass('visible');
+      });
+
+      $popover.on('mouseleave', function () {
+        const $self = $(this);
+        const hideTimeout = setTimeout(function () {
+          $self.removeClass('visible');
+        }, 100);
+        $self.data('hideTimeout', hideTimeout);
+      });
+    },
+
+    hideSnippetPopover: function (e) {
+      const $button = $(this);
+      const popoverId = $button.data('popover');
+
+      if (!popoverId) {
+        return;
+      }
+
+      const $popover = $('#' + popoverId);
+
+      // Delay hiding to allow moving to popover
+      const hideTimeout = setTimeout(function () {
+        $popover.removeClass('visible');
+      }, 100);
+
+      $popover.data('hideTimeout', hideTimeout);
+    },
+
+    copySnippet: function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const $button = $(this);
+      const snippet = $button.data('snippet');
+      const popoverId = $button.data('popover');
+
+      if (!snippet) {
+        return;
+      }
+
+      // Hide the popover immediately
+      if (popoverId) {
+        const $popover = $('#' + popoverId);
+        $popover.removeClass('visible');
+        if ($popover.data('hideTimeout')) {
+          clearTimeout($popover.data('hideTimeout'));
+        }
+      }
+
+      // Copy to clipboard
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(snippet).then(
+          function () {
+            YamlCF.showCopyFeedback($button);
+          },
+          function () {
+            // Fallback for older browsers
+            YamlCF.fallbackCopyToClipboard(snippet, $button);
+          }
+        );
+      } else {
+        // Fallback for older browsers
+        YamlCF.fallbackCopyToClipboard(snippet, $button);
+      }
+    },
+
+    fallbackCopyToClipboard: function (text, $button) {
+      const $temp = $('<textarea>');
+      $('body').append($temp);
+      $temp.val(text).select();
+      try {
+        document.execCommand('copy');
+        YamlCF.showCopyFeedback($button);
+      } catch (err) {
+        YamlCF.showMessage('Failed to copy snippet', 'error');
+      }
+      $temp.remove();
+    },
+
+    showCopyFeedback: function ($button) {
+      // Remove existing tooltips
+      $('.yaml-cf-snippet-tooltip').remove();
+
+      // Add visual feedback to button
+      $button.addClass('copied');
+      setTimeout(function () {
+        $button.removeClass('copied');
+      }, 2000);
+
+      // Create success tooltip
+      const $tooltip = $('<div>', {
+        class: 'yaml-cf-snippet-tooltip',
+        text: 'Copied!',
+      });
+
+      // Position tooltip
+      const buttonOffset = $button.offset();
+      const buttonHeight = $button.outerHeight();
+      const buttonWidth = $button.outerWidth();
+
+      $('body').append($tooltip);
+
+      const tooltipWidth = $tooltip.outerWidth();
+      const tooltipLeft = buttonOffset.left - tooltipWidth / 2 + buttonWidth / 2;
+      const tooltipTop = buttonOffset.top + buttonHeight + 8;
+
+      $tooltip.css({
+        left: tooltipLeft + 'px',
+        top: tooltipTop + 'px',
+      });
+
+      // Auto-hide tooltip
+      setTimeout(function () {
+        $tooltip.fadeOut(300, function () {
+          $(this).remove();
+        });
+      }, 2000);
+
+      // Show success message
+      YamlCF.showMessage('Code snippet copied to clipboard!', 'success');
     },
   };
 

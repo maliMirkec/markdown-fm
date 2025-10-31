@@ -214,7 +214,7 @@ class YAML_Custom_Fields {
   public function enqueue_admin_assets($hook) {
     // Load on the plugin settings page
     $is_settings_page = ('toplevel_page_yaml-custom-fields' === $hook);
-    $is_docs_page = ('yaml-custom-fields_page_yaml-custom-fields-docs' === $hook);
+    $is_docs_page = ('yaml-cf_page_yaml-cf-docs' === $hook);
     $is_edit_template_page = (strpos($hook, 'yaml-cf-edit-template') !== false);
     $is_edit_partial_page = (strpos($hook, 'yaml-cf-edit-partial') !== false);
     $is_edit_schema_page = (strpos($hook, 'yaml-cf-edit-schema') !== false);
@@ -368,6 +368,22 @@ class YAML_Custom_Fields {
     $schemas = get_option('yaml_cf_schemas', []);
     $schema_yaml = isset($schemas[$template]) ? $schemas[$template] : '';
 
+    // Check if there's a validation error and restore the invalid schema
+    $error_message = '';
+    if (isset($_GET['error']) && sanitize_text_field(wp_unslash($_GET['error'])) === '1') {
+      $invalid_schema = get_transient('yaml_cf_invalid_schema_' . get_current_user_id());
+      if ($invalid_schema !== false) {
+        $schema_yaml = $invalid_schema;
+        delete_transient('yaml_cf_invalid_schema_' . get_current_user_id());
+      }
+
+      if (isset($_GET['error_msg'])) {
+        $error_message = sanitize_text_field(wp_unslash($_GET['error_msg']));
+      } else {
+        $error_message = __('Invalid YAML schema. Please check your syntax and try again.', 'yaml-custom-fields');
+      }
+    }
+
     // Get template name from theme files
     $theme_files = $this->get_theme_templates();
     $template_name = $template;
@@ -408,9 +424,30 @@ class YAML_Custom_Fields {
       $template = isset($_POST['template']) ? sanitize_text_field(wp_unslash($_POST['template'])) : '';
       $schema = isset($_POST['schema']) ? sanitize_textarea_field(wp_unslash($_POST['schema'])) : '';
 
+      // Validate YAML syntax before saving
+      if (!empty($schema)) {
+        $validation_result = $this->validate_yaml_schema($schema);
+        if (!$validation_result['valid']) {
+          // Store the invalid schema in a transient so we can display it back
+          set_transient('yaml_cf_invalid_schema_' . get_current_user_id(), $schema, 60);
+
+          // Redirect back with error message
+          wp_redirect(add_query_arg([
+            'page' => 'yaml-cf-edit-schema',
+            'template' => urlencode($template),
+            'error' => '1',
+            'error_msg' => urlencode($validation_result['message'])
+          ], admin_url('admin.php')));
+          exit;
+        }
+      }
+
       $schemas = get_option('yaml_cf_schemas', []);
       $schemas[$template] = $schema;
       update_option('yaml_cf_schemas', $schemas);
+
+      // Clear any stored invalid schema
+      delete_transient('yaml_cf_invalid_schema_' . get_current_user_id());
 
       // Redirect with success message
       wp_redirect(add_query_arg([
@@ -432,10 +469,17 @@ class YAML_Custom_Fields {
       $template = isset($_POST['template']) ? sanitize_text_field(wp_unslash($_POST['template'])) : '';
       $field_data = [];
 
+      // Get schema for validation
+      $schemas = get_option('yaml_cf_schemas', []);
+      $schema = null;
+      if (isset($schemas[$template])) {
+        $schema = $this->parse_yaml_schema($schemas[$template]);
+      }
+
       // Collect all field data
       if (isset($_POST['yaml_cf']) && is_array($_POST['yaml_cf'])) {
         // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via sanitize_field_data()
-        $field_data = $this->sanitize_field_data(wp_unslash($_POST['yaml_cf']));
+        $field_data = $this->sanitize_field_data(wp_unslash($_POST['yaml_cf']), $schema);
       }
 
       $partial_data = get_option('yaml_cf_partial_data', []);
@@ -452,18 +496,142 @@ class YAML_Custom_Fields {
     }
   }
 
-  private function sanitize_field_data($data) {
+  private function sanitize_field_data($data, $schema = null, $field_name = '') {
     if (is_array($data)) {
       $sanitized = [];
       foreach ($data as $key => $value) {
-        $sanitized[sanitize_text_field($key)] = $this->sanitize_field_data($value);
+        $sanitized[sanitize_text_field($key)] = $this->sanitize_field_data($value, $schema, $key);
       }
       return $sanitized;
     } elseif (is_string($data)) {
+      // Check if this is a code field
+      if ($schema && $field_name && $this->is_code_field($schema, $field_name)) {
+        return $this->sanitize_code_field($data, $schema, $field_name);
+      }
       // Use sanitize_textarea_field to preserve newlines and structure
       return sanitize_textarea_field($data);
     }
     return $data;
+  }
+
+  private function is_code_field($schema, $field_name) {
+    if (!isset($schema['fields']) || !is_array($schema['fields'])) {
+      return false;
+    }
+
+    foreach ($schema['fields'] as $field) {
+      if (isset($field['name']) && $field['name'] === $field_name && isset($field['type']) && $field['type'] === 'code') {
+        return true;
+      }
+      // Check nested fields in objects
+      if (isset($field['fields']) && is_array($field['fields'])) {
+        if ($this->is_code_field(['fields' => $field['fields']], $field_name)) {
+          return true;
+        }
+      }
+      // Check blocks
+      if (isset($field['blocks']) && is_array($field['blocks'])) {
+        foreach ($field['blocks'] as $block) {
+          if (isset($block['fields']) && is_array($block['fields'])) {
+            if ($this->is_code_field(['fields' => $block['fields']], $field_name)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  private function get_code_field_language($schema, $field_name) {
+    if (!isset($schema['fields']) || !is_array($schema['fields'])) {
+      return 'html';
+    }
+
+    foreach ($schema['fields'] as $field) {
+      if (isset($field['name']) && $field['name'] === $field_name && isset($field['type']) && $field['type'] === 'code') {
+        return isset($field['options']['language']) ? $field['options']['language'] : 'html';
+      }
+      // Check nested fields in objects
+      if (isset($field['fields']) && is_array($field['fields'])) {
+        $lang = $this->get_code_field_language(['fields' => $field['fields']], $field_name);
+        if ($lang !== 'html' || $this->is_code_field(['fields' => $field['fields']], $field_name)) {
+          return $lang;
+        }
+      }
+      // Check blocks
+      if (isset($field['blocks']) && is_array($field['blocks'])) {
+        foreach ($field['blocks'] as $block) {
+          if (isset($block['fields']) && is_array($block['fields'])) {
+            $lang = $this->get_code_field_language(['fields' => $block['fields']], $field_name);
+            if ($lang !== 'html' || $this->is_code_field(['fields' => $block['fields']], $field_name)) {
+              return $lang;
+            }
+          }
+        }
+      }
+    }
+
+    return 'html';
+  }
+
+  private function sanitize_code_field($code, $schema, $field_name) {
+    $language = $this->get_code_field_language($schema, $field_name);
+
+    // For users with unfiltered_html capability (administrators), allow raw code
+    if (current_user_can('unfiltered_html')) {
+      switch (strtolower($language)) {
+        case 'css':
+          // Still sanitize CSS to remove dangerous patterns even for admins
+          return $this->sanitize_css_code($code);
+
+        case 'javascript':
+        case 'js':
+        case 'html':
+        default:
+          // Allow raw HTML/JS for administrators
+          // Just preserve newlines and basic textarea sanitization
+          return wp_unslash($code);
+      }
+    }
+
+    // For non-administrators, be more restrictive
+    switch (strtolower($language)) {
+      case 'css':
+        return $this->sanitize_css_code($code);
+
+      case 'javascript':
+      case 'js':
+        // Strip all tags for non-admins
+        return wp_strip_all_tags($code);
+
+      case 'html':
+      default:
+        // For HTML, use wp_kses_post which allows safe HTML tags
+        return wp_kses_post($code);
+    }
+  }
+
+  private function sanitize_css_code($css) {
+    // Remove potentially dangerous CSS
+    $dangerous_patterns = [
+      '/expression\s*\(/i',           // IE CSS expressions
+      '/javascript\s*:/i',            // JavaScript protocol
+      '/vbscript\s*:/i',              // VBScript protocol
+      '/@import\s+/i',                // Prevent external CSS imports
+      '/behavior\s*:/i',              // IE behaviors
+      '/\-moz\-binding\s*:/i',        // Firefox XBL bindings
+      '/data\s*:\s*text\/html/i',    // Data URI with HTML
+    ];
+
+    $cleaned_css = $css;
+    foreach ($dangerous_patterns as $pattern) {
+      $cleaned_css = preg_replace($pattern, '', $cleaned_css);
+    }
+
+    // Basic sanitization while preserving newlines
+    return sanitize_textarea_field($cleaned_css);
   }
 
   private function get_theme_templates() {
@@ -758,7 +926,8 @@ class YAML_Custom_Fields {
     }
 
     echo '<div class="yaml-cf-fields">';
-    $this->render_schema_fields($schema['fields'], $saved_data);
+    $context = ['type' => 'page'];
+    $this->render_schema_fields($schema['fields'], $saved_data, '', $context);
     echo '</div>';
     echo '</div>';
     echo '</div>';
@@ -777,7 +946,63 @@ class YAML_Custom_Fields {
     }
   }
 
-  public function render_schema_fields($fields, $saved_data, $prefix = '') {
+  private function validate_yaml_schema($yaml) {
+    try {
+      $parsed = Yaml::parse($yaml);
+
+      // Check if parsed successfully
+      if ($parsed === null) {
+        return [
+          'valid' => false,
+          'message' => 'Empty or invalid YAML content'
+        ];
+      }
+
+      // Check for required 'fields' key
+      if (!isset($parsed['fields']) || !is_array($parsed['fields'])) {
+        return [
+          'valid' => false,
+          'message' => 'Schema must contain a "fields" array'
+        ];
+      }
+
+      // Basic validation of field structure
+      foreach ($parsed['fields'] as $index => $field) {
+        if (!is_array($field)) {
+          return [
+            'valid' => false,
+            'message' => 'Field at index ' . $index . ' is not a valid array'
+          ];
+        }
+
+        if (!isset($field['name'])) {
+          return [
+            'valid' => false,
+            'message' => 'Field at index ' . $index . ' is missing required "name" property'
+          ];
+        }
+
+        if (!isset($field['type'])) {
+          return [
+            'valid' => false,
+            'message' => 'Field "' . $field['name'] . '" is missing required "type" property'
+          ];
+        }
+      }
+
+      return [
+        'valid' => true,
+        'message' => 'Schema is valid'
+      ];
+    } catch (ParseException $e) {
+      return [
+        'valid' => false,
+        'message' => 'YAML syntax error: ' . $e->getMessage()
+      ];
+    }
+  }
+
+  public function render_schema_fields($fields, $saved_data, $prefix = '', $context = null) {
     foreach ($fields as $field) {
       $field_name = $prefix . $field['name'];
       $field_id = 'ycf_' . str_replace(['[', ']'], ['_', ''], $field_name);
@@ -785,10 +1010,59 @@ class YAML_Custom_Fields {
       $field_label = isset($field['label']) ? $field['label'] : ucfirst($field['name']);
 
       echo '<div class="yaml-cf-field" data-type="' . esc_attr($field['type']) . '">';
+
+      // Generate code snippet
+      $code_snippet = '';
+      $popover_id = '';
+      if ($context && is_array($context) && isset($context['type'])) {
+        // Determine the function name based on field type
+        $function_name = 'ycf_get_field';
+        if (isset($field['type'])) {
+          if ($field['type'] === 'image') {
+            $function_name = 'ycf_get_image';
+          } elseif ($field['type'] === 'file') {
+            $function_name = 'ycf_get_file';
+          }
+        }
+
+        if ($context['type'] === 'partial' && isset($context['template'])) {
+          $code_snippet = $function_name . "('" . esc_js($field['name']) . "', 'partial:" . esc_js($context['template']) . "')";
+        } else {
+          $code_snippet = $function_name . "('" . esc_js($field['name']) . "')";
+        }
+        $popover_id = 'snippet-' . sanitize_html_class($field_id);
+      }
+
       if($field['type'] === 'image' || $field['type'] === 'file') {
-        echo '<p>' . esc_html($field_label) . '</p>';
+        echo '<p>' . esc_html($field_label);
+        if ($code_snippet) {
+          echo ' <span class="yaml-cf-snippet-wrapper">';
+          echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($code_snippet) . '" data-popover="' . esc_attr($popover_id) . '">';
+          echo '<span class="dashicons dashicons-editor-code"></span>';
+          echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
+          echo '</button>';
+          echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($popover_id) . '" role="tooltip">';
+          echo '<code>' . esc_html($code_snippet) . '</code>';
+          echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
+          echo '</span>';
+          echo '</span>';
+        }
+        echo '</p>';
       } else {
-        echo '<label for="' . esc_attr($field_id) . '">' . esc_html($field_label) . '</label>';
+        echo '<label for="' . esc_attr($field_id) . '">' . esc_html($field_label);
+        if ($code_snippet) {
+          echo ' <span class="yaml-cf-snippet-wrapper">';
+          echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($code_snippet) . '" data-popover="' . esc_attr($popover_id) . '">';
+          echo '<span class="dashicons dashicons-editor-code"></span>';
+          echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
+          echo '</button>';
+          echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($popover_id) . '" role="tooltip">';
+          echo '<code>' . esc_html($code_snippet) . '</code>';
+          echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
+          echo '</span>';
+          echo '</span>';
+        }
+        echo '</label>';
       }
 
       switch ($field['type']) {
@@ -864,7 +1138,15 @@ class YAML_Custom_Fields {
                 $opt_label = $option;
               }
 
-              $selected = ($field_value === $opt_value) ? 'selected' : '';
+              // Use loose comparison to handle string/int type differences
+              $selected = '';
+              if ($multiple && is_array($field_value)) {
+                // For multiple select, check if value is in array
+                $selected = in_array($opt_value, $field_value, false) ? 'selected' : '';
+              } else {
+                // For single select, use loose comparison
+                $selected = ($field_value == $opt_value && $field_value !== '') ? 'selected' : '';
+              }
               // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
               echo '<option value="' . esc_attr($opt_value) . '" ' . $selected . '>' . esc_html($opt_label) . '</option>';
             }
@@ -985,7 +1267,9 @@ class YAML_Custom_Fields {
         echo '<div class="yaml-cf-field">';
         echo '<label for="' . esc_attr($block_field_id) . '">' . esc_html($block_field['label']) . '</label>';
 
-        if ($block_field_type === 'rich-text') {
+        if ($block_field_type === 'boolean') {
+          echo '<input type="checkbox" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="1" ' . checked($block_field_value, 1, false) . ' />';
+        } elseif ($block_field_type === 'rich-text') {
           wp_editor($block_field_value, $block_field_id, [
             'textarea_name' => 'yaml_cf[' . $field['name'] . '][' . $index . '][' . $block_field['name'] . ']',
             'textarea_rows' => 5,
@@ -998,11 +1282,91 @@ class YAML_Custom_Fields {
         } elseif ($block_field_type === 'text') {
           // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
           echo '<textarea name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" rows="5" class="large-text">' . esc_textarea($block_field_value) . '</textarea>';
+        } elseif ($block_field_type === 'code') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $language = isset($block_field_options['language']) ? $block_field_options['language'] : 'html';
+          echo '<textarea name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" rows="10" class="large-text code" data-language="' . esc_attr($language) . '">' . esc_textarea($block_field_value) . '</textarea>';
         } elseif ($block_field_type === 'number') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $min = isset($block_field_options['min']) ? 'min="' . intval($block_field_options['min']) . '"' : '';
+          $max = isset($block_field_options['max']) ? 'max="' . intval($block_field_options['max']) . '"' : '';
           // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<input type="number" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" class="small-text" />';
+          echo '<input type="number" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" ' . $min . ' ' . $max . ' class="small-text" />';
+        } elseif ($block_field_type === 'date') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $has_time = isset($block_field_options['time']) && $block_field_options['time'];
+          $type = $has_time ? 'datetime-local' : 'date';
+          // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+          echo '<input type="' . esc_attr($type) . '" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" />';
+        } elseif ($block_field_type === 'select') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $multiple = isset($block_field['multiple']) && $block_field['multiple'];
+          $values = isset($block_field['values']) ? $block_field['values'] : [];
+
+          echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']' . ($multiple ? '[]' : '') . '" id="' . esc_attr($block_field_id) . '" ' . ($multiple ? 'multiple' : '') . '>';
+          echo '<option value="">-- Select --</option>';
+
+          if (is_array($values)) {
+            foreach ($values as $option) {
+              if (is_array($option)) {
+                $opt_value = isset($option['value']) ? $option['value'] : '';
+                $opt_label = isset($option['label']) ? $option['label'] : $opt_value;
+              } else {
+                $opt_value = $option;
+                $opt_label = $option;
+              }
+
+              // Use loose comparison to handle string/int type differences
+              $selected = '';
+              if ($multiple && is_array($block_field_value)) {
+                // For multiple select, check if value is in array
+                $selected = in_array($opt_value, $block_field_value, false) ? 'selected' : '';
+              } else {
+                // For single select, use loose comparison
+                $selected = ($block_field_value == $opt_value && $block_field_value !== '') ? 'selected' : '';
+              }
+              // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+              echo '<option value="' . esc_attr($opt_value) . '" ' . $selected . '>' . esc_html($opt_label) . '</option>';
+            }
+          }
+
+          echo '</select>';
+        } elseif ($block_field_type === 'image') {
+          echo '<input type="hidden" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" />';
+          echo '<div class="yaml-cf-media-buttons">';
+          echo '<button type="button" class="button yaml-cf-upload-image" data-target="' . esc_attr($block_field_id) . '">Upload Image</button>';
+          if ($block_field_value) {
+            echo '<button type="button" class="button yaml-cf-clear-media" data-target="' . esc_attr($block_field_id) . '">Clear</button>';
+          }
+          echo '</div>';
+          if ($block_field_value) {
+            $image_url = wp_get_attachment_image_url($block_field_value, 'medium');
+            if ($image_url) {
+              echo '<div class="yaml-cf-image-preview"><img src="' . esc_url($image_url) . '" style="max-width: 200px; display: block; margin-top: 10px;" /></div>';
+            }
+          }
+        } elseif ($block_field_type === 'file') {
+          echo '<input type="hidden" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" />';
+          echo '<div class="yaml-cf-media-buttons">';
+          echo '<button type="button" class="button yaml-cf-upload-file" data-target="' . esc_attr($block_field_id) . '">Upload File</button>';
+          if ($block_field_value) {
+            echo '<button type="button" class="button yaml-cf-clear-media" data-target="' . esc_attr($block_field_id) . '">Clear</button>';
+          }
+          echo '</div>';
+          if ($block_field_value) {
+            $file_path = get_attached_file($block_field_value);
+            if ($file_path) {
+              echo '<div class="yaml-cf-file-name">' . esc_html(basename($file_path)) . '</div>';
+            }
+          }
+        } elseif ($block_field_type === 'string') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $minlength = isset($block_field_options['minlength']) ? 'minlength="' . intval($block_field_options['minlength']) . '"' : '';
+          $maxlength = isset($block_field_options['maxlength']) ? 'maxlength="' . intval($block_field_options['maxlength']) . '"' : '';
+          // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+          echo '<input type="text" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" ' . $minlength . ' ' . $maxlength . ' class="regular-text" />';
         } else {
-          // Default to text input for string and other types
+          // Default to text input for unknown types
           // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
           echo '<input type="text" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" class="regular-text" />';
         }
@@ -1033,8 +1397,21 @@ class YAML_Custom_Fields {
     }
 
     if (isset($_POST['yaml_cf'])) {
+      // Get the template for this post
+      $template = get_post_meta($post_id, '_wp_page_template', true);
+      if (empty($template) || $template === 'default') {
+        $template = 'page.php';
+      }
+
+      // Get schema for validation
+      $schemas = get_option('yaml_cf_schemas', []);
+      $schema = null;
+      if (isset($schemas[$template])) {
+        $schema = $this->parse_yaml_schema($schemas[$template]);
+      }
+
       // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via sanitize_field_data()
-      $sanitized_data = $this->sanitize_field_data(wp_unslash($_POST['yaml_cf']));
+      $sanitized_data = $this->sanitize_field_data(wp_unslash($_POST['yaml_cf']), $schema);
       update_post_meta($post_id, '_yaml_cf_data', $sanitized_data);
     }
   }

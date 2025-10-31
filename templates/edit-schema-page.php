@@ -27,6 +27,20 @@ if (!defined('ABSPATH')) {
           <span class="dashicons dashicons-arrow-left-alt2"></span>
           <?php esc_html_e('Back to Templates', 'yaml-custom-fields'); ?>
         </a>
+        <?php
+        // Check if this is a partial (has a slash or matches partial patterns)
+        $is_partial = (strpos($template, '/') !== false) ||
+                      preg_match('/^(header|footer|sidebar|content|comments|searchform)/', basename($template));
+
+        // Also check if schema exists before showing Manage Data button
+        if ($is_partial && !empty($schema_yaml)) :
+          $manage_data_url = admin_url('admin.php?page=yaml-cf-edit-partial&template=' . urlencode($template));
+        ?>
+        <a href="<?php echo esc_url($manage_data_url); ?>" class="button button-secondary" style="margin-left: 10px;">
+          <span class="dashicons dashicons-admin-generic"></span>
+          <?php esc_html_e('Manage Data', 'yaml-custom-fields'); ?>
+        </a>
+        <?php endif; ?>
       </p>
       <p><strong><?php esc_html_e('Template File:', 'yaml-custom-fields'); ?></strong> <code><?php echo esc_html($template); ?></code></p>
       <p><?php esc_html_e('Define the YAML schema that specifies which fields are available for this template.', 'yaml-custom-fields'); ?></p>
@@ -58,6 +72,16 @@ if (!defined('ABSPATH')) {
 jQuery(document).ready(function($) {
   if (typeof YamlCF !== 'undefined' && YamlCF.showMessage) {
     YamlCF.showMessage('<?php echo esc_js($success_message); ?>', 'success');
+  }
+});
+</script>
+<?php endif; ?>
+
+<?php if (!empty($error_message)) : ?>
+<script>
+jQuery(document).ready(function($) {
+  if (typeof YamlCF !== 'undefined' && YamlCF.showMessage) {
+    YamlCF.showMessage('<?php echo esc_js($error_message); ?>', 'error', true);
   }
 });
 </script>

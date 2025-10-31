@@ -27,6 +27,13 @@ if (!defined('ABSPATH')) {
           <span class="dashicons dashicons-arrow-left-alt2"></span>
           <?php esc_html_e('Back to Templates', 'yaml-custom-fields'); ?>
         </a>
+        <?php
+        $edit_schema_url = admin_url('admin.php?page=yaml-cf-edit-schema&template=' . urlencode($template));
+        ?>
+        <a href="<?php echo esc_url($edit_schema_url); ?>" class="button button-secondary" style="margin-left: 10px;">
+          <span class="dashicons dashicons-edit"></span>
+          <?php esc_html_e('Edit Schema', 'yaml-custom-fields'); ?>
+        </a>
       </p>
       <p><strong><?php esc_html_e('Template File:', 'yaml-custom-fields'); ?></strong> <code><?php echo esc_html($template); ?></code></p>
       <p><?php esc_html_e('This data is global and will be used wherever this partial is included in your theme.', 'yaml-custom-fields'); ?></p>
@@ -40,7 +47,8 @@ if (!defined('ABSPATH')) {
         <?php
         if (!empty($schema['fields'])) {
           $plugin = YAML_Custom_Fields::get_instance();
-          $plugin->render_schema_fields($schema['fields'], $template_data);
+          $context = ['type' => 'partial', 'template' => $template];
+          $plugin->render_schema_fields($schema['fields'], $template_data, '', $context);
         } else {
           echo '<p>' . esc_html__('No fields defined in schema.', 'yaml-custom-fields') . '</p>';
         }

@@ -31,23 +31,23 @@ if (!defined('ABSPATH')) {
 <h2>Screenshots</h2>
 
 <h3>1. Main Admin Page</h3>
-<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-1.png'); ?>" alt="Main YAML Custom Fields admin page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'screenshot-1.png'); ?>" alt="Main YAML Custom Fields admin page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Main admin page showing page templates and template partials with enable/disable toggles</em></p>
 
 <h3>2. Schema Editor - Page Templates</h3>
-<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-2.png'); ?>" alt="Schema editor for page templates" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'screenshot-2.png'); ?>" alt="Schema editor for page templates" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Schema editor for main page templates with YAML syntax for defining custom fields</em></p>
 
 <h3>3. Schema Editor - Partial Templates</h3>
-<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-3.png'); ?>" alt="Schema editor for partials" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'screenshot-3.png'); ?>" alt="Schema editor for partials" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Schema editor for partial templates (headers, footers, etc.)</em></p>
 
 <h3>4. Partial Data Editor</h3>
-<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-4.png'); ?>" alt="Partial data editor" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'screenshot-4.png'); ?>" alt="Partial data editor" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Partial data editor for managing global content in template partials</em></p>
 
 <h3>5. Documentation Page</h3>
-<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-5.png'); ?>" alt="Documentation page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'screenshot-5.png'); ?>" alt="Documentation page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Comprehensive documentation with guides and examples</em></p>
 
 <h2>Installation</h2>
@@ -393,7 +393,7 @@ $menu_cta = ycf_get_field('menu_cta', 'partial:header.php');
 
 <h3>Code</h3>
 
-<p>Code editor with syntax highlighting.</p>
+<p>Code editor for storing HTML, CSS, or JavaScript code.</p>
 
 <pre><code>- name: custom_css
   label: Custom CSS
@@ -403,8 +403,26 @@ $menu_cta = ycf_get_field('menu_cta', 'partial:header.php');
 
 <p><strong>Options:</strong></p>
 <ul>
-  <li><code>language</code> - Syntax highlighting (html, css, javascript, php, python, etc.)</li>
+  <li><code>language</code> - Code language: html, css, javascript, js, php, python, etc.</li>
 </ul>
+
+<p><strong>Security &amp; Sanitization:</strong></p>
+<ul>
+  <li><strong>Administrators:</strong> Can store raw HTML, JavaScript, and forms. CSS is sanitized to remove dangerous patterns (e.g., <code>expression()</code>, <code>javascript:</code>).</li>
+  <li><strong>Non-administrators:</strong> HTML is sanitized using <code>wp_kses_post()</code> (safe tags only), JavaScript is stripped completely.</li>
+  <li>Uses WordPress's <code>unfiltered_html</code> capability - the same security model as Gutenberg's Custom HTML block.</li>
+</ul>
+
+<p><strong>Usage in templates:</strong></p>
+<pre><code>&lt;?php
+// Output code field (don't escape for HTML/JS)
+echo ycf_get_field('mailchimp_form', 'partial:footer.php');
+
+// For CSS, wrap in style tags
+echo '&lt;style&gt;' . esc_html(ycf_get_field('custom_css')) . '&lt;/style&gt;';
+?&gt;</code></pre>
+
+<p><strong>⚠️ Important:</strong> Only use unescaped output for code fields where you (the administrator) control the content. Never use for untrusted user-generated content.</p>
 
 <h3>Boolean</h3>
 
