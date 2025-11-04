@@ -16,25 +16,21 @@
       this.initMetaBoxChangeTracking();
     },
 
+    // Format date for filename (matches PHP format: Y-m-d-H-i-s)
+    formatDateForFilename: function() {
+      const date = new Date();
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+      return year + '-' + month + '-' + day + '-' + hours + '-' + minutes + '-' + seconds;
+    },
+
     bindEvents: function () {
       // Enable/Disable YAML for templates
       $(document).on('change', '.yaml-cf-enable-yaml', this.toggleYAML);
-
-      // Edit Schema button
-      $(document).on('click', '.yaml-cf-edit-schema', this.openSchemaModal);
-
-      // Save Schema
-      $(document).on('click', '.yaml-cf-save-schema', this.saveSchema);
-
-      // Note: Partial data editing moved to dedicated page (yaml-cf-edit-partial)
-
-      // Close Schema Modal
-      $(document).on('click', '.yaml-cf-modal-close', this.closeModal);
-      $(document).on('click', '.yaml-cf-modal', function (e) {
-        if ($(e.target).hasClass('yaml-cf-modal')) {
-          YamlCF.closeModal();
-        }
-      });
 
       // Block Controls
       $(document).on('click', '.yaml-cf-add-block', this.addBlock);
@@ -42,10 +38,6 @@
 
       // Clear Media
       $(document).on('click', '.yaml-cf-clear-media', this.clearMedia);
-
-      // Partial Image/File Upload (for modal-based editing - if still used)
-      $(document).on('click', '.yaml-cf-upload-image-partial', this.uploadImagePartial);
-      $(document).on('click', '.yaml-cf-upload-file-partial', this.uploadFilePartial);
 
       // Reset All Data
       $(document).on('click', '.yaml-cf-reset-data', this.resetAllData);
@@ -67,13 +59,6 @@
       $(document).on('click', '.yaml-cf-copy-snippet', this.copySnippet);
       $(document).on('mouseenter', '.yaml-cf-copy-snippet', this.showSnippetPopover);
       $(document).on('mouseleave', '.yaml-cf-copy-snippet', this.hideSnippetPopover);
-
-      // Escape key to close modal
-      $(document).on('keydown', function (e) {
-        if (e.key === 'Escape') {
-          YamlCF.closeModal();
-        }
-      });
     },
 
     toggleYAML: function () {
@@ -162,83 +147,6 @@
         error: function () {
           $checkbox.prop('checked', !enabled);
           YamlCF.showMessage('Error saving settings', 'error');
-        },
-      });
-    },
-
-    openSchemaModal: function () {
-      const $button = $(this);
-      const template = $button.data('template');
-      const templateName = $button.data('name');
-
-      $('#yaml-cf-template-name').text(templateName);
-      $('#yaml-cf-current-template').val(template);
-
-      // Load existing schema
-      $.ajax({
-        url: yamlCF.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'yaml_cf_get_schema',
-          nonce: yamlCF.nonce,
-          template: template,
-        },
-        success: function (response) {
-          if (response.success) {
-            $('#yaml-cf-schema-editor').val(response.data.schema || '');
-          }
-        },
-      });
-
-      $('#yaml-cf-schema-modal').fadeIn(300);
-    },
-
-    closeModal: function () {
-      $('.yaml-cf-modal').fadeOut(300);
-    },
-
-    saveSchema: function () {
-      const template = $('#yaml-cf-current-template').val();
-      const schema = $('#yaml-cf-schema-editor').val();
-
-      if (!schema.trim()) {
-        alert('Please enter a schema');
-        return;
-      }
-
-      $('.yaml-cf-save-schema').prop('disabled', true).text('Saving...');
-
-      $.ajax({
-        url: yamlCF.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'yaml_cf_save_schema',
-          nonce: yamlCF.nonce,
-          template: template,
-          schema: schema,
-        },
-        success: function (response) {
-          if (response.success) {
-            YamlCF.showMessage('Schema saved successfully', 'success');
-            YamlCF.closeModal();
-
-            // Update the button text to "Edit Schema"
-            $('.yaml-cf-edit-schema[data-template="' + template + '"]')
-              .text('Edit Schema')
-              .after(
-                '<span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span>'
-              );
-          } else {
-            YamlCF.showMessage('Error saving schema', 'error');
-          }
-        },
-        error: function () {
-          YamlCF.showMessage('Error saving schema', 'error');
-        },
-        complete: function () {
-          $('.yaml-cf-save-schema')
-            .prop('disabled', false)
-            .text('Save Schema');
         },
       });
     },
@@ -765,122 +673,6 @@
       $button.remove();
     },
 
-    uploadImagePartial: function (e) {
-      e.preventDefault();
-
-      const $button = $(this);
-      const targetId = $button.data('target');
-
-      const mediaUploader = wp.media({
-        title: 'Select Image',
-        button: {
-          text: 'Use This Image',
-        },
-        multiple: false,
-        library: {
-          type: 'image',
-        },
-      });
-
-      mediaUploader.on('select', function () {
-        const attachment = mediaUploader
-          .state()
-          .get('selection')
-          .first()
-          .toJSON();
-        const $input = $('#' + targetId);
-        // Store attachment ID instead of URL
-        $input.val(attachment.id);
-
-        // Update/add preview
-        const $field = $button.closest('.yaml-cf-field');
-        let $preview = $field.find('.yaml-cf-image-preview');
-        if ($preview.length) {
-          $preview.find('img').attr('src', attachment.url);
-        } else {
-          $field.append(
-            $('<div>', {
-              class: 'yaml-cf-image-preview',
-              html:
-                '<img src="' +
-                attachment.url +
-                '" style="max-width: 200px; display: block; margin-top: 10px;" />',
-            })
-          );
-        }
-
-        // Add clear button if it doesn't exist
-        const $buttonsDiv = $button.closest('.yaml-cf-media-buttons');
-        if (!$buttonsDiv.find('.yaml-cf-clear-media').length) {
-          $buttonsDiv.append(
-            $('<button>', {
-              type: 'button',
-              class: 'button yaml-cf-clear-media',
-              'data-target': targetId,
-              text: 'Clear',
-            })
-          );
-        }
-      });
-
-      mediaUploader.open();
-    },
-
-    uploadFilePartial: function (e) {
-      e.preventDefault();
-
-      const $button = $(this);
-      const targetId = $button.data('target');
-
-      const mediaUploader = wp.media({
-        title: 'Select File',
-        button: {
-          text: 'Use This File',
-        },
-        multiple: false,
-      });
-
-      mediaUploader.on('select', function () {
-        const attachment = mediaUploader
-          .state()
-          .get('selection')
-          .first()
-          .toJSON();
-        const $input = $('#' + targetId);
-        // Store attachment ID instead of URL
-        $input.val(attachment.id);
-
-        // Update/add file name display
-        const $field = $button.closest('.yaml-cf-field');
-        let $fileDisplay = $field.find('.yaml-cf-file-name');
-        if ($fileDisplay.length) {
-          $fileDisplay.text(attachment.filename);
-        } else {
-          $field.append(
-            $('<div>', {
-              class: 'yaml-cf-file-name',
-              text: attachment.filename,
-            })
-          );
-        }
-
-        // Add clear button if it doesn't exist
-        const $buttonsDiv = $button.closest('.yaml-cf-media-buttons');
-        if (!$buttonsDiv.find('.yaml-cf-clear-media').length) {
-          $buttonsDiv.append(
-            $('<button>', {
-              type: 'button',
-              class: 'button yaml-cf-clear-media',
-              'data-target': targetId,
-              text: 'Clear',
-            })
-          );
-        }
-      });
-
-      mediaUploader.open();
-    },
-
     resetAllData: function (e) {
       e.preventDefault();
 
@@ -953,310 +745,6 @@
       );
     },
 
-    openPartialDataModal: function () {
-      const $button = $(this);
-      const template = $button.data('template');
-      const templateName = $button.data('name');
-
-      $('#yaml-cf-partial-name').text(templateName);
-      $('#yaml-cf-current-partial').val(template);
-
-      // Load schema and existing data
-      $.ajax({
-        url: yamlCF.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'yaml_cf_get_partial_data',
-          nonce: yamlCF.nonce,
-          template: template,
-        },
-        success: function (response) {
-          if (response.success) {
-            YamlCF.renderPartialFields(
-              response.data.schema,
-              response.data.data || {}
-            );
-          } else {
-            alert('Error loading partial data');
-          }
-        },
-        error: function () {
-          alert('Error loading partial data');
-        },
-      });
-
-      $('#yaml-cf-partial-data-modal').fadeIn(300);
-    },
-
-    renderPartialFields: function (schema, data) {
-      const $container = $('#yaml-cf-partial-fields');
-      $container.empty();
-
-      if (!schema || !schema.fields) {
-        $container.html('<p>No schema defined for this partial.</p>');
-        return;
-      }
-
-      schema.fields.forEach(function (field) {
-        const fieldValue = data[field.name] || field.default || '';
-        const fieldId = 'partial_' + field.name;
-        const $fieldDiv = $('<div>', { class: 'yaml-cf-field' });
-
-        $fieldDiv.append(
-          $('<label>', {
-            for: fieldId,
-            text: field.label || field.name,
-          })
-        );
-
-        // Render field based on type
-        switch (field.type) {
-          case 'image':
-            const $imageInput = $('<input>', {
-              type: 'hidden',
-              name: 'partial_data[' + field.name + ']',
-              id: fieldId,
-              value: fieldValue,
-            });
-            const $imageButtonsDiv = $('<div>', {
-              class: 'yaml-cf-media-buttons',
-            });
-            const $imageUploadBtn = $('<button>', {
-              type: 'button',
-              class: 'button yaml-cf-upload-image-partial',
-              'data-target': fieldId,
-              text: 'Upload Image',
-            });
-            $imageButtonsDiv.append($imageUploadBtn);
-
-            if (fieldValue) {
-              const $imageClearBtn = $('<button>', {
-                type: 'button',
-                class: 'button yaml-cf-clear-media',
-                'data-target': fieldId,
-                text: 'Clear',
-              });
-              $imageButtonsDiv.append($imageClearBtn);
-            }
-
-            $fieldDiv.append($imageInput).append($imageButtonsDiv);
-
-            if (fieldValue) {
-              $fieldDiv.append(
-                $('<div>', {
-                  class: 'yaml-cf-image-preview',
-                  html:
-                    '<img src="' +
-                    fieldValue +
-                    '" style="max-width: 200px; display: block; margin-top: 10px;" />',
-                })
-              );
-            }
-            break;
-
-          case 'file':
-            const $fileInput = $('<input>', {
-              type: 'hidden',
-              name: 'partial_data[' + field.name + ']',
-              id: fieldId,
-              value: fieldValue,
-            });
-            const $fileButtonsDiv = $('<div>', {
-              class: 'yaml-cf-media-buttons',
-            });
-            const $fileUploadBtn = $('<button>', {
-              type: 'button',
-              class: 'button yaml-cf-upload-file-partial',
-              'data-target': fieldId,
-              text: 'Upload File',
-            });
-            $fileButtonsDiv.append($fileUploadBtn);
-
-            if (fieldValue) {
-              const $fileClearBtn = $('<button>', {
-                type: 'button',
-                class: 'button yaml-cf-clear-media',
-                'data-target': fieldId,
-                text: 'Clear',
-              });
-              $fileButtonsDiv.append($fileClearBtn);
-            }
-
-            $fieldDiv.append($fileInput).append($fileButtonsDiv);
-
-            if (fieldValue) {
-              const fileName = fieldValue.split('/').pop();
-              $fieldDiv.append(
-                $('<div>', {
-                  class: 'yaml-cf-file-name',
-                  text: fileName,
-                })
-              );
-            }
-            break;
-          case 'boolean':
-            $fieldDiv.append(
-              $('<input>', {
-                type: 'checkbox',
-                name: 'partial_data[' + field.name + ']',
-                id: fieldId,
-                value: '1',
-                checked: fieldValue == 1,
-              })
-            );
-            break;
-
-          case 'string':
-            const options = field.options || {};
-            $fieldDiv.append(
-              $('<input>', {
-                type: 'text',
-                name: 'partial_data[' + field.name + ']',
-                id: fieldId,
-                value: fieldValue,
-                class: 'regular-text',
-                maxlength: options.maxlength || '',
-                minlength: options.minlength || '',
-              })
-            );
-            break;
-
-          case 'text':
-            const textOptions = field.options || {};
-            $fieldDiv.append(
-              $('<textarea>', {
-                name: 'partial_data[' + field.name + ']',
-                id: fieldId,
-                rows: 5,
-                class: 'large-text',
-                maxlength: textOptions.maxlength || '',
-                text: fieldValue,
-              })
-            );
-            break;
-
-          case 'number':
-            const numOptions = field.options || {};
-            $fieldDiv.append(
-              $('<input>', {
-                type: 'number',
-                name: 'partial_data[' + field.name + ']',
-                id: fieldId,
-                value: fieldValue,
-                class: 'small-text',
-                min: numOptions.min || '',
-                max: numOptions.max || '',
-              })
-            );
-            break;
-
-          case 'select':
-            const $select = $('<select>', {
-              name: 'partial_data[' + field.name + ']',
-              id: fieldId,
-            });
-            $select.append($('<option>', { value: '', text: '-- Select --' }));
-
-            if (field.values && Array.isArray(field.values)) {
-              field.values.forEach(function (option) {
-                const optValue = option.value || option;
-                const optLabel = option.label || optValue;
-                $select.append(
-                  $('<option>', {
-                    value: optValue,
-                    text: optLabel,
-                    selected: fieldValue === optValue,
-                  })
-                );
-              });
-            }
-            $fieldDiv.append($select);
-            break;
-
-          case 'date':
-            const dateOptions = field.options || {};
-            const hasTime = dateOptions.time || false;
-            $fieldDiv.append(
-              $('<input>', {
-                type: hasTime ? 'datetime-local' : 'date',
-                name: 'partial_data[' + field.name + ']',
-                id: fieldId,
-                value: fieldValue,
-              })
-            );
-            break;
-
-          default:
-            $fieldDiv.append(
-              $('<input>', {
-                type: 'text',
-                name: 'partial_data[' + field.name + ']',
-                id: fieldId,
-                value: fieldValue,
-                class: 'regular-text',
-              })
-            );
-        }
-
-        $container.append($fieldDiv);
-      });
-    },
-
-    savePartialData: function () {
-      const template = $('#yaml-cf-current-partial').val();
-      const $fields = $('#yaml-cf-partial-fields').find(
-        'input, textarea, select'
-      );
-      const data = {};
-
-      $fields.each(function () {
-        const $field = $(this);
-        const name = $field.attr('name');
-        if (name && name.startsWith('partial_data[')) {
-          const fieldName = name.match(/partial_data\[([^\]]+)\]/)[1];
-          if ($field.attr('type') === 'checkbox') {
-            data[fieldName] = $field.is(':checked') ? 1 : 0;
-          } else {
-            data[fieldName] = $field.val();
-          }
-        }
-      });
-
-      $('.yaml-cf-save-partial-data')
-        .prop('disabled', true)
-        .text('Saving...');
-
-      $.ajax({
-        url: yamlCF.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'yaml_cf_save_partial_data',
-          nonce: yamlCF.nonce,
-          template: template,
-          data: JSON.stringify(data),
-        },
-        success: function (response) {
-          if (response.success) {
-            YamlCF.showMessage(
-              'Partial data saved successfully',
-              'success'
-            );
-            YamlCF.closeModal();
-          } else {
-            YamlCF.showMessage('Error saving partial data', 'error');
-          }
-        },
-        error: function () {
-          YamlCF.showMessage('Error saving partial data', 'error');
-        },
-        complete: function () {
-          $('.yaml-cf-save-partial-data')
-            .prop('disabled', false)
-            .text('Save Data');
-        },
-      });
-    },
-
     exportSettings: function (e) {
       e.preventDefault();
       const $button = $(this);
@@ -1282,12 +770,8 @@
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(dataBlob);
             const link = document.createElement('a');
-            const timestamp = new Date()
-              .toISOString()
-              .replace(/[:.]/g, '-')
-              .slice(0, -5);
             link.href = url;
-            link.download = 'yaml-cf-settings-' + timestamp + '.json';
+            link.download = 'yaml-cs-schema-' + YamlCF.formatDateForFilename() + '.json';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

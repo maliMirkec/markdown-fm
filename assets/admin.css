@@ -275,6 +275,15 @@
   background: #f5f5f5;
 }
 
+/* Page header */
+.yaml-cf-meta-box-header a {
+  display: inline-block;
+}
+
+.yaml-cf-meta-box-header label {
+  vertical-align: top;
+}
+
 /* Image and File Upload */
 .yaml-cf-media-buttons {
   display: flex;
