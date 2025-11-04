@@ -16,18 +16,6 @@
       this.initMetaBoxChangeTracking();
     },
 
-    // Format date for filename (matches PHP format: Y-m-d-H-i-s)
-    formatDateForFilename: function() {
-      const date = new Date();
-      const year = date.getFullYear();
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const day = date.getDate().toString().padStart(2, '0');
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      const seconds = date.getSeconds().toString().padStart(2, '0');
-      return year + '-' + month + '-' + day + '-' + hours + '-' + minutes + '-' + seconds;
-    },
-
     bindEvents: function () {
       // Enable/Disable YAML for templates
       $(document).on('change', '.yaml-cf-enable-yaml', this.toggleYAML);
@@ -42,12 +30,7 @@
       // Reset All Data
       $(document).on('click', '.yaml-cf-reset-data', this.resetAllData);
 
-      // Export/Import Settings
-      $(document).on(
-        'click',
-        '.yaml-cf-export-settings',
-        this.exportSettings
-      );
+      // Import Settings
       $(document).on(
         'click',
         '.yaml-cf-import-settings-trigger',
@@ -743,55 +726,6 @@
       alert(
         'All custom field data has been cleared. Remember to save the page to make this change permanent.'
       );
-    },
-
-    exportSettings: function (e) {
-      e.preventDefault();
-      const $button = $(this);
-      const originalText = $button.html();
-
-      $button
-        .prop('disabled', true)
-        .html(
-          '<span class="dashicons dashicons-update" style="animation: rotation 1s infinite linear;"></span> Exporting...'
-        );
-
-      $.ajax({
-        url: yamlCF.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'yaml_cf_export_settings',
-          nonce: yamlCF.nonce,
-        },
-        success: function (response) {
-          if (response.success) {
-            // Create JSON file and download
-            const dataStr = JSON.stringify(response.data, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'yaml-cs-schema-' + YamlCF.formatDateForFilename() + '.json';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-
-            YamlCF.showMessage('Settings exported successfully', 'success');
-          } else {
-            YamlCF.showMessage(
-              'Error exporting settings: ' + (response.data || 'Unknown error'),
-              'error'
-            );
-          }
-        },
-        error: function () {
-          YamlCF.showMessage('AJAX error occurred during export', 'error');
-        },
-        complete: function () {
-          $button.prop('disabled', false).html(originalText);
-        },
-      });
     },
 
     triggerImport: function (e) {

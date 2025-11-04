@@ -51,6 +51,7 @@ class YAML_Custom_Fields {
   private function init_hooks() {
     add_action('admin_init', [$this, 'handle_form_submissions']);
     add_action('admin_init', [$this, 'handle_single_post_export']);
+    add_action('admin_init', [$this, 'handle_settings_export']);
     add_action('admin_menu', [$this, 'add_admin_menu']);
     add_action('admin_head', [$this, 'hide_submenu_items']);
     add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
@@ -505,6 +506,48 @@ class YAML_Custom_Fields {
 
     // Set headers for file download
     $filename = 'yaml-cs-content-' . sanitize_file_name($post->post_name) . '-' . gmdate('Y-m-d-H-i-s') . '.json';
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Expires: 0');
+
+    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON output
+    echo wp_json_encode($export_data, JSON_PRETTY_PRINT);
+    exit;
+  }
+
+  public function handle_settings_export() {
+    // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Nonce verified below
+    if (!isset($_GET['yaml_cf_export_settings']) || !isset($_GET['_wpnonce'])) {
+      return;
+    }
+
+    $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce']));
+    // phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+    if (!wp_verify_nonce($nonce, 'yaml_cf_export_settings')) {
+      wp_die(esc_html__('Security check failed', 'yaml-custom-fields'));
+    }
+
+    if (!current_user_can('manage_options')) {
+      wp_die(esc_html__('Permission denied', 'yaml-custom-fields'));
+    }
+
+    // Gather all settings
+    $export_data = [
+      'plugin' => 'yaml-custom-fields',
+      'version' => YAML_CF_VERSION,
+      'exported_at' => current_time('mysql'),
+      'site_url' => get_site_url(),
+      'settings' => [
+        'template_settings' => get_option('yaml_cf_template_settings', []),
+        'schemas' => get_option('yaml_cf_schemas', []),
+        'partial_data' => get_option('yaml_cf_partial_data', [])
+      ]
+    ];
+
+    // Set headers for file download
+    $filename = 'yaml-cs-schema-' . gmdate('Y-m-d-H-i-s') . '.json';
     header('Content-Type: application/json');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
     header('Cache-Control: no-cache, must-revalidate');
