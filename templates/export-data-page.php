@@ -43,6 +43,10 @@ if (!defined('ABSPATH')) {
         <p><?php esc_html_e('Loading posts...', 'yaml-custom-fields'); ?></p>
       </div>
 
+      <form method="post" id="yaml-cf-export-form">
+        <?php wp_nonce_field('yaml_cf_export_page_data', 'yaml_cf_export_page_data_nonce'); ?>
+        <input type="hidden" name="match_by" id="yaml-cf-export-match-by" value="slug">
+
       <div id="yaml-cf-posts-list" style="display: none;">
         <div class="yaml-cf-posts-header" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
           <div>
@@ -70,13 +74,15 @@ if (!defined('ABSPATH')) {
           </tbody>
         </table>
 
+        <div id="yaml-cf-export-post-ids"></div>
+
         <div style="margin-top: 20px;">
-          <button type="button" class="button button-primary" id="yaml-cf-export-selected" disabled>
+          <button type="submit" class="button button-primary" id="yaml-cf-export-selected" disabled>
             <?php esc_html_e('Export Selected Posts', 'yaml-custom-fields'); ?>
           </button>
-          <span id="yaml-cf-export-message" style="margin-left: 15px;"></span>
         </div>
       </div>
+      </form>
 
       <div id="yaml-cf-no-posts" style="display: none; padding: 40px; text-align: center;">
         <p><?php esc_html_e('No pages or posts with custom field data found.', 'yaml-custom-fields'); ?></p>
@@ -118,18 +124,6 @@ if (!defined('ABSPATH')) {
 <script>
 jQuery(document).ready(function($) {
   let postsData = [];
-
-  // Helper function to format date for filename (matches PHP format: Y-m-d-H-i-s)
-  function formatDateForFilename() {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const seconds = date.getSeconds().toString().padStart(2, '0');
-    return year + '-' + month + '-' + day + '-' + hours + '-' + minutes + '-' + seconds;
-  }
 
   // Load posts with custom field data
   function loadPosts() {
@@ -193,6 +187,19 @@ jQuery(document).ready(function($) {
     const count = $('.yaml-cf-post-checkbox:checked').length;
     $('#yaml-cf-selected-count').text(count);
     $('#yaml-cf-export-selected').prop('disabled', count === 0);
+
+    // Update hidden inputs for form submission
+    updateHiddenPostIds();
+  }
+
+  function updateHiddenPostIds() {
+    const $container = $('#yaml-cf-export-post-ids');
+    $container.empty();
+
+    $('.yaml-cf-post-checkbox:checked').each(function() {
+      const postId = $(this).data('post-id');
+      $container.append('<input type="hidden" name="post_ids[]" value="' + postId + '">');
+    });
   }
 
   // Select/Deselect all
@@ -210,52 +217,9 @@ jQuery(document).ready(function($) {
 
   $(document).on('change', '.yaml-cf-post-checkbox', updateSelectedCount);
 
-  // Export selected posts
-  $('#yaml-cf-export-selected').on('click', function() {
-    const selectedIds = [];
-    $('.yaml-cf-post-checkbox:checked').each(function() {
-      selectedIds.push($(this).data('post-id'));
-    });
-
-    if (selectedIds.length === 0) {
-      alert('Please select at least one post to export.');
-      return;
-    }
-
-    const matchBy = $('input[name="match_by"]:checked').val();
-    const $message = $('#yaml-cf-export-message');
-    $message.html('<span class="spinner is-active" style="float: none;"></span>');
-
-    $.ajax({
-      url: yamlCF.ajax_url,
-      type: 'POST',
-      data: {
-        action: 'yaml_cf_export_page_data',
-        nonce: yamlCF.nonce,
-        post_ids: selectedIds,
-        match_by: matchBy
-      },
-      success: function(response) {
-        if (response.success) {
-          const dataStr = JSON.stringify(response.data, null, 2);
-          const dataBlob = new Blob([dataStr], { type: 'application/json' });
-          const url = window.URL.createObjectURL(dataBlob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'yaml-cs-partials-' + formatDateForFilename() + '.json';
-          a.click();
-          window.URL.revokeObjectURL(url);
-
-          $message.html('<span style="color: green;">✓ Export complete! ' + selectedIds.length + ' posts exported.</span>');
-          setTimeout(function() { $message.html(''); }, 5000);
-        } else {
-          $message.html('<span style="color: red;">Error: ' + response.data + '</span>');
-        }
-      },
-      error: function() {
-        $message.html('<span style="color: red;">Export failed</span>');
-      }
-    });
+  // Update match_by hidden input when radio selection changes
+  $('input[name="match_by"]').on('change', function() {
+    $('#yaml-cf-export-match-by').val($(this).val());
   });
 
   // Import page data

@@ -9,14 +9,24 @@ if (!defined('ABSPATH')) {
 
 // Get all posts with custom field data and validate them
 global $wpdb;
-$results = $wpdb->get_results(
-  "SELECT p.ID, p.post_title, p.post_name, p.post_type, p.post_status
-   FROM {$wpdb->posts} p
-   INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_yaml_cf_data'
-   WHERE p.post_type IN ('page', 'post')
-   AND p.post_status IN ('publish', 'draft', 'pending', 'private')
-   ORDER BY p.post_type, p.post_title"
-);
+
+// Try to get from cache first
+$cache_key = 'yaml_cf_validation_posts';
+$results = wp_cache_get($cache_key, 'yaml-custom-fields');
+
+if (false === $results) {
+  // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above with wp_cache_get/set
+  $results = $wpdb->get_results(
+    "SELECT p.ID, p.post_title, p.post_name, p.post_type, p.post_status
+     FROM {$wpdb->posts} p
+     INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_yaml_cf_data'
+     WHERE p.post_type IN ('page', 'post')
+     AND p.post_status IN ('publish', 'draft', 'pending', 'private')
+     ORDER BY p.post_type, p.post_title"
+  );
+  // Cache for 5 minutes
+  wp_cache_set($cache_key, $results, 'yaml-custom-fields', 300);
+}
 
 $validation_results = [];
 $total_posts = count($results);
@@ -121,10 +131,8 @@ function validate_yaml_cf_attachments($data, $path = '') {
           <p>
             <strong><?php esc_html_e('Issues detected!', 'yaml-custom-fields'); ?></strong>
             <?php
-            printf(
-              esc_html__('%d posts have missing attachments. Review the details below.', 'yaml-custom-fields'),
-              $posts_with_issues
-            );
+            /* translators: %d: number of posts with issues */
+            printf(esc_html__('%d posts have missing attachments. Review the details below.', 'yaml-custom-fields'), absint($posts_with_issues));
             ?>
           </p>
         </div>
@@ -202,10 +210,8 @@ function validate_yaml_cf_attachments($data, $path = '') {
                     <details>
                       <summary style="cursor: pointer; color: #d63638;">
                         <?php
-                        printf(
-                          esc_html__('%d missing attachments', 'yaml-custom-fields'),
-                          count($missing)
-                        );
+                        /* translators: %d: number of missing attachments */
+                        printf(esc_html__('%d missing attachments', 'yaml-custom-fields'), count($missing));
                         ?>
                       </summary>
                       <ul style="margin: 10px 0 0 20px; list-style: disc;">
@@ -213,10 +219,8 @@ function validate_yaml_cf_attachments($data, $path = '') {
                           <li>
                             <strong><?php echo esc_html($item['field']); ?>:</strong>
                             <?php
-                            printf(
-                              esc_html__('ID %d (not found)', 'yaml-custom-fields'),
-                              $item['id']
-                            );
+                            /* translators: %d: attachment ID */
+                            printf(esc_html__('ID %d (not found)', 'yaml-custom-fields'), absint($item['id']));
                             ?>
                           </li>
                         <?php endforeach; ?>

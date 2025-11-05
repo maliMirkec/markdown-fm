@@ -52,6 +52,7 @@ class YAML_Custom_Fields {
     add_action('admin_init', [$this, 'handle_form_submissions']);
     add_action('admin_init', [$this, 'handle_single_post_export']);
     add_action('admin_init', [$this, 'handle_settings_export']);
+    add_action('admin_init', [$this, 'handle_page_data_export']);
     add_action('admin_menu', [$this, 'add_admin_menu']);
     add_action('admin_head', [$this, 'hide_submenu_items']);
     add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
@@ -558,6 +559,79 @@ class YAML_Custom_Fields {
     exit;
   }
 
+  public function handle_page_data_export() {
+    // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Nonce verified below
+    if (!isset($_POST['yaml_cf_export_page_data_nonce'])) {
+      return;
+    }
+
+    $nonce = sanitize_text_field(wp_unslash($_POST['yaml_cf_export_page_data_nonce']));
+    // phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+    if (!wp_verify_nonce($nonce, 'yaml_cf_export_page_data')) {
+      wp_die(esc_html__('Security check failed', 'yaml-custom-fields'));
+    }
+
+    if (!current_user_can('manage_options')) {
+      wp_die(esc_html__('Permission denied', 'yaml-custom-fields'));
+    }
+
+    // phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via array_map
+    $post_ids = isset($_POST['post_ids']) ? array_map('intval', wp_unslash($_POST['post_ids'])) : [];
+    // phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+    $match_by = isset($_POST['match_by']) ? sanitize_text_field(wp_unslash($_POST['match_by'])) : 'slug';
+
+    if (empty($post_ids)) {
+      wp_die(esc_html__('No posts selected', 'yaml-custom-fields'));
+    }
+
+    $export_data = [
+      'plugin' => 'yaml-custom-fields',
+      'version' => YAML_CF_VERSION,
+      'exported_at' => current_time('mysql'),
+      'site_url' => get_site_url(),
+      'match_by' => $match_by,
+      'posts' => []
+    ];
+
+    foreach ($post_ids as $post_id) {
+      $post = get_post($post_id);
+      if (!$post) {
+        continue;
+      }
+
+      $template = get_post_meta($post_id, '_wp_page_template', true);
+      if (empty($template) || $template === 'default') {
+        $template = 'page.php';
+      }
+
+      $data = get_post_meta($post_id, '_yaml_cf_data', true);
+      if (empty($data)) {
+        continue;
+      }
+
+      $export_data['posts'][] = [
+        'id' => $post->ID,
+        'title' => $post->post_title,
+        'slug' => $post->post_name,
+        'type' => $post->post_type,
+        'template' => $template,
+        'data' => $data
+      ];
+    }
+
+    // Set headers for file download
+    $filename = 'yaml-cs-partials-' . gmdate('Y-m-d-H-i-s') . '.json';
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Expires: 0');
+
+    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON output
+    echo wp_json_encode($export_data, JSON_PRETTY_PRINT);
+    exit;
+  }
+
   public function handle_form_submissions() {
     // Handle single post import
     if (isset($_POST['yaml_cf_import_post_nonce']) &&
@@ -569,7 +643,7 @@ class YAML_Custom_Fields {
         wp_die(esc_html__('Permission denied', 'yaml-custom-fields'));
       }
 
-      if (!isset($_FILES['yaml_cf_import_file']) || $_FILES['yaml_cf_import_file']['error'] !== UPLOAD_ERR_OK) {
+      if (!isset($_FILES['yaml_cf_import_file']) || !isset($_FILES['yaml_cf_import_file']['error']) || $_FILES['yaml_cf_import_file']['error'] !== UPLOAD_ERR_OK) {
         wp_redirect(add_query_arg([
           'post' => $post_id,
           'action' => 'edit',
@@ -578,7 +652,7 @@ class YAML_Custom_Fields {
         exit;
       }
 
-      // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- Validated via wp_check_filetype
+      // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- Validated via wp_check_filetype
       $file = $_FILES['yaml_cf_import_file'];
       $file_type = wp_check_filetype($file['name']);
 
@@ -618,6 +692,9 @@ class YAML_Custom_Fields {
 
       // Update post meta
       update_post_meta($post_id, '_yaml_cf_data', $cleaned_data);
+
+      // Clear caches
+      $this->clear_data_caches();
 
       // Redirect with success message
       wp_redirect(add_query_arg([
@@ -700,6 +777,9 @@ class YAML_Custom_Fields {
       $partial_data = get_option('yaml_cf_partial_data', []);
       $partial_data[$template] = $field_data;
       update_option('yaml_cf_partial_data', $partial_data);
+
+      // Clear caches
+      $this->clear_data_caches();
 
       // Redirect with success message
       wp_redirect(add_query_arg([
@@ -1671,6 +1751,9 @@ class YAML_Custom_Fields {
       // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via sanitize_field_data()
       $sanitized_data = $this->sanitize_field_data(wp_unslash($_POST['yaml_cf']), $schema);
       update_post_meta($post_id, '_yaml_cf_data', $sanitized_data);
+
+      // Clear caches
+      $this->clear_data_caches();
     }
   }
 
@@ -1726,6 +1809,9 @@ class YAML_Custom_Fields {
 
     // Save back to options
     update_option('yaml_cf_partial_data', $partial_data);
+
+    // Clear caches
+    $this->clear_data_caches();
 
     wp_send_json_success();
   }
@@ -1808,6 +1894,9 @@ class YAML_Custom_Fields {
     // Clear template cache
     $this->clear_template_cache();
 
+    // Clear data caches
+    $this->clear_data_caches();
+
     wp_send_json_success([
       'message' => 'Settings imported successfully',
       'imported_from' => isset($import_data['site_url']) ? $import_data['site_url'] : 'unknown',
@@ -1825,15 +1914,24 @@ class YAML_Custom_Fields {
     global $wpdb;
 
     // Get all posts and pages that have custom field data
-    $results = $wpdb->get_results(
-      "SELECT p.ID, p.post_title, p.post_name, p.post_type, p.post_status, pm.meta_value as template
-       FROM {$wpdb->posts} p
-       INNER JOIN {$wpdb->postmeta} pm1 ON p.ID = pm1.post_id AND pm1.meta_key = '_yaml_cf_data'
-       LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_wp_page_template'
-       WHERE p.post_type IN ('page', 'post')
-       AND p.post_status IN ('publish', 'draft', 'pending', 'private')
-       ORDER BY p.post_type, p.post_title"
-    );
+    // Try to get from cache first
+    $cache_key = 'yaml_cf_posts_with_data';
+    $results = wp_cache_get($cache_key, 'yaml-custom-fields');
+
+    if (false === $results) {
+      // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Cached above with wp_cache_get/set
+      $results = $wpdb->get_results(
+        "SELECT p.ID, p.post_title, p.post_name, p.post_type, p.post_status, pm.meta_value as template
+         FROM {$wpdb->posts} p
+         INNER JOIN {$wpdb->postmeta} pm1 ON p.ID = pm1.post_id AND pm1.meta_key = '_yaml_cf_data'
+         LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_wp_page_template'
+         WHERE p.post_type IN ('page', 'post')
+         AND p.post_status IN ('publish', 'draft', 'pending', 'private')
+         ORDER BY p.post_type, p.post_title"
+      );
+      // Cache for 1 hour
+      wp_cache_set($cache_key, $results, 'yaml-custom-fields', 3600);
+    }
 
     $posts = [];
     foreach ($results as $row) {
@@ -1969,6 +2067,9 @@ class YAML_Custom_Fields {
       $imported++;
     }
 
+    // Clear caches after import
+    $this->clear_data_caches();
+
     wp_send_json_success([
       'message' => sprintf('Import complete. %d imported, %d skipped.', $imported, $skipped),
       'imported' => $imported,
@@ -2005,6 +2106,18 @@ class YAML_Custom_Fields {
     }
 
     return $data;
+  }
+
+  /**
+   * Clear all plugin caches
+   * Call this whenever custom field data changes
+   */
+  private function clear_data_caches() {
+    // Clear validation page cache
+    wp_cache_delete('yaml_cf_validation_posts', 'yaml-custom-fields');
+
+    // Clear export page cache
+    wp_cache_delete('yaml_cf_posts_with_data', 'yaml-custom-fields');
   }
 
 }

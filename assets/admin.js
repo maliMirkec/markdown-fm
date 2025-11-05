@@ -828,18 +828,26 @@
       reader.readAsText(file);
     },
 
-    initMetaBoxChangeTracking: function () {
+    initFormChangeTracking: function (config) {
       const self = this;
-      const $metaBox = $('#yaml-cf-meta-box');
+      const $container = $(config.container);
 
-      // Only run on post editor
-      if (!$metaBox.length) return;
+      // Exit if container doesn't exist
+      if (!$container.length) return;
 
-      // Capture original meta box state
-      function captureMetaBoxState() {
+      const storageKey = config.storageKey || 'formData';
+      const hasChangesKey = config.hasChangesKey || 'hasFormChanges';
+
+      // Initialize storage
+      if (!self[storageKey]) {
+        self[storageKey] = {};
+      }
+
+      // Capture form state
+      function captureFormState() {
         const data = {};
-        $metaBox
-          .find('.yaml-cf-fields')
+        $container
+          .find(config.fieldsSelector)
           .find('input, textarea, select')
           .each(function () {
             const $field = $(this);
@@ -858,26 +866,24 @@
       }
 
       // Check for changes
-      function checkMetaBoxChanges() {
-        const currentData = captureMetaBoxState();
+      function checkFormChanges() {
+        const currentData = captureFormState();
         const changed =
-          JSON.stringify(self.originalMetaBoxData) !==
-          JSON.stringify(currentData);
+          JSON.stringify(self[storageKey]) !== JSON.stringify(currentData);
 
-        if (changed !== self.hasMetaBoxChanges) {
-          self.hasMetaBoxChanges = changed;
-          toggleMetaBoxIndicator(changed);
+        if (changed !== self[hasChangesKey]) {
+          self[hasChangesKey] = changed;
+          toggleIndicator(changed);
 
-          // Integrate with WordPress's own save warning
-          if (changed) {
-            // Mark WordPress form as dirty
+          // Integrate with WordPress's own save warning (if enabled)
+          if (changed && config.gutenbergSupport) {
             if (typeof wp !== 'undefined' && wp.data && wp.data.dispatch) {
               // Gutenberg
               wp.data
                 .dispatch('core/editor')
                 .editPost({ meta: { _ycf_changed: Date.now() } });
             } else {
-              // Classic editor - trigger WordPress's own warning
+              // Classic editor
               $('#post').trigger('change');
             }
           }
@@ -885,13 +891,9 @@
       }
 
       // Show/hide indicator
-      function toggleMetaBoxIndicator(show) {
+      function toggleIndicator(show) {
         if (show) {
-          YamlCF.showMessage(
-            'You have unsaved changes in YAML Custom Fields fields',
-            'warning',
-            true
-          );
+          YamlCF.showMessage(config.message, 'warning', true);
         } else {
           YamlCF.hideMessage('warning');
         }
@@ -899,34 +901,64 @@
 
       // Capture initial state after page loads
       setTimeout(function () {
-        self.originalMetaBoxData = captureMetaBoxState();
-      }, 1000);
+        self[storageKey] = captureFormState();
+      }, config.captureDelay || 1000);
 
-      // Watch for changes in meta box fields
-      $metaBox.on('input change', 'input, textarea, select', function () {
-        checkMetaBoxChanges();
+      // Watch for changes
+      $container.on('input change', 'input, textarea, select', function () {
+        checkFormChanges();
       });
 
-      // Clear changes flag on form submit/save
-      $('form#post').on('submit', function () {
-        self.hasMetaBoxChanges = false;
-        toggleMetaBoxIndicator(false);
+      // Clear changes flag on form submit
+      $(config.submitSelector).on('submit', function () {
+        self[hasChangesKey] = false;
+        toggleIndicator(false);
       });
 
-      // Also listen for Gutenberg save
-      if (typeof wp !== 'undefined' && wp.data && wp.data.subscribe) {
-        let wasSaving = false;
-        wp.data.subscribe(function () {
-          const isSaving = wp.data.select('core/editor').isSavingPost();
-          if (wasSaving && !isSaving) {
-            // Save just completed
-            self.hasMetaBoxChanges = false;
-            self.originalMetaBoxData = captureMetaBoxState();
-            toggleMetaBoxIndicator(false);
+      // beforeunload warning (if enabled)
+      if (config.beforeUnloadMessage) {
+        $(window).on('beforeunload', function (e) {
+          if (self[hasChangesKey]) {
+            e.returnValue = config.beforeUnloadMessage;
+            return config.beforeUnloadMessage;
           }
-          wasSaving = isSaving;
         });
       }
+
+      // Gutenberg save handler (if enabled)
+      if (config.gutenbergSupport) {
+        if (typeof wp !== 'undefined' && wp.data && wp.data.subscribe) {
+          let wasSaving = false;
+          wp.data.subscribe(function () {
+            const isSaving = wp.data.select('core/editor').isSavingPost();
+            if (wasSaving && !isSaving) {
+              // Save just completed
+              self[hasChangesKey] = false;
+              self[storageKey] = captureFormState();
+              toggleIndicator(false);
+            }
+            wasSaving = isSaving;
+          });
+        }
+      }
+    },
+
+    initMetaBoxChangeTracking: function () {
+      const $metaBox = $('#yaml-cf-meta-box');
+
+      // Only run on post editor
+      if (!$metaBox.length) return;
+
+      this.initFormChangeTracking({
+        container: '#yaml-cf-meta-box',
+        fieldsSelector: '.yaml-cf-fields',
+        message: 'You have unsaved changes in YAML Custom Fields fields',
+        submitSelector: 'form#post',
+        storageKey: 'originalMetaBoxData',
+        hasChangesKey: 'hasMetaBoxChanges',
+        gutenbergSupport: true,
+        captureDelay: 1000,
+      });
     },
 
     showMessage: function (message, type, persistent) {
