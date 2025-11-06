@@ -38,6 +38,9 @@
       );
       $(document).on('change', '#yaml-cf-import-file', this.importSettings);
 
+      // Import Post Data
+      $(document).on('change', 'input[name="yaml_cf_import_file_hidden"]', this.importPostData);
+
       // Code Snippet Copy
       $(document).on('click', '.yaml-cf-copy-snippet', this.copySnippet);
       $(document).on('mouseenter', '.yaml-cf-copy-snippet', this.showSnippetPopover);
@@ -516,8 +519,9 @@
 
         const $button = $(this);
         const targetId = $button.data('target');
+        const currentValue = $('#' + targetId).val();
 
-        // Always create a new media uploader instance to avoid target conflicts
+        // Create a new frame instance to avoid conflicts
         const mediaUploader = wp.media({
           title: 'Select Image',
           button: {
@@ -527,6 +531,21 @@
           library: {
             type: 'image',
           },
+          frame: 'select',
+        });
+
+        // Reset and pre-select the current image if one exists
+        mediaUploader.on('open', function () {
+          const selection = mediaUploader.state().get('selection');
+          // Clear any existing selection first
+          selection.reset();
+
+          // Pre-select current image if one exists
+          if (currentValue) {
+            const attachment = wp.media.attachment(currentValue);
+            attachment.fetch();
+            selection.add(attachment ? [attachment] : []);
+          }
         });
 
         mediaUploader.on('select', function () {
@@ -535,15 +554,24 @@
             .get('selection')
             .first()
             .toJSON();
-          // Store attachment ID instead of URL
-          $('#' + targetId).val(attachment.id);
 
-          // Update preview
-          const $preview = $button.siblings('.yaml-cf-image-preview');
+          // Store attachment ID instead of URL
+          const $field = $('#' + targetId);
+          $field.val(attachment.id);
+
+          // Trigger change event to ensure form knows it's been modified
+          $field.trigger('change');
+
+          // Update preview - look for preview after the buttons container
+          const $buttonsDiv = $button.closest('.yaml-cf-media-buttons');
+          const $preview = $buttonsDiv.siblings('.yaml-cf-image-preview');
+
           if ($preview.length) {
+            // Update existing preview
             $preview.find('img').attr('src', attachment.url);
           } else {
-            $button.after(
+            // Create new preview after the buttons container
+            $buttonsDiv.after(
               '<div class="yaml-cf-image-preview">' +
                 '<img src="' +
                 attachment.url +
@@ -553,7 +581,6 @@
           }
 
           // Add clear button if it doesn't exist
-          const $buttonsDiv = $button.closest('.yaml-cf-media-buttons');
           if (!$buttonsDiv.find('.yaml-cf-clear-media').length) {
             $buttonsDiv.append(
               $('<button>', {
@@ -594,12 +621,16 @@
           // Store attachment ID instead of URL
           $('#' + targetId).val(attachment.id);
 
-          // Update file name display
-          const $fileDisplay = $button.siblings('.yaml-cf-file-name');
+          // Update file name display - look for display after the buttons container
+          const $buttonsDiv = $button.closest('.yaml-cf-media-buttons');
+          const $fileDisplay = $buttonsDiv.siblings('.yaml-cf-file-name');
+
           if ($fileDisplay.length) {
+            // Update existing display
             $fileDisplay.text(attachment.filename);
           } else {
-            $button.after(
+            // Create new display after the buttons container
+            $buttonsDiv.after(
               '<div class="yaml-cf-file-name">' +
                 attachment.filename +
                 '</div>'
@@ -607,7 +638,6 @@
           }
 
           // Add clear button if it doesn't exist
-          const $buttonsDiv = $button.closest('.yaml-cf-media-buttons');
           if (!$buttonsDiv.find('.yaml-cf-clear-media').length) {
             $buttonsDiv.append(
               $('<button>', {
@@ -642,7 +672,12 @@
       // Clear the hidden input value
       $field.val('');
 
-      // Remove the preview/filename display
+      // Remove the preview/filename display - look for siblings of the buttons container
+      const $buttonsDiv = $button.closest('.yaml-cf-media-buttons');
+      $buttonsDiv.siblings('.yaml-cf-image-preview').remove();
+      $buttonsDiv.siblings('.yaml-cf-file-name').remove();
+
+      // Also try finding within the field container (for backwards compatibility)
       $button
         .closest('.yaml-cf-field')
         .find('.yaml-cf-image-preview')
@@ -1155,6 +1190,41 @@
 
       // Show success message
       YamlCF.showMessage('Code snippet copied to clipboard!', 'success');
+    },
+
+    importPostData: function (e) {
+      const $input = $(this);
+      const file = e.target.files[0];
+
+      if (!file) return;
+
+      if (!confirm('⚠️ WARNING: This will replace ALL custom field data for this page. Continue?')) {
+        $input.val('');
+        return;
+      }
+
+      const postId = $input.data('post-id');
+      const nonce = $input.data('nonce');
+      const formData = new FormData();
+      formData.append('yaml_cf_import_file', file);
+      formData.append('yaml_cf_import_post_nonce', nonce);
+      formData.append('post_id', postId);
+
+      // Submit via AJAX to avoid form nesting issues
+      $.ajax({
+        url: window.location.href,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function () {
+          window.location.href = window.location.href.split('?')[0] + '?post=' + postId + '&action=edit&yaml_cf_imported=1';
+        },
+        error: function () {
+          alert('Import failed. Please try again.');
+          $input.val('');
+        }
+      });
     },
   };
 

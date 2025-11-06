@@ -489,20 +489,30 @@ class YAML_Custom_Fields {
       wp_die(esc_html__('No custom field data found for this post', 'yaml-custom-fields'));
     }
 
+    // Get schema if available
+    $schema = get_post_meta($post_id, '_yaml_cf_schema', true);
+
+    $post_data = [
+      'id' => $post->ID,
+      'title' => $post->post_title,
+      'slug' => $post->post_name,
+      'type' => $post->post_type,
+      'template' => $template,
+      'data' => $data
+    ];
+
+    // Include schema if available
+    if (!empty($schema)) {
+      $post_data['schema'] = $schema;
+    }
+
     $export_data = [
       'plugin' => 'yaml-custom-fields',
       'version' => YAML_CF_VERSION,
       'exported_at' => current_time('mysql'),
       'site_url' => get_site_url(),
       'type' => 'single-post',
-      'post' => [
-        'id' => $post->ID,
-        'title' => $post->post_title,
-        'slug' => $post->post_name,
-        'type' => $post->post_type,
-        'template' => $template,
-        'data' => $data
-      ]
+      'post' => $post_data
     ];
 
     // Set headers for file download
@@ -693,8 +703,14 @@ class YAML_Custom_Fields {
       // Update post meta
       update_post_meta($post_id, '_yaml_cf_data', $cleaned_data);
 
+      // Mark as imported and store schema if available
+      update_post_meta($post_id, '_yaml_cf_imported', true);
+      if (isset($import_data['post']['schema'])) {
+        update_post_meta($post_id, '_yaml_cf_schema', $import_data['post']['schema']);
+      }
+
       // Clear caches
-      $this->clear_data_caches();
+      $this->clear_data_caches($post_id);
 
       // Redirect with success message
       wp_redirect(add_query_arg([
@@ -1237,16 +1253,12 @@ class YAML_Custom_Fields {
     echo '<a href="' . esc_url($export_url) . '">' . esc_html__('Export', 'yaml-custom-fields') . '</a>';
     echo ' | ';
 
-    // Import form (inline text link style)
+    // Import link (triggers hidden file input, handled via separate form submission)
     echo '<span style="display: inline-block;">';
-    echo '<form method="post" enctype="multipart/form-data" style="display: inline; margin: 0;">';
-    wp_nonce_field('yaml_cf_import_post', 'yaml_cf_import_post_nonce');
-    echo '<input type="hidden" name="post_id" value="' . esc_attr($post->ID) . '">';
-    echo '<input type="file" name="yaml_cf_import_file" accept=".json" id="yaml-cf-import-file-' . esc_attr($post->ID) . '" style="display: none;" onchange="if(confirm(\'' . esc_js(__('⚠️ WARNING: This will replace ALL custom field data for this page. Continue?', 'yaml-custom-fields')) . '\')) { this.form.submit(); } else { this.value = \'\'; }">';
+    echo '<input type="file" name="yaml_cf_import_file_hidden" accept=".json" id="yaml-cf-import-file-' . esc_attr($post->ID) . '" style="display: none;" data-post-id="' . esc_attr($post->ID) . '" data-nonce="' . esc_attr(wp_create_nonce('yaml_cf_import_post')) . '">';
     echo '<label for="yaml-cf-import-file-' . esc_attr($post->ID) . '" style="cursor: pointer; color: #2271b1; text-decoration: underline;">';
     echo esc_html__('Import', 'yaml-custom-fields');
     echo '</label>';
-    echo '</form>';
     echo '</span>';
     echo ' | ';
 
@@ -1718,23 +1730,33 @@ class YAML_Custom_Fields {
   }
 
   public function save_schema_data($post_id) {
+    error_log('=== YAML CF save_schema_data called for post_id: ' . $post_id . ' ===');
+
     if (!isset($_POST['yaml_cf_meta_box_nonce'])) {
+      error_log('YAML CF Save - FAILED: No nonce found');
       return;
     }
 
     if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['yaml_cf_meta_box_nonce'])), 'yaml_cf_meta_box')) {
+      error_log('YAML CF Save - FAILED: Nonce verification failed');
       return;
     }
 
     if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+      error_log('YAML CF Save - SKIPPED: Autosave in progress');
       return;
     }
 
     if (!current_user_can('edit_post', $post_id)) {
+      error_log('YAML CF Save - FAILED: User lacks edit_post capability');
       return;
     }
 
     if (isset($_POST['yaml_cf'])) {
+      // Debug: Log what we're receiving
+      error_log('YAML CF Save - Post ID: ' . $post_id);
+      error_log('YAML CF Save - Data: ' . print_r($_POST['yaml_cf'], true));
+
       // Get the template for this post
       $template = get_post_meta($post_id, '_wp_page_template', true);
       if (empty($template) || $template === 'default') {
@@ -1750,10 +1772,22 @@ class YAML_Custom_Fields {
 
       // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via sanitize_field_data()
       $sanitized_data = $this->sanitize_field_data(wp_unslash($_POST['yaml_cf']), $schema);
+
+      // Debug: Log sanitized data
+      error_log('YAML CF Save - Sanitized: ' . print_r($sanitized_data, true));
+
       update_post_meta($post_id, '_yaml_cf_data', $sanitized_data);
 
+      // Store schema for validation purposes
+      if ($schema) {
+        update_post_meta($post_id, '_yaml_cf_schema', $schema);
+      }
+
       // Clear caches
-      $this->clear_data_caches();
+      $this->clear_data_caches($post_id);
+    } else {
+      error_log('YAML CF Save - WARNING: No yaml_cf data in POST');
+      error_log('YAML CF Save - POST keys: ' . implode(', ', array_keys($_POST)));
     }
   }
 
@@ -1993,7 +2027,10 @@ class YAML_Custom_Fields {
         continue;
       }
 
-      $export_data['posts'][] = [
+      // Get schema if available
+      $schema = get_post_meta($post_id, '_yaml_cf_schema', true);
+
+      $post_data = [
         'id' => $post->ID,
         'title' => $post->post_title,
         'slug' => $post->post_name,
@@ -2001,6 +2038,13 @@ class YAML_Custom_Fields {
         'template' => $template,
         'data' => $data
       ];
+
+      // Include schema if available
+      if (!empty($schema)) {
+        $post_data['schema'] = $schema;
+      }
+
+      $export_data['posts'][] = $post_data;
     }
 
     wp_send_json_success($export_data);
@@ -2064,6 +2108,13 @@ class YAML_Custom_Fields {
 
       // Update the post meta
       update_post_meta($target_post->ID, '_yaml_cf_data', $cleaned_data);
+
+      // Mark as imported and store schema if available
+      update_post_meta($target_post->ID, '_yaml_cf_imported', true);
+      if (isset($post_data['schema'])) {
+        update_post_meta($target_post->ID, '_yaml_cf_schema', $post_data['schema']);
+      }
+
       $imported++;
     }
 
@@ -2111,13 +2162,35 @@ class YAML_Custom_Fields {
   /**
    * Clear all plugin caches
    * Call this whenever custom field data changes
+   *
+   * @param int|null $post_id Optional. Specific post ID to clear cache for. If null, clears all.
    */
-  private function clear_data_caches() {
+  private function clear_data_caches($post_id = null) {
     // Clear validation page cache
     wp_cache_delete('yaml_cf_validation_posts', 'yaml-custom-fields');
 
     // Clear export page cache
     wp_cache_delete('yaml_cf_posts_with_data', 'yaml-custom-fields');
+
+    // Clear WordPress post meta cache
+    // This ensures that get_post_meta() calls return fresh data
+    if ($post_id) {
+      // Clear cache for specific post
+      wp_cache_delete($post_id, 'post_meta');
+      clean_post_cache($post_id);
+    } else {
+      // Clear cache for all posts with custom field data
+      global $wpdb;
+      // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Necessary for cache clearing
+      $post_ids = $wpdb->get_col(
+        "SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_yaml_cf_data'"
+      );
+
+      foreach ($post_ids as $pid) {
+        wp_cache_delete($pid, 'post_meta');
+        clean_post_cache($pid);
+      }
+    }
   }
 
 }

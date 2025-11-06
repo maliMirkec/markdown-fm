@@ -20,6 +20,7 @@ if (false === $results) {
     "SELECT p.ID, p.post_title, p.post_name, p.post_type, p.post_status
      FROM {$wpdb->posts} p
      INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_yaml_cf_data'
+     INNER JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = '_yaml_cf_imported'
      WHERE p.post_type IN ('page', 'post')
      AND p.post_status IN ('publish', 'draft', 'pending', 'private')
      ORDER BY p.post_type, p.post_title"
@@ -39,7 +40,10 @@ foreach ($results as $post) {
     continue;
   }
 
-  $missing_attachments = validate_yaml_cf_attachments($data);
+  // Get the schema for this post
+  $schema = get_post_meta($post->ID, '_yaml_cf_schema', true);
+
+  $missing_attachments = validate_yaml_cf_attachments($data, '', $schema);
 
   if (!empty($missing_attachments)) {
     $posts_with_issues++;
@@ -52,27 +56,65 @@ foreach ($results as $post) {
   ];
 }
 
-// Helper function to recursively find attachment IDs
-function validate_yaml_cf_attachments($data, $path = '') {
+// Helper function to recursively find attachment IDs using schema
+function validate_yaml_cf_attachments($data, $path = '', $schema = null) {
   $missing = [];
 
   if (!is_array($data)) {
     return $missing;
   }
 
+  // If no schema provided, skip validation (can't determine which fields are attachments)
+  if (empty($schema)) {
+    return $missing;
+  }
+
   foreach ($data as $key => $value) {
     $current_path = $path ? $path . ' > ' . $key : $key;
 
+    // Find the field definition in the schema
+    $field_schema = find_field_in_schema($schema, $key);
+
     if (is_array($value)) {
-      // Recursively check nested arrays
-      $nested_missing = validate_yaml_cf_attachments($value, $current_path);
-      $missing = array_merge($missing, $nested_missing);
-    } elseif (is_numeric($value) && intval($value) > 0) {
-      // Check if this is an attachment
-      $attachment = get_post(intval($value));
-      if (!$attachment || $attachment->post_type !== 'attachment') {
-        // Could be a regular post ID, so let's verify it exists
-        if (!$attachment) {
+      // For list fields (arrays), check each item
+      if ($field_schema && isset($field_schema['list']) && $field_schema['list']) {
+        // This is a list field, validate each item
+        foreach ($value as $index => $item) {
+          $item_path = $current_path . ' > ' . $index;
+          if (is_array($item)) {
+            // Get the schema for list items (could be blocks)
+            $item_schema = $field_schema;
+            if (isset($field_schema['fields'])) {
+              $item_schema = $field_schema['fields'];
+            } elseif (isset($field_schema['blocks'])) {
+              // For block fields, find the matching block type
+              if (isset($item['type']) && isset($field_schema['blocks'])) {
+                foreach ($field_schema['blocks'] as $block) {
+                  if (isset($block['name']) && $block['name'] === $item['type']) {
+                    $item_schema = isset($block['fields']) ? $block['fields'] : [];
+                    break;
+                  }
+                }
+              }
+            }
+            $nested_missing = validate_yaml_cf_attachments($item, $item_path, $item_schema);
+            $missing = array_merge($missing, $nested_missing);
+          }
+        }
+      } else {
+        // Regular nested object, pass the nested schema
+        $nested_schema = null;
+        if ($field_schema && isset($field_schema['fields'])) {
+          $nested_schema = $field_schema['fields'];
+        }
+        $nested_missing = validate_yaml_cf_attachments($value, $current_path, $nested_schema);
+        $missing = array_merge($missing, $nested_missing);
+      }
+    } elseif ($field_schema && in_array($field_schema['type'], ['image', 'file'], true)) {
+      // Only validate if this field is defined as image or file type in schema
+      if (is_numeric($value) && intval($value) > 0) {
+        $attachment = get_post(intval($value));
+        if (!$attachment || $attachment->post_type !== 'attachment') {
           $missing[] = [
             'field' => $current_path,
             'id' => intval($value)
@@ -83,6 +125,21 @@ function validate_yaml_cf_attachments($data, $path = '') {
   }
 
   return $missing;
+}
+
+// Helper function to find a field definition in schema
+function find_field_in_schema($schema, $field_name) {
+  if (!is_array($schema)) {
+    return null;
+  }
+
+  foreach ($schema as $field) {
+    if (isset($field['name']) && $field['name'] === $field_name) {
+      return $field;
+    }
+  }
+
+  return null;
 }
 ?>
 
