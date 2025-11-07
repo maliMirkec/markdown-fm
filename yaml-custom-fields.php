@@ -1361,58 +1361,80 @@ class YAML_Custom_Fields {
 
       echo '<div class="yaml-cf-field" data-type="' . esc_attr($field['type']) . '">';
 
-      // Generate code snippet
+      // Generate code snippet (skip for block type fields as they have their own snippet)
       $code_snippet = '';
       $popover_id = '';
-      if ($context && is_array($context) && isset($context['type'])) {
-        // Determine the function name based on field type
+      if ($context && is_array($context) && isset($context['type']) && $field['type'] !== 'block') {
+        // Determine the function name and parameters based on field type
         $function_name = 'ycf_get_field';
+        $extra_params = '';
+        $post_id_param = '';
+
         if (isset($field['type'])) {
           if ($field['type'] === 'image') {
             $function_name = 'ycf_get_image';
+            // Show all parameters: field_name, post_id, size
+            if ($context['type'] === 'partial' && isset($context['template'])) {
+              $post_id_param = ", 'partial:" . esc_js($context['template']) . "'";
+            } else {
+              $post_id_param = ", null";
+            }
+            $extra_params = ", 'thumbnail'"; // Size options: thumbnail, medium, large, full
           } elseif ($field['type'] === 'file') {
             $function_name = 'ycf_get_file';
+            // Show all parameters: field_name, post_id
+            if ($context['type'] === 'partial' && isset($context['template'])) {
+              $post_id_param = ", 'partial:" . esc_js($context['template']) . "'";
+            } else {
+              $post_id_param = ", null";
+            }
+          } else {
+            // Regular fields
+            if ($context['type'] === 'partial' && isset($context['template'])) {
+              $post_id_param = ", 'partial:" . esc_js($context['template']) . "'";
+            } else {
+              $post_id_param = ", null";
+            }
           }
         }
 
-        if ($context['type'] === 'partial' && isset($context['template'])) {
-          $code_snippet = $function_name . "('" . esc_js($field['name']) . "', 'partial:" . esc_js($context['template']) . "')";
-        } else {
-          $code_snippet = $function_name . "('" . esc_js($field['name']) . "')";
-        }
+        $code_snippet = $function_name . "('" . esc_js($field['name']) . "'" . $post_id_param . $extra_params . ")";
         $popover_id = 'snippet-' . sanitize_html_class($field_id);
       }
 
-      if($field['type'] === 'image' || $field['type'] === 'file') {
-        echo '<p>' . esc_html($field_label);
-        if ($code_snippet) {
-          echo ' <span class="yaml-cf-snippet-wrapper">';
-          echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($code_snippet) . '" data-popover="' . esc_attr($popover_id) . '">';
-          echo '<span class="dashicons dashicons-editor-code"></span>';
-          echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
-          echo '</button>';
-          echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($popover_id) . '" role="tooltip">';
-          echo '<code>' . esc_html($code_snippet) . '</code>';
-          echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
-          echo '</span>';
-          echo '</span>';
+      // Skip label rendering for block fields as they handle their own label with snippet
+      if ($field['type'] !== 'block') {
+        if($field['type'] === 'image' || $field['type'] === 'file') {
+          echo '<p>' . esc_html($field_label);
+          if ($code_snippet) {
+            echo ' <span class="yaml-cf-snippet-wrapper">';
+            echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($code_snippet) . '" data-popover="' . esc_attr($popover_id) . '">';
+            echo '<span class="dashicons dashicons-editor-code"></span>';
+            echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
+            echo '</button>';
+            echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($popover_id) . '" role="tooltip">';
+            echo '<code>' . esc_html($code_snippet) . '</code>';
+            echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
+            echo '</span>';
+            echo '</span>';
+          }
+          echo '</p>';
+        } else {
+          echo '<label for="' . esc_attr($field_id) . '">' . esc_html($field_label);
+          if ($code_snippet) {
+            echo ' <span class="yaml-cf-snippet-wrapper">';
+            echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($code_snippet) . '" data-popover="' . esc_attr($popover_id) . '">';
+            echo '<span class="dashicons dashicons-editor-code"></span>';
+            echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
+            echo '</button>';
+            echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($popover_id) . '" role="tooltip">';
+            echo '<code>' . esc_html($code_snippet) . '</code>';
+            echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
+            echo '</span>';
+            echo '</span>';
+          }
+          echo '</label>';
         }
-        echo '</p>';
-      } else {
-        echo '<label for="' . esc_attr($field_id) . '">' . esc_html($field_label);
-        if ($code_snippet) {
-          echo ' <span class="yaml-cf-snippet-wrapper">';
-          echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($code_snippet) . '" data-popover="' . esc_attr($popover_id) . '">';
-          echo '<span class="dashicons dashicons-editor-code"></span>';
-          echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
-          echo '</button>';
-          echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($popover_id) . '" role="tooltip">';
-          echo '<code>' . esc_html($code_snippet) . '</code>';
-          echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
-          echo '</span>';
-          echo '</span>';
-        }
-        echo '</label>';
       }
 
       switch ($field['type']) {
@@ -1553,6 +1575,24 @@ class YAML_Custom_Fields {
           $blocks = isset($field['blocks']) ? $field['blocks'] : [];
           $block_key = isset($field['blockKey']) ? $field['blockKey'] : 'type';
 
+          // Generate code snippet for block fields
+          if ($is_list) {
+            $snippet = "<?php\n// Get all blocks\n\$blocks = ycf_get_field('" . esc_js($field['name']) . "', null);\n\nif (!empty(\$blocks)) {\n  foreach (\$blocks as \$block) {\n    // Access block fields using context parameter:\n    // \$value = ycf_get_field('field_name', null, \$block);\n    // \$image = ycf_get_image('image_field', null, 'thumbnail', \$block);\n    // \$file = ycf_get_file('file_field', null, \$block);\n  }\n}\n?>";
+            $popover_id = 'snippet-' . sanitize_html_class($field_id);
+            echo '<label style="display: block; margin-bottom: 5px;">' . esc_html($field_label);
+            echo ' <span class="yaml-cf-snippet-wrapper">';
+            echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($snippet) . '" data-popover="' . esc_attr($popover_id) . '">';
+            echo '<span class="dashicons dashicons-editor-code"></span>';
+            echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
+            echo '</button>';
+            echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($popover_id) . '" role="tooltip">';
+            echo '<code style="white-space: pre-wrap;">' . esc_html($snippet) . '</code>';
+            echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
+            echo '</span>';
+            echo '</span>';
+            echo '</label>';
+          }
+
           echo '<div class="yaml-cf-block-container" data-field-name="' . esc_attr($field['name']) . '">';
 
           if ($is_list) {
@@ -1614,8 +1654,29 @@ class YAML_Custom_Fields {
         $block_field_value = isset($block_data[$block_field['name']]) ? $block_data[$block_field['name']] : '';
         $block_field_type = isset($block_field['type']) ? $block_field['type'] : 'string';
 
+        // Generate code snippet for block field
+        $function_name = 'ycf_get_field';
+        if ($block_field_type === 'image') {
+          $function_name = 'ycf_get_image';
+        } elseif ($block_field_type === 'file') {
+          $function_name = 'ycf_get_file';
+        }
+        $block_snippet = $function_name . "('" . esc_js($block_field['name']) . "', null, " . ($block_field_type === 'image' ? "'thumbnail', " : "") . "\$block)";
+        $block_popover_id = 'snippet-' . sanitize_html_class($block_field_id);
+
         echo '<div class="yaml-cf-field">';
-        echo '<label for="' . esc_attr($block_field_id) . '">' . esc_html($block_field['label']) . '</label>';
+        echo '<label for="' . esc_attr($block_field_id) . '">' . esc_html($block_field['label']);
+        echo ' <span class="yaml-cf-snippet-wrapper">';
+        echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($block_snippet) . '" data-popover="' . esc_attr($block_popover_id) . '">';
+        echo '<span class="dashicons dashicons-editor-code"></span>';
+        echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
+        echo '</button>';
+        echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($block_popover_id) . '" role="tooltip">';
+        echo '<code>' . esc_html($block_snippet) . '</code>';
+        echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
+        echo '</span>';
+        echo '</span>';
+        echo '</label>';
 
         if ($block_field_type === 'boolean') {
           echo '<input type="checkbox" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="1" ' . checked($block_field_value, 1, false) . ' />';
@@ -2205,15 +2266,34 @@ add_action('plugins_loaded', 'yaml_cf_init');
  * Get a specific field value from YAML Custom Fields data
  *
  * @param string $field_name The name of the field to retrieve
- * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param int|string|null $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param array|null $context_data Optional. Array data to search in (useful for nested blocks). Defaults to null.
  * @return mixed The field value, or null if not found
  *
- * Usage in templates:
- * - For page/post: $hero = yaml_cf_get_field('hero');
- * - For specific post: $hero = yaml_cf_get_field('hero', 123);
- * - For partial: $logo = yaml_cf_get_field('logo', 'partial:header.php');
+ * Usage Examples:
+ *
+ * Basic Usage (Current Page):
+ *   $title = yaml_cf_get_field('hero_title', null);
+ *
+ * Specific Post:
+ *   $title = yaml_cf_get_field('hero_title', 123);
+ *
+ * Partial Template:
+ *   $logo = yaml_cf_get_field('logo', 'partial:header.php');
+ *
+ * Block Fields (with context):
+ *   $blocks = yaml_cf_get_field('features', null);
+ *   foreach ($blocks as $block) {
+ *     $title = yaml_cf_get_field('title', null, $block);
+ *     $description = yaml_cf_get_field('description', null, $block);
+ *   }
  */
-function yaml_cf_get_field($field_name, $post_id = null) {
+function yaml_cf_get_field($field_name, $post_id = null, $context_data = null) {
+  // If context data is provided, search within that array
+  if (is_array($context_data)) {
+    return isset($context_data[$field_name]) ? $context_data[$field_name] : null;
+  }
+
   // Handle partials
   if (is_string($post_id) && strpos($post_id, 'partial:') === 0) {
     $partial_file = str_replace('partial:', '', $post_id);
@@ -2295,8 +2375,8 @@ if (!function_exists('ycf_get_field')) {
   /**
    * Alias for yaml_cf_get_field()
    */
-  function ycf_get_field($field_name, $post_id = null) {
-    return yaml_cf_get_field($field_name, $post_id);
+  function ycf_get_field($field_name, $post_id = null, $context_data = null) {
+    return yaml_cf_get_field($field_name, $post_id, $context_data);
   }
 }
 
@@ -2323,12 +2403,39 @@ if (!function_exists('ycf_has_field')) {
  * Returns an array with image information
  *
  * @param string $field_name The name of the image field
- * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param int|string|null $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
  * @param string $size Optional. Image size (thumbnail, medium, large, full). Defaults to 'full'.
- * @return array|null Array with 'id', 'url', 'alt', 'width', 'height' keys or null if not found
+ * @param array|null $context_data Optional. Array data to search in (useful for nested blocks). Defaults to null.
+ * @return array|null Array with 'id', 'url', 'alt', 'title', 'caption', 'description', 'width', 'height' keys or null if not found
+ *
+ * Usage Examples:
+ *
+ * Basic Usage (Current Page):
+ *   $hero = ycf_get_image('hero_image', null, 'large');
+ *   if ($hero) {
+ *     echo '<img src="' . esc_url($hero['url']) . '" alt="' . esc_attr($hero['alt']) . '" />';
+ *   }
+ *
+ * With Different Sizes:
+ *   $thumb = ycf_get_image('featured_image', null, 'thumbnail');
+ *   $medium = ycf_get_image('featured_image', null, 'medium');
+ *   $large = ycf_get_image('featured_image', null, 'large');
+ *   $full = ycf_get_image('featured_image', null, 'full');
+ *
+ * Block Fields (with context):
+ *   $blocks = ycf_get_field('team_members', null);
+ *   foreach ($blocks as $block) {
+ *     $photo = ycf_get_image('photo', null, 'thumbnail', $block);
+ *     if ($photo) {
+ *       echo '<img src="' . esc_url($photo['url']) . '" alt="' . esc_attr($photo['alt']) . '" />';
+ *     }
+ *   }
+ *
+ * Partial Template:
+ *   $logo = ycf_get_image('site_logo', 'partial:header.php', 'medium');
  */
-function ycf_get_image($field_name, $post_id = null, $size = 'full') {
-  $attachment_id = ycf_get_field($field_name, $post_id);
+function ycf_get_image($field_name, $post_id = null, $size = 'full', $context_data = null) {
+  $attachment_id = ycf_get_field($field_name, $post_id, $context_data);
 
   if (!$attachment_id || !is_numeric($attachment_id)) {
     return null;
@@ -2363,11 +2470,37 @@ function ycf_get_image($field_name, $post_id = null, $size = 'full') {
  * Returns an array with file information
  *
  * @param string $field_name The name of the file field
- * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
- * @return array|null Array with 'id', 'url', 'filename', 'filesize', 'mime_type' keys or null if not found
+ * @param int|string|null $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param array|null $context_data Optional. Array data to search in (useful for nested blocks). Defaults to null.
+ * @return array|null Array with 'id', 'url', 'path', 'filename', 'filesize', 'mime_type', 'title' keys or null if not found
+ *
+ * Usage Examples:
+ *
+ * Basic Usage (Current Page):
+ *   $pdf = ycf_get_file('brochure', null);
+ *   if ($pdf) {
+ *     echo '<a href="' . esc_url($pdf['url']) . '" download>' . esc_html($pdf['filename']) . '</a>';
+ *     echo '<span>(' . size_format($pdf['filesize']) . ')</span>';
+ *   }
+ *
+ * Block Fields (with context):
+ *   $blocks = ycf_get_field('downloads', null);
+ *   foreach ($blocks as $block) {
+ *     $file = ycf_get_file('document', null, $block);
+ *     $title = ycf_get_field('title', null, $block);
+ *     if ($file) {
+ *       echo '<div class="download">';
+ *       echo '<h3>' . esc_html($title) . '</h3>';
+ *       echo '<a href="' . esc_url($file['url']) . '">' . esc_html($file['filename']) . '</a>';
+ *       echo '</div>';
+ *     }
+ *   }
+ *
+ * Partial Template:
+ *   $terms = ycf_get_file('terms_pdf', 'partial:footer.php');
  */
-function ycf_get_file($field_name, $post_id = null) {
-  $attachment_id = ycf_get_field($field_name, $post_id);
+function ycf_get_file($field_name, $post_id = null, $context_data = null) {
+  $attachment_id = ycf_get_field($field_name, $post_id, $context_data);
 
   if (!$attachment_id || !is_numeric($attachment_id)) {
     return null;
