@@ -64,6 +64,67 @@ if (!defined('ABSPATH')) {
         </a>
       </p>
     </form>
+
+    <div class="yaml-cf-schema-examples">
+      <h2><?php esc_html_e('Schema Example', 'yaml-custom-fields'); ?></h2>
+      <p><?php esc_html_e('Here\'s an example schema in YAML format:', 'yaml-custom-fields'); ?></p>
+      <pre>fields:
+  - name: hero_title
+    label: Hero Title
+    type: string
+    required: true
+    options:
+      maxlength: 100
+  - name: hero_image
+    label: Hero Image
+    type: image
+  - name: category
+    label: Category
+    type: taxonomy
+    options:
+      taxonomy: category
+  - name: tags
+    label: Tags
+    type: taxonomy
+    multiple: true
+    options:
+      taxonomy: post_tag
+  - name: features
+    label: Features
+    type: block
+    list: true
+    blockKey: type
+    blocks:
+      - name: feature
+        label: Feature Block
+        fields:
+          - name: title
+            label: Title
+            type: string
+          - name: icon
+            label: Icon
+            type: image
+          - name: description
+            label: Description
+            type: text</pre>
+
+      <h3><?php esc_html_e('Supported Field Types', 'yaml-custom-fields'); ?></h3>
+      <ul>
+        <li><strong>boolean</strong> - Checkbox</li>
+        <li><strong>string</strong> - Single line text (supports minlength, maxlength)</li>
+        <li><strong>text</strong> - Multi-line textarea (supports maxlength)</li>
+        <li><strong>rich-text</strong> - WordPress WYSIWYG editor</li>
+        <li><strong>code</strong> - Code editor (supports language option)</li>
+        <li><strong>number</strong> - Number input (supports min, max)</li>
+        <li><strong>date</strong> - Date picker (supports time option for datetime)</li>
+        <li><strong>select</strong> - Dropdown (supports multiple and values options)</li>
+        <li><strong>taxonomy</strong> - WordPress categories, tags, or custom taxonomies (supports multiple and taxonomy options)</li>
+        <li><strong>image</strong> - WordPress media uploader for images</li>
+        <li><strong>file</strong> - WordPress media uploader for any file</li>
+        <li><strong>object</strong> - Nested fields group</li>
+        <li><strong>block</strong> - Repeater field with multiple block types (list: true for repeatable)</li>
+      </ul>
+    </div>
   </div>
 </div>
 

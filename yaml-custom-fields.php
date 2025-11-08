@@ -1388,6 +1388,14 @@ class YAML_Custom_Fields {
             } else {
               $post_id_param = ", null";
             }
+          } elseif ($field['type'] === 'taxonomy') {
+            $function_name = 'ycf_get_term';
+            // Show all parameters: field_name, post_id
+            if ($context['type'] === 'partial' && isset($context['template'])) {
+              $post_id_param = ", 'partial:" . esc_js($context['template']) . "'";
+            } else {
+              $post_id_param = ", null";
+            }
           } else {
             // Regular fields
             if ($context['type'] === 'partial' && isset($context['template'])) {
@@ -1527,6 +1535,39 @@ class YAML_Custom_Fields {
           echo '</select>';
           break;
 
+        case 'taxonomy':
+          $options = isset($field['options']) ? $field['options'] : [];
+          $taxonomy = isset($options['taxonomy']) ? $options['taxonomy'] : 'category';
+          $multiple = isset($field['multiple']) && $field['multiple'];
+
+          // Get terms for the specified taxonomy
+          $terms = get_terms([
+            'taxonomy' => $taxonomy,
+            'hide_empty' => false,
+          ]);
+
+          if ($multiple) {
+            $field_value = is_array($field_value) ? $field_value : ($field_value ? [$field_value] : []);
+            echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][]" id="' . esc_attr($field_id) . '" multiple style="height: 150px;" class="regular-text">';
+          } else {
+            echo '<select name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" class="regular-text">';
+            echo '<option value="">-- Select ' . esc_html(ucfirst($taxonomy)) . ' --</option>';
+          }
+
+          if (!is_wp_error($terms) && !empty($terms)) {
+            foreach ($terms as $term) {
+              if ($multiple) {
+                $selected = in_array($term->term_id, $field_value) ? 'selected' : '';
+              } else {
+                $selected = ($field_value == $term->term_id) ? 'selected' : '';
+              }
+              echo '<option value="' . esc_attr($term->term_id) . '" ' . $selected . '>' . esc_html($term->name) . '</option>';
+            }
+          }
+
+          echo '</select>';
+          break;
+
         case 'image':
           echo '<input type="hidden" name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" />';
           echo '<div class="yaml-cf-media-buttons">';
@@ -1577,7 +1618,7 @@ class YAML_Custom_Fields {
 
           // Generate code snippet for block fields
           if ($is_list) {
-            $snippet = "<?php\n// Get all blocks\n\$blocks = ycf_get_field('" . esc_js($field['name']) . "', null);\n\nif (!empty(\$blocks)) {\n  foreach (\$blocks as \$block) {\n    // Access block fields using context parameter:\n    // \$value = ycf_get_field('field_name', null, \$block);\n    // \$image = ycf_get_image('image_field', null, 'thumbnail', \$block);\n    // \$file = ycf_get_file('file_field', null, \$block);\n  }\n}\n?>";
+            $snippet = "<?php\n// Get all blocks\n\$blocks = ycf_get_field('" . esc_js($field['name']) . "', null);\n\nif (!empty(\$blocks)) {\n  foreach (\$blocks as \$block) {\n    // Access block fields using context parameter:\n    // \$value = ycf_get_field('field_name', null, \$block);\n    // \$image = ycf_get_image('image_field', null, 'thumbnail', \$block);\n    // \$file = ycf_get_file('file_field', null, \$block);\n    // \$term = ycf_get_term('taxonomy_field', null, \$block);\n  }\n}\n?>";
             $popover_id = 'snippet-' . sanitize_html_class($field_id);
             echo '<label style="display: block; margin-bottom: 5px;">' . esc_html($field_label);
             echo ' <span class="yaml-cf-snippet-wrapper">';
@@ -1656,12 +1697,16 @@ class YAML_Custom_Fields {
 
         // Generate code snippet for block field
         $function_name = 'ycf_get_field';
+        $extra_snippet_params = '';
         if ($block_field_type === 'image') {
           $function_name = 'ycf_get_image';
+          $extra_snippet_params = "'thumbnail', ";
         } elseif ($block_field_type === 'file') {
           $function_name = 'ycf_get_file';
+        } elseif ($block_field_type === 'taxonomy') {
+          $function_name = 'ycf_get_term';
         }
-        $block_snippet = $function_name . "('" . esc_js($block_field['name']) . "', null, " . ($block_field_type === 'image' ? "'thumbnail', " : "") . "\$block)";
+        $block_snippet = $function_name . "('" . esc_js($block_field['name']) . "', null, " . $extra_snippet_params . "\$block)";
         $block_popover_id = 'snippet-' . sanitize_html_class($block_field_id);
 
         echo '<div class="yaml-cf-field">';
@@ -1738,6 +1783,37 @@ class YAML_Custom_Fields {
               }
               // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
               echo '<option value="' . esc_attr($opt_value) . '" ' . $selected . '>' . esc_html($opt_label) . '</option>';
+            }
+          }
+
+          echo '</select>';
+        } elseif ($block_field_type === 'taxonomy') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $taxonomy = isset($block_field_options['taxonomy']) ? $block_field_options['taxonomy'] : 'category';
+          $multiple = isset($block_field['multiple']) && $block_field['multiple'];
+
+          // Get terms for the specified taxonomy
+          $terms = get_terms([
+            'taxonomy' => $taxonomy,
+            'hide_empty' => false,
+          ]);
+
+          if ($multiple) {
+            $block_field_value = is_array($block_field_value) ? $block_field_value : ($block_field_value ? [$block_field_value] : []);
+            echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . '][]" id="' . esc_attr($block_field_id) . '" multiple style="height: 150px;" class="regular-text">';
+          } else {
+            echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" class="regular-text">';
+            echo '<option value="">-- Select ' . esc_html(ucfirst($taxonomy)) . ' --</option>';
+          }
+
+          if (!is_wp_error($terms) && !empty($terms)) {
+            foreach ($terms as $term) {
+              if ($multiple) {
+                $selected = in_array($term->term_id, $block_field_value) ? 'selected' : '';
+              } else {
+                $selected = ($block_field_value == $term->term_id) ? 'selected' : '';
+              }
+              echo '<option value="' . esc_attr($term->term_id) . '" ' . $selected . '>' . esc_html($term->name) . '</option>';
             }
           }
 
@@ -2522,6 +2598,70 @@ function ycf_get_file($field_name, $post_id = null, $context_data = null) {
     'mime_type' => get_post_mime_type($attachment_id),
     'title' => get_the_title($attachment_id),
   ];
+}
+
+/**
+ * Get term/taxonomy data for a taxonomy field
+ * Returns term object(s) or an array of term objects
+ *
+ * @param string $field_name The name of the taxonomy field
+ * @param int|string|null $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param array|null $context_data Optional. Array data to search in (useful for nested blocks). Defaults to null.
+ * @return WP_Term|WP_Term[]|null Single term object, array of term objects, or null if not found
+ *
+ * Usage Examples:
+ *
+ * Basic Usage (Single Category):
+ *   $category = ycf_get_term('post_category', null);
+ *   if ($category) {
+ *     echo '<a href="' . get_term_link($category) . '">' . esc_html($category->name) . '</a>';
+ *   }
+ *
+ * Multiple Categories:
+ *   $categories = ycf_get_term('post_categories', null);
+ *   if ($categories && is_array($categories)) {
+ *     foreach ($categories as $category) {
+ *       echo '<span>' . esc_html($category->name) . '</span>';
+ *     }
+ *   }
+ *
+ * Block Fields (with context):
+ *   $blocks = ycf_get_field('articles', null);
+ *   foreach ($blocks as $block) {
+ *     $category = ycf_get_term('category', null, $block);
+ *     if ($category) {
+ *       echo '<span class="cat">' . esc_html($category->name) . '</span>';
+ *     }
+ *   }
+ */
+function ycf_get_term($field_name, $post_id = null, $context_data = null) {
+  $term_ids = ycf_get_field($field_name, $post_id, $context_data);
+
+  if (!$term_ids) {
+    return null;
+  }
+
+  // Handle single term ID
+  if (is_numeric($term_ids)) {
+    $term = get_term($term_ids);
+    return (!is_wp_error($term) && $term) ? $term : null;
+  }
+
+  // Handle multiple term IDs
+  if (is_array($term_ids)) {
+    $terms = [];
+    foreach ($term_ids as $term_id) {
+      if (is_numeric($term_id)) {
+        $term = get_term($term_id);
+        if (!is_wp_error($term) && $term) {
+          $terms[] = $term;
+        }
+      }
+    }
+    return !empty($terms) ? $terms : null;
+  }
+
+  return null;
 }
 
 register_uninstall_hook(__FILE__, 'yaml_cf_uninstall');

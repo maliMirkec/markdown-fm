@@ -178,25 +178,26 @@ if (!defined('ABSPATH')) {
     label: Page Title
     type: string
     options:
-    maxlength: 100
+      maxlength: 100
   - name: description
     label: Description
     type: text
     options:
-    maxlength: 160
+      maxlength: 160
   - name: featured_image
     label: Featured Image
     type: image
-  - name: author
-    label: Author
-    type: select
+  - name: category
+    label: Category
+    type: taxonomy
     options:
-    multiple: false
-    values:
-      - value: john
-        label: John Doe
-      - value: jane
-        label: Jane Smith
+      taxonomy: category
+  - name: tags
+    label: Tags
+    type: taxonomy
+    multiple: true
+    options:
+      taxonomy: post_tag
   - name: sections
     label: Page Sections
     type: block
@@ -229,6 +230,7 @@ if (!defined('ABSPATH')) {
       <li><strong>number</strong> - Number input (supports min, max)</li>
       <li><strong>date</strong> - Date picker (supports time option for datetime)</li>
       <li><strong>select</strong> - Dropdown (supports multiple and values options)</li>
+      <li><strong>taxonomy</strong> - WordPress categories, tags, or custom taxonomies (supports multiple and taxonomy options)</li>
       <li><strong>image</strong> - WordPress media uploader for images</li>
       <li><strong>file</strong> - WordPress media uploader for any file</li>
       <li><strong>object</strong> - Nested fields group</li>

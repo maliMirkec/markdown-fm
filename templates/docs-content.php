@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
 
 <ul>
   <li>🎨 <strong>Define YAML schemas</strong> for page templates and template partials</li>
-  <li>📝 <strong>12+ field types</strong> including string, rich-text, images, blocks, and more</li>
+  <li>📝 <strong>13+ field types</strong> including string, rich-text, images, blocks, taxonomies, and more</li>
   <li>🔧 <strong>Beautiful admin interface</strong> with branded header and intuitive controls</li>
   <li>🎯 <strong>Per-page data</strong> for templates (stored in post meta)</li>
   <li>🌐 <strong>Global data</strong> for partials like headers and footers (stored in options)</li>
@@ -103,6 +103,11 @@ composer install</code></pre>
   - name: hero_image
     label: Hero Image
     type: image
+  - name: category
+    label: Category
+    type: taxonomy
+    options:
+      taxonomy: category
   - name: description
     label: Description
     type: text
@@ -196,7 +201,7 @@ $features = ycf_get_field('features');
 
 <p>YAML Custom Fields provides ACF-like template functions for retrieving your data:</p>
 
-<h3><code>ycf_get_field($field_name, $post_id = null)</code></h3>
+<h3><code>ycf_get_field($field_name, $post_id = null, $context_data = null)</code></h3>
 
 <p>Get a single field value.</p>
 
@@ -211,7 +216,83 @@ $logo = ycf_get_field('logo', 'partial:header.php');
 $copyright = ycf_get_field('copyright', 'partial:footer.php');
 
 // For partials in subdirectories
-$menu = ycf_get_field('menu_items', 'partial:partials/navigation.php');</code></pre>
+$menu = ycf_get_field('menu_items', 'partial:partials/navigation.php');
+
+// For block fields (using context_data parameter)
+$blocks = ycf_get_field('features');
+foreach ($blocks as $block) {
+  $title = ycf_get_field('title', null, $block);
+  $description = ycf_get_field('description', null, $block);
+}</code></pre>
+
+<h3><code>ycf_get_image($field_name, $post_id = null, $size = 'full', $context_data = null)</code></h3>
+
+<p>Get comprehensive image data including URL, alt text, dimensions, and more.</p>
+
+<pre><code>// Basic usage
+$image = ycf_get_image('hero_image');
+
+// With custom size
+$thumbnail = ycf_get_image('hero_image', null, 'thumbnail');
+
+// In blocks
+$blocks = ycf_get_field('features');
+foreach ($blocks as $block) {
+  $icon = ycf_get_image('icon', null, 'medium', $block);
+  if ($icon) {
+    echo '&lt;img src="' . esc_url($icon['url']) . '" alt="' . esc_attr($icon['alt']) . '"&gt;';
+  }
+}</code></pre>
+
+<p><strong>Returns:</strong> Array with <code>id</code>, <code>url</code>, <code>alt</code>, <code>title</code>, <code>caption</code>, <code>description</code>, <code>width</code>, <code>height</code></p>
+
+<h3><code>ycf_get_file($field_name, $post_id = null, $context_data = null)</code></h3>
+
+<p>Get comprehensive file data including URL, path, size, and MIME type.</p>
+
+<pre><code>// Basic usage
+$pdf = ycf_get_file('brochure');
+
+// In blocks
+$blocks = ycf_get_field('downloads');
+foreach ($blocks as $block) {
+  $file = ycf_get_file('document', null, $block);
+  if ($file) {
+    echo '&lt;a href="' . esc_url($file['url']) . '"&gt;' . esc_html($file['filename']) . '&lt;/a&gt;';
+  }
+}</code></pre>
+
+<p><strong>Returns:</strong> Array with <code>id</code>, <code>url</code>, <code>path</code>, <code>filename</code>, <code>filesize</code>, <code>mime_type</code>, <code>title</code></p>
+
+<h3><code>ycf_get_term($field_name, $post_id = null, $context_data = null)</code></h3>
+
+<p>Get WordPress taxonomy term(s) from a taxonomy field.</p>
+
+<pre><code>// Single term
+$category = ycf_get_term('category');
+if ($category) {
+  echo esc_html($category->name);
+  echo '&lt;a href="' . esc_url(get_term_link($category)) . '"&gt;View category&lt;/a&gt;';
+}
+
+// Multiple terms
+$tags = ycf_get_term('tags');
+if ($tags) {
+  foreach ($tags as $tag) {
+    echo esc_html($tag->name) . ' ';
+  }
+}
+
+// In blocks
+$blocks = ycf_get_field('content_sections');
+foreach ($blocks as $block) {
+  $term = ycf_get_term('category', null, $block);
+  if ($term) {
+    echo esc_html($term->name);
+  }
+}</code></pre>
+
+<p><strong>Returns:</strong> <code>WP_Term</code> object (single) or array of <code>WP_Term</code> objects (multiple), or <code>null</code> if not set</p>
 
 <h3><code>ycf_get_fields($post_id = null)</code></h3>
 
@@ -303,6 +384,11 @@ if (ycf_has_field('logo', 'partial:header.php')) {
   - name: show_search
     label: Show Search Bar
     type: boolean
+  - name: header_category
+    label: Featured Category
+    type: taxonomy
+    options:
+      taxonomy: category
   - name: menu_cta
     label: Menu CTA Button
     type: object
@@ -488,6 +574,67 @@ echo '&lt;style&gt;' . esc_html(ycf_get_field('custom_css')) . '&lt;/style&gt;';
   <li><code>values</code> - Array of options with <code>value</code> and <code>label</code> keys</li>
 </ul>
 
+<h3>Taxonomy</h3>
+
+<p>WordPress taxonomy selector for categories, tags, or custom taxonomies.</p>
+
+<pre><code>- name: category
+  label: Post Category
+  type: taxonomy
+  options:
+    taxonomy: category
+
+- name: tags
+  label: Tags
+  type: taxonomy
+  multiple: true
+  options:
+    taxonomy: post_tag
+
+- name: custom_tax
+  label: Custom Taxonomy
+  type: taxonomy
+  options:
+    taxonomy: your_custom_taxonomy</code></pre>
+
+<p><strong>Options:</strong></p>
+<ul>
+  <li><code>taxonomy</code> - WordPress taxonomy name (category, post_tag, or any custom taxonomy)</li>
+  <li><code>multiple</code> - Set to <code>true</code> to allow multiple term selection</li>
+</ul>
+
+<p><strong>Usage in templates:</strong></p>
+
+<pre><code>&lt;?php
+// Get single term
+$category = ycf_get_term('category');
+if ($category) {
+  echo '&lt;span&gt;' . esc_html($category->name) . '&lt;/span&gt;';
+  echo '&lt;a href="' . esc_url(get_term_link($category)) . '"&gt;View more&lt;/a&gt;';
+}
+
+// Get multiple terms
+$tags = ycf_get_term('tags');
+if ($tags) {
+  foreach ($tags as $tag) {
+    echo '&lt;a href="' . esc_url(get_term_link($tag)) . '"&gt;';
+    echo esc_html($tag->name);
+    echo '&lt;/a&gt; ';
+  }
+}
+
+// In blocks - use context_data parameter
+$blocks = ycf_get_field('content_blocks');
+foreach ($blocks as $block) {
+  $block_category = ycf_get_term('category', null, $block);
+  if ($block_category) {
+    echo esc_html($block_category->name);
+  }
+}
+?&gt;</code></pre>
+
+<p><strong>Returns:</strong> <code>WP_Term</code> object (single selection) or array of <code>WP_Term</code> objects (multiple selection), or <code>null</code> if not set.</p>
+
 <h3>Image</h3>
 
 <p>WordPress media uploader for images.</p>
@@ -551,6 +698,11 @@ echo $author['bio'];</code></pre>
         - name: background_image
           label: Background Image
           type: image
+        - name: category
+          label: Category
+          type: taxonomy
+          options:
+            taxonomy: category
     - name: two_column
       label: Two Column Layout
       fields:
@@ -805,17 +957,19 @@ if ($pdf) {
 <h3>Version 1.0.0</h3>
 <ul>
   <li>Initial release</li>
-  <li>Support for 12+ field types from PagesCMS</li>
+  <li>Support for 13+ field types from PagesCMS</li>
   <li>Template and partial support</li>
-  <li>ACF-like template functions</li>
-  <li>Block/repeater functionality</li>
+  <li>ACF-like template functions with context_data parameter for block fields</li>
+  <li>Taxonomy field type for categories, tags, and custom taxonomies (single/multiple selection)</li>
+  <li>Enhanced helper functions: <code>ycf_get_field()</code>, <code>ycf_get_image()</code>, <code>ycf_get_file()</code>, <code>ycf_get_term()</code></li>
+  <li>Block/repeater functionality with context-aware field access</li>
   <li>WordPress media integration with attachment ID storage</li>
-  <li>Helper functions for images and files (<code>ycf_get_image()</code>, <code>ycf_get_file()</code>)</li>
   <li>Administrator-only access</li>
   <li>Clean uninstall</li>
   <li>Clear buttons for image and file fields</li>
   <li>Reset All Data button for clearing all custom fields on a page</li>
   <li>Confirmation alerts for destructive actions</li>
+  <li>Copy snippet buttons for all field types with complete function signatures</li>
 </ul>
 
 <hr>

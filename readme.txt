@@ -17,7 +17,7 @@ YAML Custom Fields allows you to define structured content schemas with an intui
 = Features =
 
 * Define YAML schemas for page templates and template partials
-* 12+ field types including string, rich-text, images, blocks, and more
+* 13+ field types including string, rich-text, images, blocks, taxonomies, and more
 * Easy-to-use admin interface for managing schemas and data
 * Per-page data for templates (stored in post meta)
 * Global data for partials like headers and footers (stored in options)
@@ -35,6 +35,7 @@ YAML Custom Fields allows you to define structured content schemas with an intui
 * **Number** - Number input with min/max constraints
 * **Date** - Date picker with optional time
 * **Select** - Dropdown with single/multiple selection
+* **Taxonomy** - WordPress categories, tags, or custom taxonomies with single/multiple selection
 * **Image** - WordPress media uploader for images
 * **File** - WordPress media uploader for any file
 * **Object** - Nested group of fields
@@ -46,7 +47,8 @@ In your theme template:
 
 `<?php
 $hero_title = ycf_get_field('hero_title');
-$hero_image = ycf_get_image('hero_image');
+$hero_image = ycf_get_image('hero_image', null, 'full');
+$category = ycf_get_term('category');
 $features = ycf_get_field('features');
 ?>
 
@@ -55,6 +57,9 @@ $features = ycf_get_field('features');
     <img src="<?php echo esc_url($hero_image['url']); ?>" alt="<?php echo esc_attr($hero_image['alt']); ?>">
   <?php endif; ?>
   <h1><?php echo esc_html($hero_title); ?></h1>
+  <?php if ($category): ?>
+    <span class="category"><?php echo esc_html($category->name); ?></span>
+  <?php endif; ?>
 </div>`
 
 = Inspired By =
@@ -129,16 +134,19 @@ Please visit the [GitHub repository](https://github.com/maliMirkec/yaml-custom-f
 
 = 1.0.0 =
 * Initial release
-* Support for 12+ field types from PagesCMS
+* Support for 13+ field types from PagesCMS
 * Template and partial support
-* ACF-like template functions
-* Block/repeater functionality
+* ACF-like template functions with context_data parameter for block fields
+* Taxonomy field type for categories, tags, and custom taxonomies (single/multiple selection)
+* Enhanced helper functions: ycf_get_field(), ycf_get_image(), ycf_get_file(), ycf_get_term()
+* Block/repeater functionality with context-aware field access
 * WordPress media integration
 * Administrator-only access
 * Clean uninstall
 * Clear buttons for image and file fields
 * Reset All Data button for clearing all custom fields
 * Confirmation alerts for destructive actions
+* Copy snippet buttons for all field types with complete function signatures
 
 == Upgrade Notice ==
 
@@ -153,7 +161,32 @@ Initial release of YAML Custom Fields.
 
 `$value = ycf_get_field('field_name');
 $value = ycf_get_field('field_name', 123); // Specific post ID
-$value = ycf_get_field('logo', 'partial:header.php'); // From partial`
+$value = ycf_get_field('logo', 'partial:header.php'); // From partial
+$value = ycf_get_field('title', null, $block); // From block context`
+
+**Get image field with details:**
+
+`$image = ycf_get_image('field_name', null, 'full');
+$image = ycf_get_image('field_name', 123, 'thumbnail'); // Specific post ID
+$image = ycf_get_image('icon', null, 'medium', $block); // From block context
+
+// Returns: array('id', 'url', 'alt', 'title', 'caption', 'description', 'width', 'height')`
+
+**Get file field with details:**
+
+`$file = ycf_get_file('field_name', null);
+$file = ycf_get_file('field_name', 123); // Specific post ID
+$file = ycf_get_file('document', null, $block); // From block context
+
+// Returns: array('id', 'url', 'path', 'filename', 'filesize', 'mime_type', 'title')`
+
+**Get taxonomy field (term or terms):**
+
+`$term = ycf_get_term('field_name', null);
+$term = ycf_get_term('field_name', 123); // Specific post ID
+$term = ycf_get_term('category', null, $block); // From block context
+
+// Returns: WP_Term object or array of WP_Term objects (for multiple selection)`
 
 **Get all fields:**
 
@@ -165,6 +198,27 @@ $fields = ycf_get_fields('partial:footer.php'); // From partial`
 
 `if (ycf_has_field('hero_title')) {
     echo ycf_get_field('hero_title');
+}`
+
+**Working with Block fields:**
+
+`$blocks = ycf_get_field('features');
+
+if (!empty($blocks)) {
+    foreach ($blocks as $block) {
+        // Access nested fields using context_data parameter
+        $title = ycf_get_field('title', null, $block);
+        $icon = ycf_get_image('icon', null, 'thumbnail', $block);
+        $category = ycf_get_term('category', null, $block);
+
+        echo '<h3>' . esc_html($title) . '</h3>';
+        if ($icon) {
+            echo '<img src="' . esc_url($icon['url']) . '">';
+        }
+        if ($category) {
+            echo '<span>' . esc_html($category->name) . '</span>';
+        }
+    }
 }`
 
 = Sample YAML Schema =
@@ -179,6 +233,17 @@ $fields = ycf_get_fields('partial:footer.php'); // From partial`
   - name: hero_image
     label: Hero Image
     type: image
+  - name: category
+    label: Category
+    type: taxonomy
+    options:
+      taxonomy: category
+  - name: tags
+    label: Tags
+    type: taxonomy
+    multiple: true
+    options:
+      taxonomy: post_tag
   - name: features
     label: Features
     type: block
@@ -191,6 +256,9 @@ $fields = ycf_get_fields('partial:footer.php'); // From partial`
           - name: title
             label: Title
             type: string
+          - name: icon
+            label: Icon
+            type: image
           - name: description
             label: Description
             type: text`
