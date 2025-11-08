@@ -322,7 +322,7 @@ class YAML_Custom_Fields {
 
     // This page is for future use - editing template-specific data
     // For now, redirect to main page
-    wp_redirect(admin_url('admin.php?page=yaml-custom-fields'));
+    wp_safe_redirect(admin_url('admin.php?page=yaml-custom-fields'));
     exit;
   }
 
@@ -654,7 +654,7 @@ class YAML_Custom_Fields {
       }
 
       if (!isset($_FILES['yaml_cf_import_file']) || !isset($_FILES['yaml_cf_import_file']['error']) || $_FILES['yaml_cf_import_file']['error'] !== UPLOAD_ERR_OK) {
-        wp_redirect(add_query_arg([
+        wp_safe_redirect(add_query_arg([
           'post' => $post_id,
           'action' => 'edit',
           'yaml_cf_import_error' => 'upload_failed'
@@ -667,7 +667,7 @@ class YAML_Custom_Fields {
       $file_type = wp_check_filetype($file['name']);
 
       if ($file_type['ext'] !== 'json') {
-        wp_redirect(add_query_arg([
+        wp_safe_redirect(add_query_arg([
           'post' => $post_id,
           'action' => 'edit',
           'yaml_cf_import_error' => 'invalid_file'
@@ -680,7 +680,7 @@ class YAML_Custom_Fields {
       $import_data = json_decode($json_data, true);
 
       if (!$import_data || !isset($import_data['plugin']) || $import_data['plugin'] !== 'yaml-custom-fields') {
-        wp_redirect(add_query_arg([
+        wp_safe_redirect(add_query_arg([
           'post' => $post_id,
           'action' => 'edit',
           'yaml_cf_import_error' => 'invalid_format'
@@ -689,7 +689,7 @@ class YAML_Custom_Fields {
       }
 
       if (!isset($import_data['post']) || !isset($import_data['post']['data'])) {
-        wp_redirect(add_query_arg([
+        wp_safe_redirect(add_query_arg([
           'post' => $post_id,
           'action' => 'edit',
           'yaml_cf_import_error' => 'no_data'
@@ -713,7 +713,7 @@ class YAML_Custom_Fields {
       $this->clear_data_caches($post_id);
 
       // Redirect with success message
-      wp_redirect(add_query_arg([
+      wp_safe_redirect(add_query_arg([
         'post' => $post_id,
         'action' => 'edit',
         'yaml_cf_imported' => '1'
@@ -740,7 +740,7 @@ class YAML_Custom_Fields {
           set_transient('yaml_cf_invalid_schema_' . get_current_user_id(), $schema, 60);
 
           // Redirect back with error message
-          wp_redirect(add_query_arg([
+          wp_safe_redirect(add_query_arg([
             'page' => 'yaml-cf-edit-schema',
             'template' => urlencode($template),
             'error' => '1',
@@ -758,7 +758,7 @@ class YAML_Custom_Fields {
       delete_transient('yaml_cf_invalid_schema_' . get_current_user_id());
 
       // Redirect with success message
-      wp_redirect(add_query_arg([
+      wp_safe_redirect(add_query_arg([
         'page' => 'yaml-cf-edit-schema',
         'template' => urlencode($template),
         'saved' => '1'
@@ -798,7 +798,7 @@ class YAML_Custom_Fields {
       $this->clear_data_caches();
 
       // Redirect with success message
-      wp_redirect(add_query_arg([
+      wp_safe_redirect(add_query_arg([
         'page' => 'yaml-cf-edit-partial',
         'template' => urlencode($template),
         'saved' => '1'
@@ -1551,7 +1551,7 @@ class YAML_Custom_Fields {
             echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][]" id="' . esc_attr($field_id) . '" multiple style="height: 150px;" class="regular-text">';
           } else {
             echo '<select name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" class="regular-text">';
-            echo '<option value="">-- Select ' . esc_html(ucfirst($taxonomy)) . ' --</option>';
+            echo '<option value="">-- Select ' . esc_html($field['label']) . ' --</option>';
           }
 
           if (!is_wp_error($terms) && !empty($terms)) {
@@ -1561,7 +1561,7 @@ class YAML_Custom_Fields {
               } else {
                 $selected = ($field_value == $term->term_id) ? 'selected' : '';
               }
-              echo '<option value="' . esc_attr($term->term_id) . '" ' . $selected . '>' . esc_html($term->name) . '</option>';
+              echo '<option value="' . esc_attr($term->term_id) . '" ' . esc_attr($selected) . '>' . esc_html($term->name) . '</option>';
             }
           }
 
@@ -1803,7 +1803,7 @@ class YAML_Custom_Fields {
             echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . '][]" id="' . esc_attr($block_field_id) . '" multiple style="height: 150px;" class="regular-text">';
           } else {
             echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" class="regular-text">';
-            echo '<option value="">-- Select ' . esc_html(ucfirst($taxonomy)) . ' --</option>';
+            echo '<option value="">-- Select ' . esc_html($block_field['label']) . ' --</option>';
           }
 
           if (!is_wp_error($terms) && !empty($terms)) {
@@ -1813,7 +1813,7 @@ class YAML_Custom_Fields {
               } else {
                 $selected = ($block_field_value == $term->term_id) ? 'selected' : '';
               }
-              echo '<option value="' . esc_attr($term->term_id) . '" ' . $selected . '>' . esc_html($term->name) . '</option>';
+              echo '<option value="' . esc_attr($term->term_id) . '" ' . esc_attr($selected) . '>' . esc_html($term->name) . '</option>';
             }
           }
 
@@ -1867,33 +1867,23 @@ class YAML_Custom_Fields {
   }
 
   public function save_schema_data($post_id) {
-    error_log('=== YAML CF save_schema_data called for post_id: ' . $post_id . ' ===');
-
     if (!isset($_POST['yaml_cf_meta_box_nonce'])) {
-      error_log('YAML CF Save - FAILED: No nonce found');
       return;
     }
 
     if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['yaml_cf_meta_box_nonce'])), 'yaml_cf_meta_box')) {
-      error_log('YAML CF Save - FAILED: Nonce verification failed');
       return;
     }
 
     if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-      error_log('YAML CF Save - SKIPPED: Autosave in progress');
       return;
     }
 
     if (!current_user_can('edit_post', $post_id)) {
-      error_log('YAML CF Save - FAILED: User lacks edit_post capability');
       return;
     }
 
     if (isset($_POST['yaml_cf'])) {
-      // Debug: Log what we're receiving
-      error_log('YAML CF Save - Post ID: ' . $post_id);
-      error_log('YAML CF Save - Data: ' . print_r($_POST['yaml_cf'], true));
-
       // Get the template for this post
       $template = get_post_meta($post_id, '_wp_page_template', true);
       if (empty($template) || $template === 'default') {
@@ -1910,9 +1900,6 @@ class YAML_Custom_Fields {
       // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via sanitize_field_data()
       $sanitized_data = $this->sanitize_field_data(wp_unslash($_POST['yaml_cf']), $schema);
 
-      // Debug: Log sanitized data
-      error_log('YAML CF Save - Sanitized: ' . print_r($sanitized_data, true));
-
       update_post_meta($post_id, '_yaml_cf_data', $sanitized_data);
 
       // Store schema for validation purposes
@@ -1922,9 +1909,6 @@ class YAML_Custom_Fields {
 
       // Clear caches
       $this->clear_data_caches($post_id);
-    } else {
-      error_log('YAML CF Save - WARNING: No yaml_cf data in POST');
-      error_log('YAML CF Save - POST keys: ' . implode(', ', array_keys($_POST)));
     }
   }
 
@@ -2450,7 +2434,10 @@ function yaml_cf_has_field($field_name, $post_id = null) {
 if (!function_exists('ycf_get_field')) {
   /**
    * Alias for yaml_cf_get_field()
+   *
+   * @deprecated Use yaml_cf_get_field() instead
    */
+  // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Backward compatibility alias
   function ycf_get_field($field_name, $post_id = null, $context_data = null) {
     return yaml_cf_get_field($field_name, $post_id, $context_data);
   }
@@ -2459,7 +2446,10 @@ if (!function_exists('ycf_get_field')) {
 if (!function_exists('ycf_get_fields')) {
   /**
    * Alias for yaml_cf_get_fields()
+   *
+   * @deprecated Use yaml_cf_get_fields() instead
    */
+  // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Backward compatibility alias
   function ycf_get_fields($post_id = null) {
     return yaml_cf_get_fields($post_id);
   }
@@ -2468,7 +2458,10 @@ if (!function_exists('ycf_get_fields')) {
 if (!function_exists('ycf_has_field')) {
   /**
    * Alias for yaml_cf_has_field()
+   *
+   * @deprecated Use yaml_cf_has_field() instead
    */
+  // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Backward compatibility alias
   function ycf_has_field($field_name, $post_id = null) {
     return yaml_cf_has_field($field_name, $post_id);
   }
@@ -2487,31 +2480,31 @@ if (!function_exists('ycf_has_field')) {
  * Usage Examples:
  *
  * Basic Usage (Current Page):
- *   $hero = ycf_get_image('hero_image', null, 'large');
+ *   $hero = yaml_cf_get_image('hero_image', null, 'large');
  *   if ($hero) {
  *     echo '<img src="' . esc_url($hero['url']) . '" alt="' . esc_attr($hero['alt']) . '" />';
  *   }
  *
  * With Different Sizes:
- *   $thumb = ycf_get_image('featured_image', null, 'thumbnail');
- *   $medium = ycf_get_image('featured_image', null, 'medium');
- *   $large = ycf_get_image('featured_image', null, 'large');
- *   $full = ycf_get_image('featured_image', null, 'full');
+ *   $thumb = yaml_cf_get_image('featured_image', null, 'thumbnail');
+ *   $medium = yaml_cf_get_image('featured_image', null, 'medium');
+ *   $large = yaml_cf_get_image('featured_image', null, 'large');
+ *   $full = yaml_cf_get_image('featured_image', null, 'full');
  *
  * Block Fields (with context):
- *   $blocks = ycf_get_field('team_members', null);
+ *   $blocks = yaml_cf_get_field('team_members', null);
  *   foreach ($blocks as $block) {
- *     $photo = ycf_get_image('photo', null, 'thumbnail', $block);
+ *     $photo = yaml_cf_get_image('photo', null, 'thumbnail', $block);
  *     if ($photo) {
  *       echo '<img src="' . esc_url($photo['url']) . '" alt="' . esc_attr($photo['alt']) . '" />';
  *     }
  *   }
  *
  * Partial Template:
- *   $logo = ycf_get_image('site_logo', 'partial:header.php', 'medium');
+ *   $logo = yaml_cf_get_image('site_logo', 'partial:header.php', 'medium');
  */
-function ycf_get_image($field_name, $post_id = null, $size = 'full', $context_data = null) {
-  $attachment_id = ycf_get_field($field_name, $post_id, $context_data);
+function yaml_cf_get_image($field_name, $post_id = null, $size = 'full', $context_data = null) {
+  $attachment_id = yaml_cf_get_field($field_name, $post_id, $context_data);
 
   if (!$attachment_id || !is_numeric($attachment_id)) {
     return null;
@@ -2541,6 +2534,18 @@ function ycf_get_image($field_name, $post_id = null, $size = 'full', $context_da
   return $image_data;
 }
 
+if (!function_exists('ycf_get_image')) {
+  /**
+   * Alias for yaml_cf_get_image()
+   *
+   * @deprecated Use yaml_cf_get_image() instead
+   */
+  // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Backward compatibility alias
+  function ycf_get_image($field_name, $post_id = null, $size = 'full', $context_data = null) {
+    return yaml_cf_get_image($field_name, $post_id, $size, $context_data);
+  }
+}
+
 /**
  * Get file data for a file field
  * Returns an array with file information
@@ -2553,17 +2558,17 @@ function ycf_get_image($field_name, $post_id = null, $size = 'full', $context_da
  * Usage Examples:
  *
  * Basic Usage (Current Page):
- *   $pdf = ycf_get_file('brochure', null);
+ *   $pdf = yaml_cf_get_file('brochure', null);
  *   if ($pdf) {
  *     echo '<a href="' . esc_url($pdf['url']) . '" download>' . esc_html($pdf['filename']) . '</a>';
  *     echo '<span>(' . size_format($pdf['filesize']) . ')</span>';
  *   }
  *
  * Block Fields (with context):
- *   $blocks = ycf_get_field('downloads', null);
+ *   $blocks = yaml_cf_get_field('downloads', null);
  *   foreach ($blocks as $block) {
- *     $file = ycf_get_file('document', null, $block);
- *     $title = ycf_get_field('title', null, $block);
+ *     $file = yaml_cf_get_file('document', null, $block);
+ *     $title = yaml_cf_get_field('title', null, $block);
  *     if ($file) {
  *       echo '<div class="download">';
  *       echo '<h3>' . esc_html($title) . '</h3>';
@@ -2573,10 +2578,10 @@ function ycf_get_image($field_name, $post_id = null, $size = 'full', $context_da
  *   }
  *
  * Partial Template:
- *   $terms = ycf_get_file('terms_pdf', 'partial:footer.php');
+ *   $terms = yaml_cf_get_file('terms_pdf', 'partial:footer.php');
  */
-function ycf_get_file($field_name, $post_id = null, $context_data = null) {
-  $attachment_id = ycf_get_field($field_name, $post_id, $context_data);
+function yaml_cf_get_file($field_name, $post_id = null, $context_data = null) {
+  $attachment_id = yaml_cf_get_field($field_name, $post_id, $context_data);
 
   if (!$attachment_id || !is_numeric($attachment_id)) {
     return null;
@@ -2600,6 +2605,18 @@ function ycf_get_file($field_name, $post_id = null, $context_data = null) {
   ];
 }
 
+if (!function_exists('ycf_get_file')) {
+  /**
+   * Alias for yaml_cf_get_file()
+   *
+   * @deprecated Use yaml_cf_get_file() instead
+   */
+  // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Backward compatibility alias
+  function ycf_get_file($field_name, $post_id = null, $context_data = null) {
+    return yaml_cf_get_file($field_name, $post_id, $context_data);
+  }
+}
+
 /**
  * Get term/taxonomy data for a taxonomy field
  * Returns term object(s) or an array of term objects
@@ -2612,13 +2629,13 @@ function ycf_get_file($field_name, $post_id = null, $context_data = null) {
  * Usage Examples:
  *
  * Basic Usage (Single Category):
- *   $category = ycf_get_term('post_category', null);
+ *   $category = yaml_cf_get_term('post_category', null);
  *   if ($category) {
  *     echo '<a href="' . get_term_link($category) . '">' . esc_html($category->name) . '</a>';
  *   }
  *
  * Multiple Categories:
- *   $categories = ycf_get_term('post_categories', null);
+ *   $categories = yaml_cf_get_term('post_categories', null);
  *   if ($categories && is_array($categories)) {
  *     foreach ($categories as $category) {
  *       echo '<span>' . esc_html($category->name) . '</span>';
@@ -2626,16 +2643,16 @@ function ycf_get_file($field_name, $post_id = null, $context_data = null) {
  *   }
  *
  * Block Fields (with context):
- *   $blocks = ycf_get_field('articles', null);
+ *   $blocks = yaml_cf_get_field('articles', null);
  *   foreach ($blocks as $block) {
- *     $category = ycf_get_term('category', null, $block);
+ *     $category = yaml_cf_get_term('category', null, $block);
  *     if ($category) {
  *       echo '<span class="cat">' . esc_html($category->name) . '</span>';
  *     }
  *   }
  */
-function ycf_get_term($field_name, $post_id = null, $context_data = null) {
-  $term_ids = ycf_get_field($field_name, $post_id, $context_data);
+function yaml_cf_get_term($field_name, $post_id = null, $context_data = null) {
+  $term_ids = yaml_cf_get_field($field_name, $post_id, $context_data);
 
   if (!$term_ids) {
     return null;
@@ -2662,6 +2679,18 @@ function ycf_get_term($field_name, $post_id = null, $context_data = null) {
   }
 
   return null;
+}
+
+if (!function_exists('ycf_get_term')) {
+  /**
+   * Alias for yaml_cf_get_term()
+   *
+   * @deprecated Use yaml_cf_get_term() instead
+   */
+  // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Backward compatibility alias
+  function ycf_get_term($field_name, $post_id = null, $context_data = null) {
+    return yaml_cf_get_term($field_name, $post_id, $context_data);
+  }
 }
 
 register_uninstall_hook(__FILE__, 'yaml_cf_uninstall');

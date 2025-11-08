@@ -29,14 +29,14 @@ if (!defined('ABSPATH')) {
         </a>
         <?php
         // Check if this is a partial (has a slash or matches partial patterns)
-        $is_partial = (strpos($template, '/') !== false) ||
+        $yaml_cf_is_partial = (strpos($template, '/') !== false) ||
                       preg_match('/^(header|footer|sidebar|content|comments|searchform)/', basename($template));
 
         // Also check if schema exists before showing Manage Data button
-        if ($is_partial && !empty($schema_yaml)) :
-          $manage_data_url = admin_url('admin.php?page=yaml-cf-edit-partial&template=' . urlencode($template));
+        if ($yaml_cf_is_partial && !empty($schema_yaml)) :
+          $yaml_cf_manage_data_url = admin_url('admin.php?page=yaml-cf-edit-partial&template=' . urlencode($template));
         ?>
-        <a href="<?php echo esc_url($manage_data_url); ?>" class="button button-secondary" style="margin-left: 10px;">
+        <a href="<?php echo esc_url($yaml_cf_manage_data_url); ?>" class="button button-secondary" style="margin-left: 10px;">
           <span class="dashicons dashicons-admin-generic"></span>
           <?php esc_html_e('Manage Data', 'yaml-custom-fields'); ?>
         </a>

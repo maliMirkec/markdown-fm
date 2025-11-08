@@ -66,31 +66,31 @@ if (!defined('ABSPATH')) {
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($templates as $template) : ?>
+            <?php foreach ($templates as $yaml_cf_template) : ?>
                 <?php
-                $is_enabled = isset($template_settings[$template['file']]) && $template_settings[$template['file']];
-                $has_schema = isset($schemas[$template['file']]) && !empty($schemas[$template['file']]);
+                $yaml_cf_is_enabled = isset($template_settings[$yaml_cf_template['file']]) && $template_settings[$yaml_cf_template['file']];
+                $yaml_cf_has_schema = isset($schemas[$yaml_cf_template['file']]) && !empty($schemas[$yaml_cf_template['file']]);
                 ?>
                 <tr>
-                    <td><strong><?php echo esc_html($template['name']); ?></strong></td>
-                    <td><code><?php echo esc_html($template['file']); ?></code></td>
+                    <td><strong><?php echo esc_html($yaml_cf_template['name']); ?></strong></td>
+                    <td><code><?php echo esc_html($yaml_cf_template['file']); ?></code></td>
                     <td>
                         <label class="yaml-cf-switch">
                             <input type="checkbox"
                                     class="yaml-cf-enable-yaml"
                                     name="enable-yaml"
-                                    data-template="<?php echo esc_attr($template['file']); ?>"
-                                    <?php checked($is_enabled); ?> />
+                                    data-template="<?php echo esc_attr($yaml_cf_template['file']); ?>"
+                                    <?php checked($yaml_cf_is_enabled); ?> />
                             <span class="yaml-cf-slider"></span>
                         </label>
                     </td>
                     <td>
-                        <?php if ($is_enabled) : ?>
-                            <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-edit-schema&template=' . urlencode($template['file']))); ?>"
+                        <?php if ($yaml_cf_is_enabled) : ?>
+                            <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-edit-schema&template=' . urlencode($yaml_cf_template['file']))); ?>"
                               class="button">
-                                <?php echo $has_schema ? esc_html__('Edit Schema', 'yaml-custom-fields') : esc_html__('Add Schema', 'yaml-custom-fields'); ?>
+                                <?php echo $yaml_cf_has_schema ? esc_html__('Edit Schema', 'yaml-custom-fields') : esc_html__('Add Schema', 'yaml-custom-fields'); ?>
                             </a>
-                            <?php if ($has_schema) : ?>
+                            <?php if ($yaml_cf_has_schema) : ?>
                                 <span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span>
                             <?php endif; ?>
                         <?php else : ?>
@@ -122,31 +122,31 @@ if (!defined('ABSPATH')) {
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($partials as $partial) : ?>
+            <?php foreach ($partials as $yaml_cf_partial) : ?>
                 <?php
-                $is_enabled = isset($template_settings[$partial['file']]) && $template_settings[$partial['file']];
-                $has_schema = isset($schemas[$partial['file']]) && !empty($schemas[$partial['file']]);
+                $yaml_cf_is_enabled = isset($template_settings[$yaml_cf_partial['file']]) && $template_settings[$yaml_cf_partial['file']];
+                $yaml_cf_has_schema = isset($schemas[$yaml_cf_partial['file']]) && !empty($schemas[$yaml_cf_partial['file']]);
                 ?>
                 <tr>
-                    <td><strong><?php echo esc_html($partial['name']); ?></strong></td>
-                    <td><code><?php echo esc_html($partial['file']); ?></code></td>
+                    <td><strong><?php echo esc_html($yaml_cf_partial['name']); ?></strong></td>
+                    <td><code><?php echo esc_html($yaml_cf_partial['file']); ?></code></td>
                     <td>
                         <label class="yaml-cf-switch">
                             <input type="checkbox"
                                     class="yaml-cf-enable-yaml"
                                     name="enable-yaml"
-                                    data-template="<?php echo esc_attr($partial['file']); ?>"
-                                    <?php checked($is_enabled); ?> />
+                                    data-template="<?php echo esc_attr($yaml_cf_partial['file']); ?>"
+                                    <?php checked($yaml_cf_is_enabled); ?> />
                             <span class="yaml-cf-slider"></span>
                         </label>
                     </td>
                     <td>
-                        <?php if ($is_enabled) : ?>
-                            <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-edit-schema&template=' . urlencode($partial['file']))); ?>"
+                        <?php if ($yaml_cf_is_enabled) : ?>
+                            <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-edit-schema&template=' . urlencode($yaml_cf_partial['file']))); ?>"
                               class="button">
-                                <?php echo $has_schema ? esc_html__('Edit Schema', 'yaml-custom-fields') : esc_html__('Add Schema', 'yaml-custom-fields'); ?>
+                                <?php echo $yaml_cf_has_schema ? esc_html__('Edit Schema', 'yaml-custom-fields') : esc_html__('Add Schema', 'yaml-custom-fields'); ?>
                             </a>
-                            <?php if ($has_schema) : ?>
+                            <?php if ($yaml_cf_has_schema) : ?>
                                 <span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span>
                             <?php endif; ?>
                         <?php else : ?>
@@ -154,8 +154,8 @@ if (!defined('ABSPATH')) {
                         <?php endif; ?>
                     </td>
                     <td>
-                        <?php if ($is_enabled && $has_schema) : ?>
-                            <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-edit-partial&template=' . urlencode($partial['file']))); ?>"
+                        <?php if ($yaml_cf_is_enabled && $yaml_cf_has_schema) : ?>
+                            <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-edit-partial&template=' . urlencode($yaml_cf_partial['file']))); ?>"
                               class="button">
                                 <?php esc_html_e('Manage Data', 'yaml-custom-fields'); ?>
                             </a>

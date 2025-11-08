@@ -11,12 +11,12 @@ if (!defined('ABSPATH')) {
 global $wpdb;
 
 // Try to get from cache first
-$cache_key = 'yaml_cf_validation_posts';
-$results = wp_cache_get($cache_key, 'yaml-custom-fields');
+$yaml_cf_cache_key = 'yaml_cf_validation_posts';
+$yaml_cf_results = wp_cache_get($yaml_cf_cache_key, 'yaml-custom-fields');
 
-if (false === $results) {
+if (false === $yaml_cf_results) {
   // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above with wp_cache_get/set
-  $results = $wpdb->get_results(
+  $yaml_cf_results = $wpdb->get_results(
     "SELECT p.ID, p.post_title, p.post_name, p.post_type, p.post_status
      FROM {$wpdb->posts} p
      INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_yaml_cf_data'
@@ -26,116 +26,116 @@ if (false === $results) {
      ORDER BY p.post_type, p.post_title"
   );
   // Cache for 5 minutes
-  wp_cache_set($cache_key, $results, 'yaml-custom-fields', 300);
+  wp_cache_set($yaml_cf_cache_key, $yaml_cf_results, 'yaml-custom-fields', 300);
 }
 
-$validation_results = [];
-$total_posts = count($results);
-$posts_with_issues = 0;
-$total_missing_attachments = 0;
+$yaml_cf_validation_results = [];
+$yaml_cf_total_posts = count($yaml_cf_results);
+$yaml_cf_posts_with_issues = 0;
+$yaml_cf_total_missing_attachments = 0;
 
-foreach ($results as $post) {
-  $data = get_post_meta($post->ID, '_yaml_cf_data', true);
-  if (empty($data)) {
+foreach ($yaml_cf_results as $yaml_cf_post) {
+  $yaml_cf_data = get_post_meta($yaml_cf_post->ID, '_yaml_cf_data', true);
+  if (empty($yaml_cf_data)) {
     continue;
   }
 
   // Get the schema for this post
-  $schema = get_post_meta($post->ID, '_yaml_cf_schema', true);
+  $yaml_cf_schema = get_post_meta($yaml_cf_post->ID, '_yaml_cf_schema', true);
 
-  $missing_attachments = validate_yaml_cf_attachments($data, '', $schema);
+  $yaml_cf_missing_attachments = yaml_cf_validate_yaml_cf_attachments($yaml_cf_data, '', $yaml_cf_schema);
 
-  if (!empty($missing_attachments)) {
-    $posts_with_issues++;
-    $total_missing_attachments += count($missing_attachments);
+  if (!empty($yaml_cf_missing_attachments)) {
+    $yaml_cf_posts_with_issues++;
+    $yaml_cf_total_missing_attachments += count($yaml_cf_missing_attachments);
   }
 
-  $validation_results[] = [
-    'post' => $post,
-    'missing_attachments' => $missing_attachments
+  $yaml_cf_validation_results[] = [
+    'post' => $yaml_cf_post,
+    'missing_attachments' => $yaml_cf_missing_attachments
   ];
 }
 
 // Helper function to recursively find attachment IDs using schema
-function validate_yaml_cf_attachments($data, $path = '', $schema = null) {
-  $missing = [];
+function yaml_cf_validate_yaml_cf_attachments($yaml_cf_data, $yaml_cf_path = '', $yaml_cf_schema = null) {
+  $yaml_cf_missing = [];
 
-  if (!is_array($data)) {
-    return $missing;
+  if (!is_array($yaml_cf_data)) {
+    return $yaml_cf_missing;
   }
 
   // If no schema provided, skip validation (can't determine which fields are attachments)
-  if (empty($schema)) {
-    return $missing;
+  if (empty($yaml_cf_schema)) {
+    return $yaml_cf_missing;
   }
 
-  foreach ($data as $key => $value) {
-    $current_path = $path ? $path . ' > ' . $key : $key;
+  foreach ($yaml_cf_data as $yaml_cf_key => $yaml_cf_value) {
+    $yaml_cf_current_path = $yaml_cf_path ? $yaml_cf_path . ' > ' . $yaml_cf_key : $yaml_cf_key;
 
     // Find the field definition in the schema
-    $field_schema = find_field_in_schema($schema, $key);
+    $yaml_cf_field_schema = yaml_cf_find_field_in_schema($yaml_cf_schema, $yaml_cf_key);
 
-    if (is_array($value)) {
+    if (is_array($yaml_cf_value)) {
       // For list fields (arrays), check each item
-      if ($field_schema && isset($field_schema['list']) && $field_schema['list']) {
+      if ($yaml_cf_field_schema && isset($yaml_cf_field_schema['list']) && $yaml_cf_field_schema['list']) {
         // This is a list field, validate each item
-        foreach ($value as $index => $item) {
-          $item_path = $current_path . ' > ' . $index;
-          if (is_array($item)) {
+        foreach ($yaml_cf_value as $yaml_cf_index => $yaml_cf_item) {
+          $yaml_cf_item_path = $yaml_cf_current_path . ' > ' . $yaml_cf_index;
+          if (is_array($yaml_cf_item)) {
             // Get the schema for list items (could be blocks)
-            $item_schema = $field_schema;
-            if (isset($field_schema['fields'])) {
-              $item_schema = $field_schema['fields'];
-            } elseif (isset($field_schema['blocks'])) {
+            $yaml_cf_item_schema = $yaml_cf_field_schema;
+            if (isset($yaml_cf_field_schema['fields'])) {
+              $yaml_cf_item_schema = $yaml_cf_field_schema['fields'];
+            } elseif (isset($yaml_cf_field_schema['blocks'])) {
               // For block fields, find the matching block type
-              if (isset($item['type']) && isset($field_schema['blocks'])) {
-                foreach ($field_schema['blocks'] as $block) {
-                  if (isset($block['name']) && $block['name'] === $item['type']) {
-                    $item_schema = isset($block['fields']) ? $block['fields'] : [];
+              if (isset($yaml_cf_item['type']) && isset($yaml_cf_field_schema['blocks'])) {
+                foreach ($yaml_cf_field_schema['blocks'] as $yaml_cf_block) {
+                  if (isset($yaml_cf_block['name']) && $yaml_cf_block['name'] === $yaml_cf_item['type']) {
+                    $yaml_cf_item_schema = isset($yaml_cf_block['fields']) ? $yaml_cf_block['fields'] : [];
                     break;
                   }
                 }
               }
             }
-            $nested_missing = validate_yaml_cf_attachments($item, $item_path, $item_schema);
-            $missing = array_merge($missing, $nested_missing);
+            $yaml_cf_nested_missing = yaml_cf_validate_yaml_cf_attachments($yaml_cf_item, $yaml_cf_item_path, $yaml_cf_item_schema);
+            $yaml_cf_missing = array_merge($yaml_cf_missing, $yaml_cf_nested_missing);
           }
         }
       } else {
         // Regular nested object, pass the nested schema
-        $nested_schema = null;
-        if ($field_schema && isset($field_schema['fields'])) {
-          $nested_schema = $field_schema['fields'];
+        $yaml_cf_nested_schema = null;
+        if ($yaml_cf_field_schema && isset($yaml_cf_field_schema['fields'])) {
+          $yaml_cf_nested_schema = $yaml_cf_field_schema['fields'];
         }
-        $nested_missing = validate_yaml_cf_attachments($value, $current_path, $nested_schema);
-        $missing = array_merge($missing, $nested_missing);
+        $yaml_cf_nested_missing = yaml_cf_validate_yaml_cf_attachments($yaml_cf_value, $yaml_cf_current_path, $yaml_cf_nested_schema);
+        $yaml_cf_missing = array_merge($yaml_cf_missing, $yaml_cf_nested_missing);
       }
-    } elseif ($field_schema && in_array($field_schema['type'], ['image', 'file'], true)) {
+    } elseif ($yaml_cf_field_schema && in_array($yaml_cf_field_schema['type'], ['image', 'file'], true)) {
       // Only validate if this field is defined as image or file type in schema
-      if (is_numeric($value) && intval($value) > 0) {
-        $attachment = get_post(intval($value));
-        if (!$attachment || $attachment->post_type !== 'attachment') {
-          $missing[] = [
-            'field' => $current_path,
-            'id' => intval($value)
+      if (is_numeric($yaml_cf_value) && intval($yaml_cf_value) > 0) {
+        $yaml_cf_attachment = get_post(intval($yaml_cf_value));
+        if (!$yaml_cf_attachment || $yaml_cf_attachment->post_type !== 'attachment') {
+          $yaml_cf_missing[] = [
+            'field' => $yaml_cf_current_path,
+            'id' => intval($yaml_cf_value)
           ];
         }
       }
     }
   }
 
-  return $missing;
+  return $yaml_cf_missing;
 }
 
 // Helper function to find a field definition in schema
-function find_field_in_schema($schema, $field_name) {
-  if (!is_array($schema)) {
+function yaml_cf_find_field_in_schema($yaml_cf_schema, $yaml_cf_field_name) {
+  if (!is_array($yaml_cf_schema)) {
     return null;
   }
 
-  foreach ($schema as $field) {
-    if (isset($field['name']) && $field['name'] === $field_name) {
-      return $field;
+  foreach ($yaml_cf_schema as $yaml_cf_field) {
+    if (isset($yaml_cf_field['name']) && $yaml_cf_field['name'] === $yaml_cf_field_name) {
+      return $yaml_cf_field;
     }
   }
 
@@ -153,33 +153,33 @@ function find_field_in_schema($schema, $field_name) {
 
       <div class="yaml-cf-summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
         <div class="yaml-cf-stat-box" style="padding: 20px; background: #f0f0f1; border-radius: 4px; text-align: center;">
-          <div style="font-size: 32px; font-weight: bold; color: #2271b1;"><?php echo esc_html($total_posts); ?></div>
+          <div style="font-size: 32px; font-weight: bold; color: #2271b1;"><?php echo esc_html($yaml_cf_total_posts); ?></div>
           <div style="margin-top: 5px; color: #646970;"><?php esc_html_e('Total Posts', 'yaml-custom-fields'); ?></div>
         </div>
 
         <div class="yaml-cf-stat-box" style="padding: 20px; background: #f0f0f1; border-radius: 4px; text-align: center;">
-          <div style="font-size: 32px; font-weight: bold; color: <?php echo $posts_with_issues > 0 ? '#d63638' : '#00a32a'; ?>;">
-            <?php echo esc_html($posts_with_issues); ?>
+          <div style="font-size: 32px; font-weight: bold; color: <?php echo $yaml_cf_posts_with_issues > 0 ? '#d63638' : '#00a32a'; ?>;">
+            <?php echo esc_html($yaml_cf_posts_with_issues); ?>
           </div>
           <div style="margin-top: 5px; color: #646970;"><?php esc_html_e('Posts with Issues', 'yaml-custom-fields'); ?></div>
         </div>
 
         <div class="yaml-cf-stat-box" style="padding: 20px; background: #f0f0f1; border-radius: 4px; text-align: center;">
-          <div style="font-size: 32px; font-weight: bold; color: <?php echo $total_missing_attachments > 0 ? '#d63638' : '#00a32a'; ?>;">
-            <?php echo esc_html($total_missing_attachments); ?>
+          <div style="font-size: 32px; font-weight: bold; color: <?php echo $yaml_cf_total_missing_attachments > 0 ? '#d63638' : '#00a32a'; ?>;">
+            <?php echo esc_html($yaml_cf_total_missing_attachments); ?>
           </div>
           <div style="margin-top: 5px; color: #646970;"><?php esc_html_e('Missing Attachments', 'yaml-custom-fields'); ?></div>
         </div>
 
         <div class="yaml-cf-stat-box" style="padding: 20px; background: #f0f0f1; border-radius: 4px; text-align: center;">
           <div style="font-size: 32px; font-weight: bold; color: #00a32a;">
-            <?php echo esc_html($total_posts - $posts_with_issues); ?>
+            <?php echo esc_html($yaml_cf_total_posts - $yaml_cf_posts_with_issues); ?>
           </div>
           <div style="margin-top: 5px; color: #646970;"><?php esc_html_e('Healthy Posts', 'yaml-custom-fields'); ?></div>
         </div>
       </div>
 
-      <?php if ($posts_with_issues === 0): ?>
+      <?php if ($yaml_cf_posts_with_issues === 0): ?>
         <div class="notice notice-success inline" style="margin-top: 20px;">
           <p><strong><?php esc_html_e('All data is valid!', 'yaml-custom-fields'); ?></strong> <?php esc_html_e('No missing attachments found.', 'yaml-custom-fields'); ?></p>
         </div>
@@ -189,7 +189,7 @@ function find_field_in_schema($schema, $field_name) {
             <strong><?php esc_html_e('Issues detected!', 'yaml-custom-fields'); ?></strong>
             <?php
             /* translators: %d: number of posts with issues */
-            printf(esc_html__('%d posts have missing attachments. Review the details below.', 'yaml-custom-fields'), absint($posts_with_issues));
+            printf(esc_html__('%d posts have missing attachments. Review the details below.', 'yaml-custom-fields'), absint($yaml_cf_posts_with_issues));
             ?>
           </p>
         </div>
@@ -219,7 +219,7 @@ function find_field_in_schema($schema, $field_name) {
     <div class="card" style="max-width: 100%; margin-top: 20px;">
       <h2><?php esc_html_e('Validation Details', 'yaml-custom-fields'); ?></h2>
 
-      <?php if (empty($validation_results)): ?>
+      <?php if (empty($yaml_cf_validation_results)): ?>
         <p><?php esc_html_e('No pages or posts with custom field data found.', 'yaml-custom-fields'); ?></p>
       <?php else: ?>
         <table class="wp-list-table widefat fixed striped">
@@ -234,50 +234,50 @@ function find_field_in_schema($schema, $field_name) {
             </tr>
           </thead>
           <tbody id="yaml-cf-validation-tbody">
-            <?php foreach ($validation_results as $result): ?>
+            <?php foreach ($yaml_cf_validation_results as $yaml_cf_result): ?>
               <?php
-              $post = $result['post'];
-              $missing = $result['missing_attachments'];
-              $has_issues = !empty($missing);
-              $data_status = $has_issues ? 'issues' : 'healthy';
+              $yaml_cf_post = $yaml_cf_result['post'];
+              $yaml_cf_missing = $yaml_cf_result['missing_attachments'];
+              $yaml_cf_has_issues = !empty($yaml_cf_missing);
+              $yaml_cf_data_status = $yaml_cf_has_issues ? 'issues' : 'healthy';
               ?>
-              <tr class="yaml-cf-validation-row" data-status="<?php echo esc_attr($data_status); ?>">
+              <tr class="yaml-cf-validation-row" data-status="<?php echo esc_attr($yaml_cf_data_status); ?>">
                 <td>
                   <strong>
-                    <a href="<?php echo esc_url(get_edit_post_link($post->ID)); ?>" target="_blank">
-                      <?php echo esc_html($post->post_title); ?>
+                    <a href="<?php echo esc_url(get_edit_post_link($yaml_cf_post->ID)); ?>" target="_blank">
+                      <?php echo esc_html($yaml_cf_post->post_title); ?>
                     </a>
                   </strong>
                   <br>
-                  <small style="color: #646970;"><?php echo esc_html($post->post_name); ?></small>
+                  <small style="color: #646970;"><?php echo esc_html($yaml_cf_post->post_name); ?></small>
                 </td>
-                <td><?php echo esc_html($post->post_type); ?></td>
+                <td><?php echo esc_html($yaml_cf_post->post_type); ?></td>
                 <td>
-                  <span class="post-state"><?php echo esc_html($post->post_status); ?></span>
+                  <span class="post-state"><?php echo esc_html($yaml_cf_post->post_status); ?></span>
                 </td>
                 <td>
-                  <?php if ($has_issues): ?>
+                  <?php if ($yaml_cf_has_issues): ?>
                     <span style="color: #d63638; font-weight: bold;">⚠ <?php esc_html_e('Issues Found', 'yaml-custom-fields'); ?></span>
                   <?php else: ?>
                     <span style="color: #00a32a; font-weight: bold;">✓ <?php esc_html_e('Valid', 'yaml-custom-fields'); ?></span>
                   <?php endif; ?>
                 </td>
                 <td>
-                  <?php if ($has_issues): ?>
+                  <?php if ($yaml_cf_has_issues): ?>
                     <details>
                       <summary style="cursor: pointer; color: #d63638;">
                         <?php
                         /* translators: %d: number of missing attachments */
-                        printf(esc_html__('%d missing attachments', 'yaml-custom-fields'), count($missing));
+                        printf(esc_html__('%d missing attachments', 'yaml-custom-fields'), count($yaml_cf_missing));
                         ?>
                       </summary>
                       <ul style="margin: 10px 0 0 20px; list-style: disc;">
-                        <?php foreach ($missing as $item): ?>
+                        <?php foreach ($yaml_cf_missing as $yaml_cf_item): ?>
                           <li>
-                            <strong><?php echo esc_html($item['field']); ?>:</strong>
+                            <strong><?php echo esc_html($yaml_cf_item['field']); ?>:</strong>
                             <?php
                             /* translators: %d: attachment ID */
-                            printf(esc_html__('ID %d (not found)', 'yaml-custom-fields'), absint($item['id']));
+                            printf(esc_html__('ID %d (not found)', 'yaml-custom-fields'), absint($yaml_cf_item['id']));
                             ?>
                           </li>
                         <?php endforeach; ?>
@@ -288,7 +288,7 @@ function find_field_in_schema($schema, $field_name) {
                   <?php endif; ?>
                 </td>
                 <td>
-                  <a href="<?php echo esc_url(get_edit_post_link($post->ID)); ?>" class="button button-small" target="_blank">
+                  <a href="<?php echo esc_url(get_edit_post_link($yaml_cf_post->ID)); ?>" class="button button-small" target="_blank">
                     <?php esc_html_e('Edit', 'yaml-custom-fields'); ?>
                   </a>
                 </td>
