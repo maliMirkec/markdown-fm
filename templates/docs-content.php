@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
 
 <ul>
   <li>🎨 <strong>Define YAML schemas</strong> for page templates and template partials</li>
-  <li>📝 <strong>13+ field types</strong> including string, rich-text, images, blocks, taxonomies, and more</li>
+  <li>📝 <strong>14+ field types</strong> including string, rich-text, images, blocks, taxonomies, post types, and more</li>
   <li>🔧 <strong>Beautiful admin interface</strong> with branded header and intuitive controls</li>
   <li>🎯 <strong>Per-page data</strong> for templates (stored in post meta)</li>
   <li>🌐 <strong>Global data</strong> for partials like headers and footers (stored in options)</li>
@@ -634,6 +634,46 @@ foreach ($blocks as $block) {
 ?&gt;</code></pre>
 
 <p><strong>Returns:</strong> <code>WP_Term</code> object (single selection) or array of <code>WP_Term</code> objects (multiple selection), or <code>null</code> if not set.</p>
+
+<h3>Post Type</h3>
+
+<p>Dropdown selector for registered WordPress post types (Post, Page, and custom post types).</p>
+
+<pre><code>- name: content_type
+  label: Content Type
+  type: post_type
+
+- name: archive_type
+  label: Archive Type
+  type: post_type</code></pre>
+
+<p><strong>Usage in templates:</strong></p>
+
+<pre><code>&lt;?php
+// Get post type object
+$post_type = ycf_get_post_type('content_type');
+if ($post_type) {
+  echo '&lt;h2&gt;' . esc_html($post_type->label) . '&lt;/h2&gt;';
+  echo '&lt;p&gt;Slug: ' . esc_html($post_type->name) . '&lt;/p&gt;';
+
+  // Query posts of this type
+  $query = new WP_Query([
+    'post_type' => $post_type->name,
+    'posts_per_page' => 10
+  ]);
+}
+
+// In blocks - use context_data parameter
+$blocks = ycf_get_field('content_blocks');
+foreach ($blocks as $block) {
+  $block_post_type = ycf_get_post_type('type', null, $block);
+  if ($block_post_type) {
+    echo esc_html($block_post_type->label);
+  }
+}
+?&gt;</code></pre>
+
+<p><strong>Returns:</strong> <code>WP_Post_Type</code> object or <code>null</code> if not set.</p>
 
 <h3>Image</h3>
 

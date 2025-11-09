@@ -36,6 +36,7 @@ YAML Custom Fields allows you to define structured content schemas with an intui
 * **Date** - Date picker with optional time
 * **Select** - Dropdown with single/multiple selection
 * **Taxonomy** - WordPress categories, tags, or custom taxonomies with single/multiple selection
+* **Post Type** - Dropdown to select registered post types (Post, Page, custom post types)
 * **Image** - WordPress media uploader for images
 * **File** - WordPress media uploader for any file
 * **Object** - Nested group of fields
@@ -49,6 +50,7 @@ In your theme template:
 $hero_title = ycf_get_field('hero_title');
 $hero_image = ycf_get_image('hero_image', null, 'full');
 $category = ycf_get_term('category');
+$post_type = ycf_get_post_type('content_type');
 $features = ycf_get_field('features');
 ?>
 
@@ -244,6 +246,9 @@ if (!empty($blocks)) {
     multiple: true
     options:
       taxonomy: post_tag
+  - name: content_type
+    label: Content Type
+    type: post_type
   - name: features
     label: Features
     type: block

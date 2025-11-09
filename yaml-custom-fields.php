@@ -1396,6 +1396,14 @@ class YAML_Custom_Fields {
             } else {
               $post_id_param = ", null";
             }
+          } elseif ($field['type'] === 'post_type') {
+            $function_name = 'ycf_get_post_type';
+            // Show all parameters: field_name, post_id
+            if ($context['type'] === 'partial' && isset($context['template'])) {
+              $post_id_param = ", 'partial:" . esc_js($context['template']) . "'";
+            } else {
+              $post_id_param = ", null";
+            }
           } else {
             // Regular fields
             if ($context['type'] === 'partial' && isset($context['template'])) {
@@ -1563,6 +1571,21 @@ class YAML_Custom_Fields {
               }
               echo '<option value="' . esc_attr($term->term_id) . '" ' . esc_attr($selected) . '>' . esc_html($term->name) . '</option>';
             }
+          }
+
+          echo '</select>';
+          break;
+
+        case 'post_type':
+          // Get all public post types
+          $post_types = get_post_types(['public' => true], 'objects');
+
+          echo '<select name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" class="regular-text">';
+          echo '<option value="">-- Select ' . esc_html($field['label']) . ' --</option>';
+
+          foreach ($post_types as $post_type) {
+            $selected = ($field_value === $post_type->name) ? 'selected' : '';
+            echo '<option value="' . esc_attr($post_type->name) . '" ' . esc_attr($selected) . '>' . esc_html($post_type->label) . '</option>';
           }
 
           echo '</select>';
@@ -1815,6 +1838,19 @@ class YAML_Custom_Fields {
               }
               echo '<option value="' . esc_attr($term->term_id) . '" ' . esc_attr($selected) . '>' . esc_html($term->name) . '</option>';
             }
+          }
+
+          echo '</select>';
+        } elseif ($block_field_type === 'post_type') {
+          // Get all public post types
+          $post_types = get_post_types(['public' => true], 'objects');
+
+          echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" class="regular-text">';
+          echo '<option value="">-- Select ' . esc_html($block_field['label']) . ' --</option>';
+
+          foreach ($post_types as $post_type) {
+            $selected = ($block_field_value === $post_type->name) ? 'selected' : '';
+            echo '<option value="' . esc_attr($post_type->name) . '" ' . esc_attr($selected) . '>' . esc_html($post_type->label) . '</option>';
           }
 
           echo '</select>';
@@ -2690,6 +2726,59 @@ if (!function_exists('ycf_get_term')) {
   // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Backward compatibility alias
   function ycf_get_term($field_name, $post_id = null, $context_data = null) {
     return yaml_cf_get_term($field_name, $post_id, $context_data);
+  }
+}
+
+/**
+ * Get post type object for a post_type field
+ * Returns WP_Post_Type object
+ *
+ * @param string $field_name The name of the post_type field
+ * @param int|string|null $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param array|null $context_data Optional. Array data to search in (useful for nested blocks). Defaults to null.
+ * @return WP_Post_Type|null Post type object or null if not found
+ *
+ * Usage Examples:
+ *
+ * Basic Usage (Current Page):
+ *   $post_type = yaml_cf_get_post_type('content_type', null);
+ *   if ($post_type) {
+ *     echo '<h2>' . esc_html($post_type->label) . '</h2>';
+ *     echo '<p>Slug: ' . esc_html($post_type->name) . '</p>';
+ *   }
+ *
+ * Block Fields (with context):
+ *   $blocks = yaml_cf_get_field('content_blocks', null);
+ *   foreach ($blocks as $block) {
+ *     $post_type = yaml_cf_get_post_type('type', null, $block);
+ *     if ($post_type) {
+ *       echo '<span class="type">' . esc_html($post_type->label) . '</span>';
+ *     }
+ *   }
+ *
+ * Partial Template:
+ *   $post_type = yaml_cf_get_post_type('archive_type', 'partial:header.php');
+ */
+function yaml_cf_get_post_type($field_name, $post_id = null, $context_data = null) {
+  $post_type_slug = yaml_cf_get_field($field_name, $post_id, $context_data);
+
+  if (!$post_type_slug || !is_string($post_type_slug)) {
+    return null;
+  }
+
+  $post_type_object = get_post_type_object($post_type_slug);
+  return $post_type_object ? $post_type_object : null;
+}
+
+if (!function_exists('ycf_get_post_type')) {
+  /**
+   * Alias for yaml_cf_get_post_type()
+   *
+   * @deprecated Use yaml_cf_get_post_type() instead
+   */
+  // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Backward compatibility alias
+  function ycf_get_post_type($field_name, $post_id = null, $context_data = null) {
+    return yaml_cf_get_post_type($field_name, $post_id, $context_data);
   }
 }
 
