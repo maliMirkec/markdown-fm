@@ -9,9 +9,18 @@ if (!defined('ABSPATH')) {
 ?>
 
 <div class="wrap">
-  <h1><?php esc_html_e('Export Page Data', 'yaml-custom-fields'); ?></h1>
+  <div class="yaml-cf-admin-container">
+    <div class="yaml-cf-header">
+      <div class="yaml-cf-header-content">
+        <img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'icon-256x256.png'); ?>" alt="YAML Custom Fields" class="yaml-cf-logo" />
+        <div class="yaml-cf-header-text">
+          <h1><?php esc_html_e('Export & Import', 'yaml-custom-fields'); ?></h1>
+          <p class="yaml-cf-tagline"><?php esc_html_e('Export and import custom field data between sites', 'yaml-custom-fields'); ?></p>
+        </div>
+      </div>
+    </div>
 
-  <div class="yaml-cf-export-data-container">
+    <div class="yaml-cf-export-data-container">
     <div class="card" style="max-width: 100%; margin-top: 20px;">
       <h2><?php esc_html_e('Select Pages/Posts to Export', 'yaml-custom-fields'); ?></h2>
 
@@ -118,6 +127,77 @@ if (!defined('ABSPATH')) {
         <div id="yaml-cf-import-results-content"></div>
       </div>
     </div>
+
+    <!-- Data Objects Export/Import -->
+    <div class="card" style="max-width: 100%; margin-top: 40px;">
+      <h2><?php esc_html_e('Export Data Objects', 'yaml-custom-fields'); ?></h2>
+
+      <div class="yaml-cf-info-box" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 20px;">
+        <p style="margin: 0;">
+          <strong><?php esc_html_e('Note:', 'yaml-custom-fields'); ?></strong>
+          <?php esc_html_e('This exports all data object types and their entries. Image and file fields in entries export attachment IDs only.', 'yaml-custom-fields'); ?>
+        </p>
+      </div>
+
+      <?php
+      $data_object_types = get_option('yaml_cf_data_object_types', []);
+      if (empty($data_object_types)) :
+      ?>
+        <div class="notice notice-info inline">
+          <p><?php esc_html_e('No data object types created yet.', 'yaml-custom-fields'); ?> <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-data-objects')); ?>"><?php esc_html_e('Create your first data object type', 'yaml-custom-fields'); ?></a></p>
+        </div>
+      <?php else : ?>
+        <form method="post" id="yaml-cf-export-data-objects-form">
+          <?php wp_nonce_field('yaml_cf_export_data_objects', 'yaml_cf_export_data_objects_nonce'); ?>
+          <button type="submit" class="button button-primary">
+            <?php esc_html_e('Export All Data Objects', 'yaml-custom-fields'); ?>
+          </button>
+          <p class="description" style="margin-top: 10px;">
+            <?php
+            $total_types = count($data_object_types);
+            $total_entries = 0;
+            foreach ($data_object_types as $type_slug => $type_data) {
+              $entries = get_option('yaml_cf_data_object_entries_' . $type_slug, []);
+              $total_entries += count($entries);
+            }
+            /* translators: 1: number of types, 2: number of entries */
+            printf(esc_html__('Export %1$d data object types with %2$d total entries', 'yaml-custom-fields'), absint($total_types), absint($total_entries));
+            ?>
+          </p>
+        </form>
+      <?php endif; ?>
+    </div>
+
+    <div class="card" style="max-width: 100%; margin-top: 20px;">
+      <h2><?php esc_html_e('Import Data Objects', 'yaml-custom-fields'); ?></h2>
+
+      <div class="yaml-cf-info-box" style="background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 20px;">
+        <p style="margin: 0;">
+          <strong><?php esc_html_e('Import Instructions:', 'yaml-custom-fields'); ?></strong>
+        </p>
+        <ul style="margin: 10px 0 0 20px;">
+          <li><?php esc_html_e('Select a JSON file exported from this plugin', 'yaml-custom-fields'); ?></li>
+          <li><?php esc_html_e('Existing data object types with the same slug will be updated', 'yaml-custom-fields'); ?></li>
+          <li><?php esc_html_e('Missing attachments (images/files) will be automatically removed', 'yaml-custom-fields'); ?></li>
+          <li><?php esc_html_e('All entries for each type will be imported', 'yaml-custom-fields'); ?></li>
+        </ul>
+      </div>
+
+      <div>
+        <input type="file" id="yaml-cf-import-data-objects-file" accept=".json" style="margin-bottom: 10px;">
+        <br>
+        <button type="button" class="button button-primary" id="yaml-cf-import-data-objects">
+          <?php esc_html_e('Import Data Objects', 'yaml-custom-fields'); ?>
+        </button>
+        <span id="yaml-cf-import-data-objects-message" style="margin-left: 15px;"></span>
+      </div>
+
+      <div id="yaml-cf-import-data-objects-results" style="display: none; margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
+        <h3><?php esc_html_e('Import Results', 'yaml-custom-fields'); ?></h3>
+        <div id="yaml-cf-import-data-objects-results-content"></div>
+      </div>
+    </div>
+  </div>
   </div>
 </div>
 
@@ -269,6 +349,67 @@ jQuery(document).ready(function($) {
 
             // Reload posts list
             loadPosts();
+          } else {
+            $message.html('<span style="color: red;">Error: ' + response.data + '</span>');
+          }
+        },
+        error: function() {
+          $message.html('<span style="color: red;">Import failed</span>');
+        }
+      });
+    };
+
+    reader.readAsText(file);
+  });
+
+  // Import data objects
+  $('#yaml-cf-import-data-objects').on('click', function() {
+    const fileInput = document.getElementById('yaml-cf-import-data-objects-file');
+    if (!fileInput.files.length) {
+      alert('Please select a file to import.');
+      return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    const $message = $('#yaml-cf-import-data-objects-message');
+    $message.html('<span class="spinner is-active" style="float: none;"></span>');
+
+    reader.onload = function(e) {
+      $.ajax({
+        url: yamlCF.ajax_url,
+        type: 'POST',
+        data: {
+          action: 'yaml_cf_import_data_objects',
+          nonce: yamlCF.nonce,
+          data: e.target.result
+        },
+        success: function(response) {
+          if (response.success) {
+            $message.html('<span style="color: green;">✓ ' + response.data.message + '</span>');
+
+            // Show detailed results
+            let resultsHtml = '<p><strong>Types Imported:</strong> ' + response.data.types_imported + '</p>';
+            resultsHtml += '<p><strong>Total Entries:</strong> ' + response.data.entries_imported + '</p>';
+            resultsHtml += '<p><strong>Exported at:</strong> ' + response.data.exported_at + '</p>';
+
+            if (response.data.errors && response.data.errors.length > 0) {
+              resultsHtml += '<h4>Errors:</h4><ul style="color: #d63638;">';
+              response.data.errors.forEach(function(error) {
+                resultsHtml += '<li>' + error + '</li>';
+              });
+              resultsHtml += '</ul>';
+            }
+
+            resultsHtml += '<p style="margin-top: 15px;"><a href="' + yamlCF.admin_url + 'admin.php?page=yaml-cf-data-objects" class="button">View Data Objects →</a></p>';
+
+            $('#yaml-cf-import-data-objects-results-content').html(resultsHtml);
+            $('#yaml-cf-import-data-objects-results').show();
+
+            // Refresh page to update export count
+            setTimeout(function() {
+              location.reload();
+            }, 2000);
           } else {
             $message.html('<span style="color: red;">Error: ' + response.data + '</span>');
           }

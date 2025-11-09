@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 }
 ?>
 
-<p>A WordPress plugin for managing YAML frontmatter schemas in theme templates and partials. Inspired by <a href="https://pagescms.org/docs/" target="_blank">PagesCMS</a>, YAML Custom Fields allows you to define structured content schemas with an intuitive interface and ACF-like template functions.</p>
+<p>A WordPress plugin for managing YAML frontmatter schemas in theme templates and partials. YAML Custom Fields allows you to define structured content schemas with an intuitive interface and ACF-like template functions.</p>
 
 <blockquote>Vibe-coded with Claude.</blockquote>
 
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
 
 <ul>
   <li>🎨 <strong>Define YAML schemas</strong> for page templates and template partials</li>
-  <li>📝 <strong>14+ field types</strong> including string, rich-text, images, blocks, taxonomies, post types, and more</li>
+  <li>📝 <strong>15+ field types</strong> including string, rich-text, images, blocks, taxonomies, post types, data objects, and more</li>
   <li>🔧 <strong>Beautiful admin interface</strong> with branded header and intuitive controls</li>
   <li>🎯 <strong>Per-page data</strong> for templates (stored in post meta)</li>
   <li>🌐 <strong>Global data</strong> for partials like headers and footers (stored in options)</li>
@@ -435,7 +435,7 @@ $menu_cta = ycf_get_field('menu_cta', 'partial:header.php');
 
 <h2>Field Types</h2>
 
-<p>YAML Custom Fields supports all field types from Pages CMS:</p>
+<p>YAML Custom Fields supports the following field types:</p>
 
 <h3>String</h3>
 
@@ -674,6 +674,112 @@ foreach ($blocks as $block) {
 ?&gt;</code></pre>
 
 <p><strong>Returns:</strong> <code>WP_Post_Type</code> object or <code>null</code> if not set.</p>
+
+<h3>Data Object</h3>
+
+<p>Reference to structured data objects that you define and manage independently of your templates. Perfect for reusable data like universities, companies, team members, or any other structured entities.</p>
+
+<p><strong>How it works:</strong></p>
+<ol>
+  <li>Navigate to <strong>YAML CF &gt; Data Objects</strong> in the admin menu</li>
+  <li>Create a new data object type (e.g., "Universities")</li>
+  <li>Define its schema using YAML (e.g., name, logo, website, description)</li>
+  <li>Add entries through the Manage Entries interface</li>
+  <li>Reference these entries in your page schemas using the data_object field type</li>
+</ol>
+
+<p><strong>Example: Creating a Universities data object type</strong></p>
+
+<p>First, create the type with this schema in Data Objects admin:</p>
+
+<pre><code>fields:
+  - name: name
+    label: University Name
+    type: string
+    required: true
+  - name: logo
+    label: Logo
+    type: image
+  - name: website
+    label: Website URL
+    type: string
+  - name: description
+    label: Description
+    type: text
+  - name: location
+    label: Location
+    type: string
+  - name: founded
+    label: Founded Year
+    type: number</code></pre>
+
+<p><strong>Then reference it in your page schema:</strong></p>
+
+<pre><code>- name: university
+  label: University
+  type: data_object
+  options:
+    object_type: universities
+
+- name: partner_universities
+  label: Partner Universities
+  type: data_object
+  list: true
+  options:
+    object_type: universities</code></pre>
+
+<p><strong>Usage in templates:</strong></p>
+
+<pre><code>&lt;?php
+// Get single data object entry
+$university = ycf_get_data_object('university');
+if ($university) {
+  echo '&lt;h2&gt;' . esc_html($university['name']) . '&lt;/h2&gt;';
+  echo '&lt;p&gt;' . esc_html($university['location']) . '&lt;/p&gt;';
+
+  // Get university logo
+  if (!empty($university['logo'])) {
+    $logo = wp_get_attachment_image($university['logo'], 'medium');
+    echo $logo;
+  }
+}
+
+// Get multiple data objects (list)
+$partners = ycf_get_field('partner_universities');
+if (!empty($partners)) {
+  foreach ($partners as $partner_id) {
+    $partner = ycf_get_data_object('partner_universities', null, ['entry_id' => $partner_id]);
+    if ($partner) {
+      echo '&lt;div class="partner"&gt;';
+      echo '&lt;h3&gt;' . esc_html($partner['name']) . '&lt;/h3&gt;';
+      echo '&lt;/div&gt;';
+    }
+  }
+}
+
+// In blocks - use context_data parameter
+$blocks = ycf_get_field('content_blocks');
+foreach ($blocks as $block) {
+  $university = ycf_get_data_object('university', null, $block);
+  if ($university) {
+    echo esc_html($university['name']);
+  }
+}
+
+// Get all entries of a data object type
+$all_universities = ycf_get_data_objects('universities');
+foreach ($all_universities as $entry_id => $university) {
+  echo '&lt;li&gt;' . esc_html($university['name']) . '&lt;/li&gt;';
+}
+?&gt;</code></pre>
+
+<p><strong>Returns:</strong> Array containing the data object entry fields, or <code>null</code> if not set.</p>
+
+<p><strong>Helper functions:</strong></p>
+<ul>
+  <li><code>ycf_get_data_object($field_name, $post_id = null, $context_data = null)</code> - Get a single data object entry referenced by a field</li>
+  <li><code>ycf_get_data_objects($object_type)</code> - Get all entries of a specific data object type</li>
+</ul>
 
 <h3>Image</h3>
 
@@ -985,7 +1091,6 @@ if ($pdf) {
   <li><strong>Author</strong>: <a href="https://www.silvestar.codes" target="_blank">Silvestar Bistrović</a></li>
   <li><strong>Email</strong>: me@silvestar.codes</li>
   <li><strong>GitHub</strong>: <a href="https://github.com/maliMirkec/yaml-custom-fields" target="_blank">maliMirkec/yaml-custom-fields</a></li>
-  <li><strong>Inspired by</strong>: <a href="https://pagescms.org/" target="_blank">PagesCMS</a> - Open-source CMS for static websites</li>
 </ul>
 
 <h2>License</h2>
@@ -997,7 +1102,7 @@ if ($pdf) {
 <h3>Version 1.0.0</h3>
 <ul>
   <li>Initial release</li>
-  <li>Support for 13+ field types from PagesCMS</li>
+  <li>Support for 15+ field types
   <li>Template and partial support</li>
   <li>ACF-like template functions with context_data parameter for block fields</li>
   <li>Taxonomy field type for categories, tags, and custom taxonomies (single/multiple selection)</li>

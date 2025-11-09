@@ -8,7 +8,7 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-A WordPress plugin for managing YAML frontmatter schemas in theme templates and partials. Inspired by PagesCMS.
+A WordPress plugin for managing YAML frontmatter schemas in theme templates and partials.
 
 == Description ==
 
@@ -17,10 +17,11 @@ YAML Custom Fields allows you to define structured content schemas with an intui
 = Features =
 
 * Define YAML schemas for page templates and template partials
-* 13+ field types including string, rich-text, images, blocks, taxonomies, and more
+* 15+ field types including string, rich-text, images, blocks, taxonomies, data objects, and more
 * Easy-to-use admin interface for managing schemas and data
 * Per-page data for templates (stored in post meta)
 * Global data for partials like headers and footers (stored in options)
+* Data Objects for managing structured, reusable data (universities, companies, etc.)
 * Simple template functions with ACF-like syntax
 * Administrator-only access for security
 * Clean uninstall removes all database records
@@ -37,6 +38,7 @@ YAML Custom Fields allows you to define structured content schemas with an intui
 * **Select** - Dropdown with single/multiple selection
 * **Taxonomy** - WordPress categories, tags, or custom taxonomies with single/multiple selection
 * **Post Type** - Dropdown to select registered post types (Post, Page, custom post types)
+* **Data Object** - Reference to structured data objects managed independently (universities, companies, team members, etc.)
 * **Image** - WordPress media uploader for images
 * **File** - WordPress media uploader for any file
 * **Object** - Nested group of fields
@@ -51,6 +53,7 @@ $hero_title = ycf_get_field('hero_title');
 $hero_image = ycf_get_image('hero_image', null, 'full');
 $category = ycf_get_term('category');
 $post_type = ycf_get_post_type('content_type');
+$university = ycf_get_data_object('university');
 $features = ycf_get_field('features');
 ?>
 
@@ -62,11 +65,10 @@ $features = ycf_get_field('features');
   <?php if ($category): ?>
     <span class="category"><?php echo esc_html($category->name); ?></span>
   <?php endif; ?>
+  <?php if ($university): ?>
+    <p><?php echo esc_html($university['name']); ?></p>
+  <?php endif; ?>
 </div>`
-
-= Inspired By =
-
-This plugin is inspired by [PagesCMS](https://pagescms.org/), an open-source CMS for static websites with YAML-based content schemas.
 
 == Installation ==
 
@@ -136,11 +138,13 @@ Please visit the [GitHub repository](https://github.com/maliMirkec/yaml-custom-f
 
 = 1.0.0 =
 * Initial release
-* Support for 13+ field types from PagesCMS
+* Support for 15+ field types
 * Template and partial support
 * ACF-like template functions with context_data parameter for block fields
 * Taxonomy field type for categories, tags, and custom taxonomies (single/multiple selection)
-* Enhanced helper functions: ycf_get_field(), ycf_get_image(), ycf_get_file(), ycf_get_term()
+* Post Type field type for selecting registered WordPress post types
+* Data Objects feature for managing structured, reusable data (universities, companies, etc.)
+* Enhanced helper functions: ycf_get_field(), ycf_get_image(), ycf_get_file(), ycf_get_term(), ycf_get_post_type(), ycf_get_data_object(), ycf_get_data_objects()
 * Block/repeater functionality with context-aware field access
 * WordPress media integration
 * Administrator-only access
@@ -189,6 +193,31 @@ $term = ycf_get_term('field_name', 123); // Specific post ID
 $term = ycf_get_term('category', null, $block); // From block context
 
 // Returns: WP_Term object or array of WP_Term objects (for multiple selection)`
+
+**Get post type field:**
+
+`$post_type = ycf_get_post_type('field_name', null);
+$post_type = ycf_get_post_type('field_name', 123); // Specific post ID
+$post_type = ycf_get_post_type('content_type', null, $block); // From block context
+
+// Returns: WP_Post_Type object or null`
+
+**Get data object field:**
+
+`$university = ycf_get_data_object('field_name', null);
+$university = ycf_get_data_object('field_name', 123); // Specific post ID
+$university = ycf_get_data_object('university', null, $block); // From block context
+
+// Returns: Array with data object entry fields or null`
+
+**Get all entries of a data object type:**
+
+`$all_universities = ycf_get_data_objects('universities');
+foreach ($all_universities as $entry_id => $university) {
+    echo esc_html($university['name']);
+}
+
+// Returns: Array of all entries for the specified data object type`
 
 **Get all fields:**
 
@@ -249,6 +278,11 @@ if (!empty($blocks)) {
   - name: content_type
     label: Content Type
     type: post_type
+  - name: university
+    label: University
+    type: data_object
+    options:
+      object_type: universities
   - name: features
     label: Features
     type: block
@@ -285,6 +319,8 @@ Then click "Refresh Template List" in the YAML Custom Fields admin page.
 * **Page/Post data:** Stored in post meta with key `_yaml_cf_data`
 * **Partial data:** Stored in options table with key `yaml_cf_partial_data`
 * **Schemas:** Stored in options table with key `yaml_cf_schemas`
+* **Data Object Types:** Stored in options table with key `yaml_cf_data_object_types`
+* **Data Object Entries:** Stored in options table with keys `yaml_cf_data_object_entries_{type_slug}`
 
 == Privacy Policy ==
 
@@ -301,7 +337,6 @@ This plugin includes the following third-party libraries:
 == Credits ==
 
 * Author: [Silvestar Bistrovic](https://www.silvestar.codes)
-* Inspired by: [PagesCMS](https://pagescms.org/)
 
 == Support ==
 

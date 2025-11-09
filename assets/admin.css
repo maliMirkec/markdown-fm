@@ -8,10 +8,11 @@
   margin: 20px 0;
 }
 
-.yaml-cf-admin-container .button {
+.wp-core-ui .yaml-cf-admin-container .button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  vertical-align: middle;
 }
 
 /* Header with Logo */
@@ -66,7 +67,7 @@
 /* Table Styles */
 .wp-list-table .dashicons-yes-alt {
   vertical-align: middle;
-  margin-top: 5px;
+  /* margin-top: 5px; */
   margin-left: 8px;
 }
 

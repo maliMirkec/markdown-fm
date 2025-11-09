@@ -23,7 +23,6 @@ if (!defined('ABSPATH')) {
 
     <div class="yaml-cf-intro">
     <p><?php esc_html_e('YAML Custom Fields allows you to define YAML frontmatter schemas for your theme templates. Enable YAML for templates, define schemas, and manage structured content directly in the WordPress editor.', 'yaml-custom-fields'); ?></p>
-    <p><strong><?php esc_html_e('Inspired by', 'yaml-custom-fields'); ?> <a href="https://pagescms.org/docs/" target="_blank">PagesCMS</a></strong></p>
     <p>
       <a href="<?php echo esc_url(add_query_arg('refresh_ycf', '1')); ?>" class="button">
         <span class="dashicons dashicons-update"></span>

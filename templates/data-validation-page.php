@@ -144,9 +144,18 @@ function yaml_cf_find_field_in_schema($yaml_cf_schema, $yaml_cf_field_name) {
 ?>
 
 <div class="wrap">
-  <h1><?php esc_html_e('Data Validation', 'yaml-custom-fields'); ?></h1>
+  <div class="yaml-cf-admin-container">
+    <div class="yaml-cf-header">
+      <div class="yaml-cf-header-content">
+        <img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'icon-256x256.png'); ?>" alt="YAML Custom Fields" class="yaml-cf-logo" />
+        <div class="yaml-cf-header-text">
+          <h1><?php esc_html_e('Data Validation', 'yaml-custom-fields'); ?></h1>
+          <p class="yaml-cf-tagline"><?php esc_html_e('Validate custom field data and detect missing attachments', 'yaml-custom-fields'); ?></p>
+        </div>
+      </div>
+    </div>
 
-  <div class="yaml-cf-validation-container">
+    <div class="yaml-cf-validation-container">
     <!-- Summary Card -->
     <div class="card" style="max-width: 100%; margin-top: 20px;">
       <h2><?php esc_html_e('Validation Summary', 'yaml-custom-fields'); ?></h2>
@@ -308,6 +317,7 @@ function yaml_cf_find_field_in_schema($yaml_cf_schema, $yaml_cf_field_name) {
         <li><?php esc_html_e('You can also manually update attachment IDs if you know the mapping', 'yaml-custom-fields'); ?></li>
       </ul>
     </div>
+  </div>
   </div>
 </div>
 
