@@ -8,23 +8,34 @@ if (!defined('ABSPATH')) {
 }
 
 // Get all posts with custom field data and validate them
-global $wpdb;
-
 // Try to get from cache first
 $yaml_cf_cache_key = 'yaml_cf_validation_posts';
 $yaml_cf_results = wp_cache_get($yaml_cf_cache_key, 'yaml-custom-fields');
 
 if (false === $yaml_cf_results) {
-  // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above with wp_cache_get/set
-  $yaml_cf_results = $wpdb->get_results(
-    "SELECT p.ID, p.post_title, p.post_name, p.post_type, p.post_status
-     FROM {$wpdb->posts} p
-     INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_yaml_cf_data'
-     INNER JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = '_yaml_cf_imported'
-     WHERE p.post_type IN ('page', 'post')
-     AND p.post_status IN ('publish', 'draft', 'pending', 'private')
-     ORDER BY p.post_type, p.post_title"
-  );
+  // Query all posts without meta_key to avoid slow query warnings
+  // Filter in PHP using metadata_exists() which uses WordPress's cached get_post_meta()
+  $yaml_cf_all_posts = get_posts([
+    'post_type' => ['page', 'post'],
+    'post_status' => ['publish', 'draft', 'pending', 'private'],
+    'posts_per_page' => -1,
+    'orderby' => ['post_type' => 'ASC', 'title' => 'ASC'],
+    'fields' => 'all',
+    'no_found_rows' => true,
+    'update_post_term_cache' => false,
+  ]);
+
+  // Filter to only include posts with both required meta keys
+  // This is faster than meta_query because WordPress caches post meta
+  $yaml_cf_results = [];
+  foreach ($yaml_cf_all_posts as $yaml_cf_post) {
+    // Check if post has both required meta keys
+    if (metadata_exists('post', $yaml_cf_post->ID, '_yaml_cf_imported') &&
+        metadata_exists('post', $yaml_cf_post->ID, '_yaml_cf_data')) {
+      $yaml_cf_results[] = $yaml_cf_post;
+    }
+  }
+
   // Cache for 5 minutes
   wp_cache_set($yaml_cf_cache_key, $yaml_cf_results, 'yaml-custom-fields', 300);
 }

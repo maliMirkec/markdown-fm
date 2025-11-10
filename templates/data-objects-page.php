@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Get all data object types
-$data_object_types = get_option('yaml_cf_data_object_types', []);
+$yaml_cf_data_object_types = get_option('yaml_cf_data_object_types', []);
 ?>
 
 <div class="wrap">
@@ -33,7 +33,7 @@ $data_object_types = get_option('yaml_cf_data_object_types', []);
       <p><?php esc_html_e('Create and manage structured data objects that can be referenced in your schemas (e.g., Universities, Companies, Team Members).', 'yaml-custom-fields'); ?></p>
     </div>
 
-  <?php if (empty($data_object_types)) : ?>
+  <?php if (empty($yaml_cf_data_object_types)) : ?>
     <div class="notice notice-info inline">
       <p><?php esc_html_e('No data object types created yet. Click "Add New Type" to create your first data object type.', 'yaml-custom-fields'); ?></p>
     </div>
@@ -49,18 +49,18 @@ $data_object_types = get_option('yaml_cf_data_object_types', []);
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($data_object_types as $slug => $type) : ?>
+        <?php foreach ($yaml_cf_data_object_types as $yaml_cf_slug => $yaml_cf_type) : ?>
           <?php
-          $entries = get_option('yaml_cf_data_object_entries_' . $slug, []);
-          $entry_count = count($entries);
-          $has_schema = !empty($type['schema']);
+          $yaml_cf_entries = get_option('yaml_cf_data_object_entries_' . $yaml_cf_slug, []);
+          $yaml_cf_entry_count = count($yaml_cf_entries);
+          $yaml_cf_has_schema = !empty($yaml_cf_type['schema']);
           ?>
           <tr>
-            <td><strong><?php echo esc_html($type['name']); ?></strong></td>
-            <td><code><?php echo esc_html($slug); ?></code></td>
-            <td><?php echo esc_html($entry_count); ?></td>
+            <td><strong><?php echo esc_html($yaml_cf_type['name']); ?></strong></td>
+            <td><code><?php echo esc_html($yaml_cf_slug); ?></code></td>
+            <td><?php echo esc_html($yaml_cf_entry_count); ?></td>
             <td>
-              <?php if ($has_schema) : ?>
+              <?php if ($yaml_cf_has_schema) : ?>
                 <span class="dashicons dashicons-yes-alt" style="color: #46b450;"></span>
                 <?php esc_html_e('Defined', 'yaml-custom-fields'); ?>
               <?php else : ?>
@@ -68,10 +68,10 @@ $data_object_types = get_option('yaml_cf_data_object_types', []);
               <?php endif; ?>
             </td>
             <td>
-              <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-edit-data-object-type&type=' . urlencode($slug))); ?>" class="button">
+              <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-edit-data-object-type&type=' . urlencode($yaml_cf_slug))); ?>" class="button">
                 <?php esc_html_e('Edit Schema', 'yaml-custom-fields'); ?>
               </a>
-              <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-manage-data-object-entries&type=' . urlencode($slug))); ?>" class="button">
+              <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-manage-data-object-entries&type=' . urlencode($yaml_cf_slug))); ?>" class="button">
                 <?php esc_html_e('Manage Entries', 'yaml-custom-fields'); ?>
               </a>
             </td>

@@ -140,8 +140,8 @@ if (!defined('ABSPATH')) {
       </div>
 
       <?php
-      $data_object_types = get_option('yaml_cf_data_object_types', []);
-      if (empty($data_object_types)) :
+      $yaml_cf_data_object_types = get_option('yaml_cf_data_object_types', []);
+      if (empty($yaml_cf_data_object_types)) :
       ?>
         <div class="notice notice-info inline">
           <p><?php esc_html_e('No data object types created yet.', 'yaml-custom-fields'); ?> <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-data-objects')); ?>"><?php esc_html_e('Create your first data object type', 'yaml-custom-fields'); ?></a></p>
@@ -154,18 +154,20 @@ if (!defined('ABSPATH')) {
           </button>
           <p class="description" style="margin-top: 10px;">
             <?php
-            $total_types = count($data_object_types);
-            $total_entries = 0;
-            foreach ($data_object_types as $type_slug => $type_data) {
-              $entries = get_option('yaml_cf_data_object_entries_' . $type_slug, []);
-              $total_entries += count($entries);
+            $yaml_cf_total_types = count($yaml_cf_data_object_types);
+            $yaml_cf_total_entries = 0;
+            foreach ($yaml_cf_data_object_types as $yaml_cf_type_slug => $yaml_cf_type_data) {
+              $yaml_cf_entries = get_option('yaml_cf_data_object_entries_' . $yaml_cf_type_slug, []);
+              $yaml_cf_total_entries += count($yaml_cf_entries);
             }
             /* translators: 1: number of types, 2: number of entries */
-            printf(esc_html__('Export %1$d data object types with %2$d total entries', 'yaml-custom-fields'), absint($total_types), absint($total_entries));
+            printf(esc_html__('Export %1$d data object types with %2$d total entries', 'yaml-custom-fields'), absint($yaml_cf_total_types), absint($yaml_cf_total_entries));
             ?>
           </p>
         </form>
-      <?php endif; ?>
+      <?php
+      endif;
+      ?>
     </div>
 
     <div class="card" style="max-width: 100%; margin-top: 20px;">
