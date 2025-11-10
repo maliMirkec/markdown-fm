@@ -21,8 +21,42 @@ if (!defined('ABSPATH')) {
     </div>
 
     <div class="yaml-cf-export-data-container">
+
+    <!-- Settings Export/Import -->
     <div class="card" style="max-width: 100%; margin-top: 20px;">
-      <h2><?php esc_html_e('Select Pages/Posts to Export', 'yaml-custom-fields'); ?></h2>
+      <h2><?php esc_html_e('Settings Export/Import', 'yaml-custom-fields'); ?></h2>
+      <p><?php esc_html_e('Backup or restore all schemas and template settings.', 'yaml-custom-fields'); ?></p>
+
+      <div style="margin: 20px 0;">
+        <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?yaml_cf_export_settings=1'), 'yaml_cf_export_settings')); ?>" class="button button-primary">
+          <span class="dashicons dashicons-download"></span>
+          <?php esc_html_e('Export Settings', 'yaml-custom-fields'); ?>
+        </a>
+        <button type="button" class="button yaml-cf-import-settings-trigger" style="margin-left: 10px;">
+          <span class="dashicons dashicons-upload"></span>
+          <?php esc_html_e('Import Settings', 'yaml-custom-fields'); ?>
+        </button>
+        <input type="file" id="yaml-cf-import-file" accept=".json" style="display: none;" />
+      </div>
+
+      <div class="yaml-cf-info-box" style="background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 12px; margin-top: 20px;">
+        <p style="margin: 0;">
+          <strong><?php esc_html_e('What gets exported:', 'yaml-custom-fields'); ?></strong>
+        </p>
+        <ul style="margin: 10px 0 0 20px;">
+          <li><?php esc_html_e('All YAML schemas for page templates', 'yaml-custom-fields'); ?></li>
+          <li><?php esc_html_e('All YAML schemas for partials', 'yaml-custom-fields'); ?></li>
+          <li><?php esc_html_e('Template enable/disable settings', 'yaml-custom-fields'); ?></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Page Data Export/Import -->
+    <div class="card" style="max-width: 100%; margin-top: 20px;">
+      <h2><?php esc_html_e('Page Data Export/Import', 'yaml-custom-fields'); ?></h2>
+      <p><?php esc_html_e('Export and import custom field data for individual posts and pages.', 'yaml-custom-fields'); ?></p>
+
+      <h3 style="margin-top: 20px;"><?php esc_html_e('Select Pages/Posts to Export', 'yaml-custom-fields'); ?></h3>
 
       <div class="yaml-cf-info-box" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 20px;">
         <p style="margin: 0;">
@@ -99,7 +133,7 @@ if (!defined('ABSPATH')) {
     </div>
 
     <div class="card" style="max-width: 100%; margin-top: 20px;">
-      <h2><?php esc_html_e('Import Page Data', 'yaml-custom-fields'); ?></h2>
+      <h3><?php esc_html_e('Import Page Data', 'yaml-custom-fields'); ?></h3>
 
       <div class="yaml-cf-info-box" style="background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 20px;">
         <p style="margin: 0;">
@@ -130,7 +164,10 @@ if (!defined('ABSPATH')) {
 
     <!-- Data Objects Export/Import -->
     <div class="card" style="max-width: 100%; margin-top: 40px;">
-      <h2><?php esc_html_e('Export Data Objects', 'yaml-custom-fields'); ?></h2>
+      <h2><?php esc_html_e('Data Objects Export/Import', 'yaml-custom-fields'); ?></h2>
+      <p><?php esc_html_e('Export and import data object types and their entries.', 'yaml-custom-fields'); ?></p>
+
+      <h3 style="margin-top: 20px;"><?php esc_html_e('Export Data Objects', 'yaml-custom-fields'); ?></h3>
 
       <div class="yaml-cf-info-box" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 20px;">
         <p style="margin: 0;">
@@ -171,7 +208,7 @@ if (!defined('ABSPATH')) {
     </div>
 
     <div class="card" style="max-width: 100%; margin-top: 20px;">
-      <h2><?php esc_html_e('Import Data Objects', 'yaml-custom-fields'); ?></h2>
+      <h3><?php esc_html_e('Import Data Objects', 'yaml-custom-fields'); ?></h3>
 
       <div class="yaml-cf-info-box" style="background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 12px; margin-bottom: 20px;">
         <p style="margin: 0;">

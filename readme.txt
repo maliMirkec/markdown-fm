@@ -4,7 +4,7 @@ Tags: yaml, frontmatter, custom-fields, cms, page-builder
 Requires at least: 5.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,9 +22,12 @@ YAML Custom Fields allows you to define structured content schemas with an intui
 * Per-page data for templates (stored in post meta)
 * Global data for partials like headers and footers (stored in options)
 * Data Objects for managing structured, reusable data (universities, companies, etc.)
+* Data Validation page for reviewing imported content
+* Consolidated Export/Import page for all data types (settings, page data, data objects)
 * Simple template functions with ACF-like syntax
 * Administrator-only access for security
 * Clean uninstall removes all database records
+* WordPress Coding Standards compliant
 
 = Supported Field Types =
 
@@ -132,9 +135,26 @@ Please visit the [GitHub repository](https://github.com/maliMirkec/yaml-custom-f
 2. Schema editor for main page templates with YAML syntax for defining custom fields
 3. Schema editor for partial templates (headers, footers, etc.)
 4. Partial data editor for managing global content in template partials
-5. Documentation page with comprehensive guides and examples
+5. Data Validation page for reviewing imported content
+6. Data Objects page for managing structured, reusable data types
+7. Export/Import page with consolidated export/import functionality for settings, page data, and data objects
+8. Documentation page with comprehensive guides and examples
 
 == Changelog ==
+
+= 1.1.0 =
+* Improved code quality and WordPress Coding Standards compliance
+* Consolidated Export/Import functionality into single admin page
+* Renamed "Export Page Data" to "Export/Import" for clarity
+* Reorganized admin menu structure (Export/Import now positioned above Documentation)
+* Enhanced database query performance with optimized caching strategy
+* Implemented post tracking system for efficient cache management
+* Improved input sanitization using filter_input() throughout the plugin
+* Enhanced output escaping for better security
+* Added production-safe logging system with WordPress hooks
+* Better file upload validation and error handling
+* Removed all phpcs:ignore suppressions in favor of proper WordPress coding practices
+* Added phpcs.xml.dist configuration file for consistent code standards
 
 = 1.0.0 =
 * Initial release
@@ -155,6 +175,9 @@ Please visit the [GitHub repository](https://github.com/maliMirkec/yaml-custom-f
 * Copy snippet buttons for all field types with complete function signatures
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Code quality improvements, consolidated Export/Import page, and enhanced security. All functionality remains backwards compatible.
 
 = 1.0.0 =
 Initial release of YAML Custom Fields.

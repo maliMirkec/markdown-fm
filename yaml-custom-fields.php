@@ -3,7 +3,7 @@
  * Plugin Name: YAML Custom Fields
  * Plugin URI: https://github.com/maliMirkec/yaml-custom-fields
  * Description: A WordPress plugin for managing YAML frontmatter schemas in theme templates
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Silvestar Bistrović
  * Author URI: https://www.silvestar.codes
  * Author Email: me@silvestar.codes
@@ -30,7 +30,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 
-define('YAML_CF_VERSION', '1.0.0');
+define('YAML_CF_VERSION', '1.1.0');
 define('YAML_CF_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('YAML_CF_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -306,16 +306,6 @@ class YAML_Custom_Fields {
       [$this, 'render_edit_partial_page']
     );
 
-    // Export Page Data
-    add_submenu_page(
-      'yaml-custom-fields',
-      __('Export Page Data', 'yaml-custom-fields'),
-      __('Export Page Data', 'yaml-custom-fields'),
-      'manage_options',
-      'yaml-cf-export-data',
-      [$this, 'render_export_data_page']
-    );
-
     // Data Validation
     add_submenu_page(
       'yaml-custom-fields',
@@ -353,6 +343,16 @@ class YAML_Custom_Fields {
       'manage_options',
       'yaml-cf-manage-data-object-entries',
       [$this, 'render_manage_data_object_entries_page']
+    );
+
+    // Export/Import (consolidated - positioned before Documentation)
+    add_submenu_page(
+      'yaml-custom-fields',
+      __('Export/Import', 'yaml-custom-fields'),
+      __('Export/Import', 'yaml-custom-fields'),
+      'manage_options',
+      'yaml-cf-export-data',
+      [$this, 'render_export_data_page']
     );
 
     // Documentation (added last to appear at the bottom)

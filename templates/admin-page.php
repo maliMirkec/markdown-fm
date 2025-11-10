@@ -32,20 +32,6 @@ if (!defined('ABSPATH')) {
     <p class="description">
       <?php esc_html_e('Scan theme files for new templates and partials with @ycf markers', 'yaml-custom-fields'); ?>
     </p>
-    <p>
-      <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin.php?yaml_cf_export_settings=1'), 'yaml_cf_export_settings')); ?>" class="button">
-        <span class="dashicons dashicons-download"></span>
-        <?php esc_html_e('Export Settings', 'yaml-custom-fields'); ?>
-      </a>
-      <button type="button" class="button yaml-cf-import-settings-trigger" style="margin-left: 10px;">
-        <span class="dashicons dashicons-upload"></span>
-        <?php esc_html_e('Import Settings', 'yaml-custom-fields'); ?>
-      </button>
-      <input type="file" id="yaml-cf-import-file" accept=".json" style="display: none;" />
-    </p>
-    <p class="description">
-      <?php esc_html_e('Backup or restore all schemas and settings', 'yaml-custom-fields'); ?>
-    </p>
     </div>
 
     <h2><?php esc_html_e('Page Templates', 'yaml-custom-fields'); ?></h2>
