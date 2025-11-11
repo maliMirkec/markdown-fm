@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 }
 
 $yaml_cf_type_slug = YAML_Custom_Fields::get_param_key('type', '');
-$yaml_cf_entry_id = YAML_Custom_Fields::get_param_key('entry', '');
+$yaml_cf_entry_id = YAML_Custom_Fields::get_param('entry', ''); // Use get_param to preserve periods in entry IDs
 $yaml_cf_action = YAML_Custom_Fields::get_param_key('action', 'list');
 
 if (empty($yaml_cf_type_slug)) {
@@ -39,11 +39,20 @@ if (isset($_POST['yaml_cf_save_entry_nonce'])) {
     wp_die(esc_html__('Security check failed', 'yaml-custom-fields'));
   }
 
-  $yaml_cf_entry_id_to_save = YAML_Custom_Fields::post_sanitized('entry_id', uniqid('entry_', true), 'sanitize_key');
+  // Get entry ID from form, or generate new one
+  // Don't use sanitize_key as it removes periods from old entry IDs
+  $yaml_cf_entry_id_from_form = YAML_Custom_Fields::post_raw('entry_id', '');
+  if (!empty($yaml_cf_entry_id_from_form)) {
+    // Editing existing entry - preserve the ID (may contain period for old entries)
+    $yaml_cf_entry_id_to_save = sanitize_text_field($yaml_cf_entry_id_from_form);
+  } else {
+    // New entry - generate ID without period
+    $yaml_cf_entry_id_to_save = uniqid('entry_');
+  }
 
   // Raw entry data - will be sanitized via sanitize_field_data()
   $yaml_cf_entry_data = $yaml_cf_plugin->sanitize_field_data(
-    YAML_Custom_Fields::post_raw('entry_data', []),
+    YAML_Custom_Fields::post_raw('yaml_cf', []),
     $yaml_cf_schema
   );
 
@@ -61,7 +70,8 @@ if (isset($_POST['yaml_cf_delete_entry_nonce'])) {
     wp_die(esc_html__('Security check failed', 'yaml-custom-fields'));
   }
 
-  $yaml_cf_entry_id_to_delete = isset($_POST['entry_id']) ? sanitize_key($_POST['entry_id']) : '';
+  // Don't use sanitize_key as it removes periods from old entry IDs
+  $yaml_cf_entry_id_to_delete = isset($_POST['entry_id']) ? sanitize_text_field(wp_unslash($_POST['entry_id'])) : '';
   if (isset($yaml_cf_entries[$yaml_cf_entry_id_to_delete])) {
     unset($yaml_cf_entries[$yaml_cf_entry_id_to_delete]);
     update_option('yaml_cf_data_object_entries_' . $yaml_cf_type_slug, $yaml_cf_entries);
@@ -73,8 +83,23 @@ if (isset($_POST['yaml_cf_delete_entry_nonce'])) {
 
 // Get entry data for editing
 $yaml_cf_entry_data = [];
-if ($yaml_cf_action === 'edit' && isset($yaml_cf_entries[$yaml_cf_entry_id])) {
-  $yaml_cf_entry_data = $yaml_cf_entries[$yaml_cf_entry_id];
+if ($yaml_cf_action === 'edit') {
+  // Try direct lookup first
+  if (isset($yaml_cf_entries[$yaml_cf_entry_id])) {
+    $yaml_cf_entry_data = $yaml_cf_entries[$yaml_cf_entry_id];
+  } else {
+    // Fallback: search for entries with periods (backward compatibility)
+    // Old entries might have periods from uniqid('entry_', true)
+    foreach ($yaml_cf_entries as $yaml_cf_stored_id => $yaml_cf_stored_data) {
+      // Remove period from stored ID and compare
+      if (str_replace('.', '', $yaml_cf_stored_id) === $yaml_cf_entry_id) {
+        $yaml_cf_entry_data = $yaml_cf_stored_data;
+        // Update the entry_id variable to match the stored ID for the form
+        $yaml_cf_entry_id = $yaml_cf_stored_id;
+        break;
+      }
+    }
+  }
 }
 ?>
 
@@ -175,7 +200,7 @@ if ($yaml_cf_action === 'edit' && isset($yaml_cf_entries[$yaml_cf_entry_id])) {
           <?php
           if (!empty($yaml_cf_schema['fields'])) {
             $yaml_cf_context = ['type' => 'data_object', 'object_type' => $yaml_cf_type_slug];
-            $yaml_cf_plugin->render_schema_fields($yaml_cf_schema['fields'], $yaml_cf_entry_data, 'entry_data', $yaml_cf_context);
+            $yaml_cf_plugin->render_schema_fields($yaml_cf_schema['fields'], $yaml_cf_entry_data, 'yaml_cf', $yaml_cf_context);
           } else {
             echo '<p>' . esc_html__('No fields defined in schema.', 'yaml-custom-fields') . '</p>';
           }

@@ -8,6 +8,30 @@ if (!defined('ABSPATH')) {
   exit;
 }
 
+// Handle delete
+if (isset($_POST['yaml_cf_delete_type_nonce'])) {
+  if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['yaml_cf_delete_type_nonce'])), 'yaml_cf_delete_type')) {
+    wp_die(esc_html__('Security check failed', 'yaml-custom-fields'));
+  }
+
+  $yaml_cf_type_slug_to_delete = isset($_POST['type_slug']) ? sanitize_key($_POST['type_slug']) : '';
+
+  if (!empty($yaml_cf_type_slug_to_delete)) {
+    $yaml_cf_data_object_types = get_option('yaml_cf_data_object_types', []);
+
+    if (isset($yaml_cf_data_object_types[$yaml_cf_type_slug_to_delete])) {
+      // Delete the type
+      unset($yaml_cf_data_object_types[$yaml_cf_type_slug_to_delete]);
+      update_option('yaml_cf_data_object_types', $yaml_cf_data_object_types);
+
+      // Delete all entries for this type
+      delete_option('yaml_cf_data_object_entries_' . $yaml_cf_type_slug_to_delete);
+
+      echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Data object type and all its entries deleted successfully!', 'yaml-custom-fields') . '</p></div>';
+    }
+  }
+}
+
 // Get all data object types
 $yaml_cf_data_object_types = get_option('yaml_cf_data_object_types', []);
 ?>
@@ -74,6 +98,18 @@ $yaml_cf_data_object_types = get_option('yaml_cf_data_object_types', []);
               <a href="<?php echo esc_url(admin_url('admin.php?page=yaml-cf-manage-data-object-entries&type=' . urlencode($yaml_cf_slug))); ?>" class="button">
                 <?php esc_html_e('Manage Entries', 'yaml-custom-fields'); ?>
               </a>
+              <form method="post" style="display: inline;" onsubmit="return confirm('<?php
+                echo esc_attr(sprintf(
+                  /* translators: %1$s: data object type name, %2$d: number of entries */
+                  __('Are you sure you want to delete the "%1$s" data object type? This will permanently delete all %2$d entries. This action cannot be undone.', 'yaml-custom-fields'),
+                  $yaml_cf_type['name'],
+                  $yaml_cf_entry_count
+                ));
+              ?>');">
+                <?php wp_nonce_field('yaml_cf_delete_type', 'yaml_cf_delete_type_nonce'); ?>
+                <input type="hidden" name="type_slug" value="<?php echo esc_attr($yaml_cf_slug); ?>" />
+                <button type="submit" class="button button-link-delete"><?php esc_html_e('Delete', 'yaml-custom-fields'); ?></button>
+              </form>
             </td>
           </tr>
         <?php endforeach; ?>
