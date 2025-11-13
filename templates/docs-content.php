@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 }
 ?>
 
-<p>A WordPress plugin for managing YAML frontmatter schemas in theme templates and partials. Inspired by <a href="https://pagescms.org/docs/" target="_blank">PagesCMS</a>, YAML Custom Fields allows you to define structured content schemas with an intuitive interface and ACF-like template functions.</p>
+<p>A WordPress plugin for managing YAML frontmatter schemas in theme templates and partials. YAML Custom Fields allows you to define structured content schemas with an intuitive interface and ACF-like template functions.</p>
 
 <blockquote>Vibe-coded with Claude.</blockquote>
 
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
 
 <ul>
   <li>🎨 <strong>Define YAML schemas</strong> for page templates and template partials</li>
-  <li>📝 <strong>12+ field types</strong> including string, rich-text, images, blocks, and more</li>
+  <li>📝 <strong>15+ field types</strong> including string, rich-text, images, blocks, taxonomies, post types, data objects, and more</li>
   <li>🔧 <strong>Beautiful admin interface</strong> with branded header and intuitive controls</li>
   <li>🎯 <strong>Per-page data</strong> for templates (stored in post meta)</li>
   <li>🌐 <strong>Global data</strong> for partials like headers and footers (stored in options)</li>
@@ -31,23 +31,23 @@ if (!defined('ABSPATH')) {
 <h2>Screenshots</h2>
 
 <h3>1. Main Admin Page</h3>
-<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-1.png'); ?>" alt="Main YAML Custom Fields admin page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'screenshot-1.png'); ?>" alt="Main YAML Custom Fields admin page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Main admin page showing page templates and template partials with enable/disable toggles</em></p>
 
 <h3>2. Schema Editor - Page Templates</h3>
-<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-2.png'); ?>" alt="Schema editor for page templates" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'screenshot-2.png'); ?>" alt="Schema editor for page templates" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Schema editor for main page templates with YAML syntax for defining custom fields</em></p>
 
 <h3>3. Schema Editor - Partial Templates</h3>
-<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-3.png'); ?>" alt="Schema editor for partials" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'screenshot-3.png'); ?>" alt="Schema editor for partials" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Schema editor for partial templates (headers, footers, etc.)</em></p>
 
 <h3>4. Partial Data Editor</h3>
-<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-4.png'); ?>" alt="Partial data editor" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'screenshot-4.png'); ?>" alt="Partial data editor" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Partial data editor for managing global content in template partials</em></p>
 
 <h3>5. Documentation Page</h3>
-<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'assets/screenshot-5.png'); ?>" alt="Documentation page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
+<p><img src="<?php echo esc_url(YAML_CF_PLUGIN_URL . 'screenshot-5.png'); ?>" alt="Documentation page" style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;" /></p>
 <p><em>Comprehensive documentation with guides and examples</em></p>
 
 <h2>Installation</h2>
@@ -103,6 +103,11 @@ composer install</code></pre>
   - name: hero_image
     label: Hero Image
     type: image
+  - name: category
+    label: Category
+    type: taxonomy
+    options:
+      taxonomy: category
   - name: description
     label: Description
     type: text
@@ -196,7 +201,7 @@ $features = ycf_get_field('features');
 
 <p>YAML Custom Fields provides ACF-like template functions for retrieving your data:</p>
 
-<h3><code>ycf_get_field($field_name, $post_id = null)</code></h3>
+<h3><code>ycf_get_field($field_name, $post_id = null, $context_data = null)</code></h3>
 
 <p>Get a single field value.</p>
 
@@ -211,7 +216,83 @@ $logo = ycf_get_field('logo', 'partial:header.php');
 $copyright = ycf_get_field('copyright', 'partial:footer.php');
 
 // For partials in subdirectories
-$menu = ycf_get_field('menu_items', 'partial:partials/navigation.php');</code></pre>
+$menu = ycf_get_field('menu_items', 'partial:partials/navigation.php');
+
+// For block fields (using context_data parameter)
+$blocks = ycf_get_field('features');
+foreach ($blocks as $block) {
+  $title = ycf_get_field('title', null, $block);
+  $description = ycf_get_field('description', null, $block);
+}</code></pre>
+
+<h3><code>ycf_get_image($field_name, $post_id = null, $size = 'full', $context_data = null)</code></h3>
+
+<p>Get comprehensive image data including URL, alt text, dimensions, and more.</p>
+
+<pre><code>// Basic usage
+$image = ycf_get_image('hero_image');
+
+// With custom size
+$thumbnail = ycf_get_image('hero_image', null, 'thumbnail');
+
+// In blocks
+$blocks = ycf_get_field('features');
+foreach ($blocks as $block) {
+  $icon = ycf_get_image('icon', null, 'medium', $block);
+  if ($icon) {
+    echo '&lt;img src="' . esc_url($icon['url']) . '" alt="' . esc_attr($icon['alt']) . '"&gt;';
+  }
+}</code></pre>
+
+<p><strong>Returns:</strong> Array with <code>id</code>, <code>url</code>, <code>alt</code>, <code>title</code>, <code>caption</code>, <code>description</code>, <code>width</code>, <code>height</code></p>
+
+<h3><code>ycf_get_file($field_name, $post_id = null, $context_data = null)</code></h3>
+
+<p>Get comprehensive file data including URL, path, size, and MIME type.</p>
+
+<pre><code>// Basic usage
+$pdf = ycf_get_file('brochure');
+
+// In blocks
+$blocks = ycf_get_field('downloads');
+foreach ($blocks as $block) {
+  $file = ycf_get_file('document', null, $block);
+  if ($file) {
+    echo '&lt;a href="' . esc_url($file['url']) . '"&gt;' . esc_html($file['filename']) . '&lt;/a&gt;';
+  }
+}</code></pre>
+
+<p><strong>Returns:</strong> Array with <code>id</code>, <code>url</code>, <code>path</code>, <code>filename</code>, <code>filesize</code>, <code>mime_type</code>, <code>title</code></p>
+
+<h3><code>ycf_get_term($field_name, $post_id = null, $context_data = null)</code></h3>
+
+<p>Get WordPress taxonomy term(s) from a taxonomy field.</p>
+
+<pre><code>// Single term
+$category = ycf_get_term('category');
+if ($category) {
+  echo esc_html($category->name);
+  echo '&lt;a href="' . esc_url(get_term_link($category)) . '"&gt;View category&lt;/a&gt;';
+}
+
+// Multiple terms
+$tags = ycf_get_term('tags');
+if ($tags) {
+  foreach ($tags as $tag) {
+    echo esc_html($tag->name) . ' ';
+  }
+}
+
+// In blocks
+$blocks = ycf_get_field('content_sections');
+foreach ($blocks as $block) {
+  $term = ycf_get_term('category', null, $block);
+  if ($term) {
+    echo esc_html($term->name);
+  }
+}</code></pre>
+
+<p><strong>Returns:</strong> <code>WP_Term</code> object (single) or array of <code>WP_Term</code> objects (multiple), or <code>null</code> if not set</p>
 
 <h3><code>ycf_get_fields($post_id = null)</code></h3>
 
@@ -303,6 +384,11 @@ if (ycf_has_field('logo', 'partial:header.php')) {
   - name: show_search
     label: Show Search Bar
     type: boolean
+  - name: header_category
+    label: Featured Category
+    type: taxonomy
+    options:
+      taxonomy: category
   - name: menu_cta
     label: Menu CTA Button
     type: object
@@ -349,7 +435,7 @@ $menu_cta = ycf_get_field('menu_cta', 'partial:header.php');
 
 <h2>Field Types</h2>
 
-<p>YAML Custom Fields supports all field types from Pages CMS:</p>
+<p>YAML Custom Fields supports the following field types:</p>
 
 <h3>String</h3>
 
@@ -393,7 +479,7 @@ $menu_cta = ycf_get_field('menu_cta', 'partial:header.php');
 
 <h3>Code</h3>
 
-<p>Code editor with syntax highlighting.</p>
+<p>Code editor for storing HTML, CSS, or JavaScript code.</p>
 
 <pre><code>- name: custom_css
   label: Custom CSS
@@ -403,8 +489,26 @@ $menu_cta = ycf_get_field('menu_cta', 'partial:header.php');
 
 <p><strong>Options:</strong></p>
 <ul>
-  <li><code>language</code> - Syntax highlighting (html, css, javascript, php, python, etc.)</li>
+  <li><code>language</code> - Code language: html, css, javascript, js, php, python, etc.</li>
 </ul>
+
+<p><strong>Security &amp; Sanitization:</strong></p>
+<ul>
+  <li><strong>Administrators:</strong> Can store raw HTML, JavaScript, and forms. CSS is sanitized to remove dangerous patterns (e.g., <code>expression()</code>, <code>javascript:</code>).</li>
+  <li><strong>Non-administrators:</strong> HTML is sanitized using <code>wp_kses_post()</code> (safe tags only), JavaScript is stripped completely.</li>
+  <li>Uses WordPress's <code>unfiltered_html</code> capability - the same security model as Gutenberg's Custom HTML block.</li>
+</ul>
+
+<p><strong>Usage in templates:</strong></p>
+<pre><code>&lt;?php
+// Output code field (don't escape for HTML/JS)
+echo ycf_get_field('mailchimp_form', 'partial:footer.php');
+
+// For CSS, wrap in style tags
+echo '&lt;style&gt;' . esc_html(ycf_get_field('custom_css')) . '&lt;/style&gt;';
+?&gt;</code></pre>
+
+<p><strong>⚠️ Important:</strong> Only use unescaped output for code fields where you (the administrator) control the content. Never use for untrusted user-generated content.</p>
 
 <h3>Boolean</h3>
 
@@ -470,6 +574,213 @@ $menu_cta = ycf_get_field('menu_cta', 'partial:header.php');
   <li><code>values</code> - Array of options with <code>value</code> and <code>label</code> keys</li>
 </ul>
 
+<h3>Taxonomy</h3>
+
+<p>WordPress taxonomy selector for categories, tags, or custom taxonomies.</p>
+
+<pre><code>- name: category
+  label: Post Category
+  type: taxonomy
+  options:
+    taxonomy: category
+
+- name: tags
+  label: Tags
+  type: taxonomy
+  multiple: true
+  options:
+    taxonomy: post_tag
+
+- name: custom_tax
+  label: Custom Taxonomy
+  type: taxonomy
+  options:
+    taxonomy: your_custom_taxonomy</code></pre>
+
+<p><strong>Options:</strong></p>
+<ul>
+  <li><code>taxonomy</code> - WordPress taxonomy name (category, post_tag, or any custom taxonomy)</li>
+  <li><code>multiple</code> - Set to <code>true</code> to allow multiple term selection</li>
+</ul>
+
+<p><strong>Usage in templates:</strong></p>
+
+<pre><code>&lt;?php
+// Get single term
+$category = ycf_get_term('category');
+if ($category) {
+  echo '&lt;span&gt;' . esc_html($category->name) . '&lt;/span&gt;';
+  echo '&lt;a href="' . esc_url(get_term_link($category)) . '"&gt;View more&lt;/a&gt;';
+}
+
+// Get multiple terms
+$tags = ycf_get_term('tags');
+if ($tags) {
+  foreach ($tags as $tag) {
+    echo '&lt;a href="' . esc_url(get_term_link($tag)) . '"&gt;';
+    echo esc_html($tag->name);
+    echo '&lt;/a&gt; ';
+  }
+}
+
+// In blocks - use context_data parameter
+$blocks = ycf_get_field('content_blocks');
+foreach ($blocks as $block) {
+  $block_category = ycf_get_term('category', null, $block);
+  if ($block_category) {
+    echo esc_html($block_category->name);
+  }
+}
+?&gt;</code></pre>
+
+<p><strong>Returns:</strong> <code>WP_Term</code> object (single selection) or array of <code>WP_Term</code> objects (multiple selection), or <code>null</code> if not set.</p>
+
+<h3>Post Type</h3>
+
+<p>Dropdown selector for registered WordPress post types (Post, Page, and custom post types).</p>
+
+<pre><code>- name: content_type
+  label: Content Type
+  type: post_type
+
+- name: archive_type
+  label: Archive Type
+  type: post_type</code></pre>
+
+<p><strong>Usage in templates:</strong></p>
+
+<pre><code>&lt;?php
+// Get post type object
+$post_type = ycf_get_post_type('content_type');
+if ($post_type) {
+  echo '&lt;h2&gt;' . esc_html($post_type->label) . '&lt;/h2&gt;';
+  echo '&lt;p&gt;Slug: ' . esc_html($post_type->name) . '&lt;/p&gt;';
+
+  // Query posts of this type
+  $query = new WP_Query([
+    'post_type' => $post_type->name,
+    'posts_per_page' => 10
+  ]);
+}
+
+// In blocks - use context_data parameter
+$blocks = ycf_get_field('content_blocks');
+foreach ($blocks as $block) {
+  $block_post_type = ycf_get_post_type('type', null, $block);
+  if ($block_post_type) {
+    echo esc_html($block_post_type->label);
+  }
+}
+?&gt;</code></pre>
+
+<p><strong>Returns:</strong> <code>WP_Post_Type</code> object or <code>null</code> if not set.</p>
+
+<h3>Data Object</h3>
+
+<p>Reference to structured data objects that you define and manage independently of your templates. Perfect for reusable data like universities, companies, team members, or any other structured entities.</p>
+
+<p><strong>How it works:</strong></p>
+<ol>
+  <li>Navigate to <strong>YAML CF &gt; Data Objects</strong> in the admin menu</li>
+  <li>Create a new data object type (e.g., "Universities")</li>
+  <li>Define its schema using YAML (e.g., name, logo, website, description)</li>
+  <li>Add entries through the Manage Entries interface</li>
+  <li>Reference these entries in your page schemas using the data_object field type</li>
+</ol>
+
+<p><strong>Example: Creating a Universities data object type</strong></p>
+
+<p>First, create the type with this schema in Data Objects admin:</p>
+
+<pre><code>fields:
+  - name: name
+    label: University Name
+    type: string
+    required: true
+  - name: logo
+    label: Logo
+    type: image
+  - name: website
+    label: Website URL
+    type: string
+  - name: description
+    label: Description
+    type: text
+  - name: location
+    label: Location
+    type: string
+  - name: founded
+    label: Founded Year
+    type: number</code></pre>
+
+<p><strong>Then reference it in your page schema:</strong></p>
+
+<pre><code>- name: university
+  label: University
+  type: data_object
+  options:
+    object_type: universities
+
+- name: partner_universities
+  label: Partner Universities
+  type: data_object
+  list: true
+  options:
+    object_type: universities</code></pre>
+
+<p><strong>Usage in templates:</strong></p>
+
+<pre><code>&lt;?php
+// Get single data object entry
+$university = ycf_get_data_object('university');
+if ($university) {
+  echo '&lt;h2&gt;' . esc_html($university['name']) . '&lt;/h2&gt;';
+  echo '&lt;p&gt;' . esc_html($university['location']) . '&lt;/p&gt;';
+
+  // Get university logo
+  if (!empty($university['logo'])) {
+    $logo = wp_get_attachment_image($university['logo'], 'medium');
+    echo $logo;
+  }
+}
+
+// Get multiple data objects (list)
+$partners = ycf_get_field('partner_universities');
+if (!empty($partners)) {
+  foreach ($partners as $partner_id) {
+    $partner = ycf_get_data_object('partner_universities', null, ['entry_id' => $partner_id]);
+    if ($partner) {
+      echo '&lt;div class="partner"&gt;';
+      echo '&lt;h3&gt;' . esc_html($partner['name']) . '&lt;/h3&gt;';
+      echo '&lt;/div&gt;';
+    }
+  }
+}
+
+// In blocks - use context_data parameter
+$blocks = ycf_get_field('content_blocks');
+foreach ($blocks as $block) {
+  $university = ycf_get_data_object('university', null, $block);
+  if ($university) {
+    echo esc_html($university['name']);
+  }
+}
+
+// Get all entries of a data object type
+$all_universities = ycf_get_data_objects('universities');
+foreach ($all_universities as $entry_id => $university) {
+  echo '&lt;li&gt;' . esc_html($university['name']) . '&lt;/li&gt;';
+}
+?&gt;</code></pre>
+
+<p><strong>Returns:</strong> Array containing the data object entry fields, or <code>null</code> if not set.</p>
+
+<p><strong>Helper functions:</strong></p>
+<ul>
+  <li><code>ycf_get_data_object($field_name, $post_id = null, $context_data = null)</code> - Get a single data object entry referenced by a field</li>
+  <li><code>ycf_get_data_objects($object_type)</code> - Get all entries of a specific data object type</li>
+</ul>
+
 <h3>Image</h3>
 
 <p>WordPress media uploader for images.</p>
@@ -533,6 +844,11 @@ echo $author['bio'];</code></pre>
         - name: background_image
           label: Background Image
           type: image
+        - name: category
+          label: Category
+          type: taxonomy
+          options:
+            taxonomy: category
     - name: two_column
       label: Two Column Layout
       fields:
@@ -775,7 +1091,6 @@ if ($pdf) {
   <li><strong>Author</strong>: <a href="https://www.silvestar.codes" target="_blank">Silvestar Bistrović</a></li>
   <li><strong>Email</strong>: me@silvestar.codes</li>
   <li><strong>GitHub</strong>: <a href="https://github.com/maliMirkec/yaml-custom-fields" target="_blank">maliMirkec/yaml-custom-fields</a></li>
-  <li><strong>Inspired by</strong>: <a href="https://pagescms.org/" target="_blank">PagesCMS</a> - Open-source CMS for static websites</li>
 </ul>
 
 <h2>License</h2>
@@ -787,17 +1102,19 @@ if ($pdf) {
 <h3>Version 1.0.0</h3>
 <ul>
   <li>Initial release</li>
-  <li>Support for 12+ field types from PagesCMS</li>
+  <li>Support for 15+ field types
   <li>Template and partial support</li>
-  <li>ACF-like template functions</li>
-  <li>Block/repeater functionality</li>
+  <li>ACF-like template functions with context_data parameter for block fields</li>
+  <li>Taxonomy field type for categories, tags, and custom taxonomies (single/multiple selection)</li>
+  <li>Enhanced helper functions: <code>ycf_get_field()</code>, <code>ycf_get_image()</code>, <code>ycf_get_file()</code>, <code>ycf_get_term()</code></li>
+  <li>Block/repeater functionality with context-aware field access</li>
   <li>WordPress media integration with attachment ID storage</li>
-  <li>Helper functions for images and files (<code>ycf_get_image()</code>, <code>ycf_get_file()</code>)</li>
   <li>Administrator-only access</li>
   <li>Clean uninstall</li>
   <li>Clear buttons for image and file fields</li>
   <li>Reset All Data button for clearing all custom fields on a page</li>
   <li>Confirmation alerts for destructive actions</li>
+  <li>Copy snippet buttons for all field types with complete function signatures</li>
 </ul>
 
 <hr>

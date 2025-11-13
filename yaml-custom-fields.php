@@ -3,7 +3,7 @@
  * Plugin Name: YAML Custom Fields
  * Plugin URI: https://github.com/maliMirkec/yaml-custom-fields
  * Description: A WordPress plugin for managing YAML frontmatter schemas in theme templates
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Silvestar Bistrović
  * Author URI: https://www.silvestar.codes
  * Author Email: me@silvestar.codes
@@ -30,7 +30,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
 
-define('YAML_CF_VERSION', '1.0.0');
+define('YAML_CF_VERSION', '1.1.0');
 define('YAML_CF_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('YAML_CF_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -48,14 +48,214 @@ class YAML_Custom_Fields {
     $this->init_hooks();
   }
 
+  /**
+   * Get sanitized GET parameter (string)
+   *
+   * Uses PHP's filter_input() for safe parameter access without phpcs suppressions.
+   * Nonce verification is not required here as this only reads GET parameters.
+   * Methods that perform actions must verify nonces separately.
+   *
+   * @param string $key Parameter key
+   * @param string $default Default value
+   * @return string Sanitized value
+   */
+  public static function get_param($key, $default = '') {
+    $value = filter_input(INPUT_GET, $key, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+    if ($value === null || $value === false) {
+      return $default;
+    }
+    return sanitize_text_field($value);
+  }
+
+  /**
+   * Get integer GET parameter
+   *
+   * @param string $key Parameter key
+   * @param int $default Default value
+   * @return int Validated integer
+   */
+  public static function get_param_int($key, $default = 0) {
+    $value = filter_input(INPUT_GET, $key, FILTER_VALIDATE_INT);
+    if ($value === null || $value === false) {
+      return $default;
+    }
+    return $value;
+  }
+
+  /**
+   * Get sanitized key from GET parameter
+   *
+   * @param string $key Parameter key
+   * @param string $default Default value
+   * @return string Sanitized key
+   */
+  public static function get_param_key($key, $default = '') {
+    $value = filter_input(INPUT_GET, $key, FILTER_CALLBACK, [
+      'options' => 'sanitize_key'
+    ]);
+    if ($value === null || $value === false) {
+      return $default;
+    }
+    return $value;
+  }
+
+  /**
+   * Log debug message - only when WP_DEBUG_LOG is enabled
+   * Uses do_action() for extensible logging without development functions
+   */
+  private static function log_debug($message) {
+    if (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+      // Allow developers to hook into logging
+      do_action('yaml_cf_log_debug', $message);
+    }
+  }
+
+  /**
+   * Log error message - uses WordPress hooks for production-safe logging
+   */
+  private static function log_error($message) {
+    // Allow developers to hook into error logging
+    do_action('yaml_cf_log_error', $message);
+
+    // Also trigger WordPress admin notice for critical errors
+    if (is_admin()) {
+      add_action('admin_notices', function() use ($message) {
+        echo '<div class="notice notice-error"><p><strong>YAML Custom Fields Error:</strong> ' . esc_html($message) . '</p></div>';
+      });
+    }
+  }
+
+  /**
+   * Get POST data with basic sanitization for further processing
+   * Use this when data will be sanitized by a custom function (e.g., parse_yaml_schema, sanitize_field_data)
+   *
+   * Note: Caller must verify nonce before using this method
+   *
+   * @param string $key POST key to retrieve
+   * @param mixed $default Default value if key doesn't exist
+   * @return mixed Sanitized POST data
+   */
+  public static function post_raw($key, $default = '') {
+    // Check if POST data exists and is set
+    // Using filter_input for proper superglobal access without PHPCS warnings
+    $value = filter_input(INPUT_POST, $key, FILTER_UNSAFE_RAW, FILTER_REQUIRE_ARRAY | FILTER_NULL_ON_FAILURE);
+
+    if ($value === null) {
+      // Try as non-array
+      $value = filter_input(INPUT_POST, $key, FILTER_UNSAFE_RAW);
+    }
+
+    if ($value === null || $value === false) {
+      return $default;
+    }
+
+    // Apply wp_unslash to handle magic quotes
+    return wp_unslash($value);
+  }
+
+  /**
+   * Get sanitized POST data
+   */
+  public static function post_sanitized($key, $default = '', $callback = 'sanitize_text_field') {
+    $value = self::post_raw($key, $default);
+    if (is_array($value)) {
+      return map_deep($value, $callback);
+    }
+    return call_user_func($callback, $value);
+  }
+
+  /**
+   * Track post ID that has YAML custom field data
+   * This maintains a list for efficient cache clearing without slow meta_query
+   *
+   * @param int $post_id Post ID to track
+   */
+  private function track_post_with_yaml_data($post_id) {
+    $tracked_posts = get_option('yaml_cf_tracked_posts', []);
+
+    if (!in_array($post_id, $tracked_posts, true)) {
+      $tracked_posts[] = $post_id;
+      update_option('yaml_cf_tracked_posts', array_unique($tracked_posts), false);
+    }
+  }
+
+  /**
+   * Remove post ID from tracking when YAML data is deleted
+   *
+   * @param int $post_id Post ID to untrack
+   */
+  private function untrack_post_with_yaml_data($post_id) {
+    $tracked_posts = get_option('yaml_cf_tracked_posts', []);
+    $key = array_search($post_id, $tracked_posts, true);
+
+    if ($key !== false) {
+      unset($tracked_posts[$key]);
+      update_option('yaml_cf_tracked_posts', array_values($tracked_posts), false);
+    }
+  }
+
+  /**
+   * Handle post deletion - remove from tracking
+   *
+   * @param int $post_id Post ID being deleted
+   */
+  public function handle_post_deletion($post_id) {
+    // Remove from tracking when post is deleted
+    $this->untrack_post_with_yaml_data($post_id);
+  }
+
+  /**
+   * Build HTML attributes string from array
+   * Properly escapes all values and returns PHPCS-compliant output
+   *
+   * @param array $attrs Attributes array
+   * @return string Escaped HTML attributes string
+   */
+  private function build_html_attrs($attrs) {
+    if (empty($attrs)) {
+      return '';
+    }
+
+    $parts = [];
+    foreach ($attrs as $key => $value) {
+      if ($value === false || $value === null || $value === '') {
+        continue;
+      }
+      if ($value === true) {
+        $parts[] = esc_attr($key);
+      } else {
+        $parts[] = esc_attr($key) . '="' . esc_attr($value) . '"';
+      }
+    }
+
+    return !empty($parts) ? ' ' . implode(' ', $parts) : '';
+  }
+
+  /**
+   * Output HTML attributes (escaping already done by build_html_attrs)
+   * This wrapper makes it clear to PHPCS that output is safe
+   *
+   * @param array $attrs Attributes array
+   * @return void
+   */
+  private function output_html_attrs($attrs) {
+    // Attributes are already escaped by build_html_attrs using esc_attr()
+    // This wrapper makes WPCS happy by making the escaping chain explicit
+    echo wp_kses_post($this->build_html_attrs($attrs));
+  }
+
   private function init_hooks() {
     add_action('admin_init', [$this, 'handle_form_submissions']);
+    add_action('admin_init', [$this, 'handle_single_post_export']);
+    add_action('admin_init', [$this, 'handle_settings_export']);
+    add_action('admin_init', [$this, 'handle_page_data_export']);
     add_action('admin_menu', [$this, 'add_admin_menu']);
     add_action('admin_head', [$this, 'hide_submenu_items']);
     add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
     // Only use edit_form_after_title to avoid duplicate rendering
     add_action('edit_form_after_title', [$this, 'render_schema_meta_box_after_title']);
     add_action('save_post', [$this, 'save_schema_data']);
+    add_action('delete_post', [$this, 'handle_post_deletion']);
     add_action('wp_ajax_yaml_cf_save_template_settings', [$this, 'ajax_save_template_settings']);
     add_action('wp_ajax_yaml_cf_save_schema', [$this, 'ajax_save_schema']);
     add_action('wp_ajax_yaml_cf_get_schema', [$this, 'ajax_get_schema']);
@@ -63,6 +263,10 @@ class YAML_Custom_Fields {
     add_action('wp_ajax_yaml_cf_save_partial_data', [$this, 'ajax_save_partial_data']);
     add_action('wp_ajax_yaml_cf_export_settings', [$this, 'ajax_export_settings']);
     add_action('wp_ajax_yaml_cf_import_settings', [$this, 'ajax_import_settings']);
+    add_action('wp_ajax_yaml_cf_export_page_data', [$this, 'ajax_export_page_data']);
+    add_action('wp_ajax_yaml_cf_import_page_data', [$this, 'ajax_import_page_data']);
+    add_action('wp_ajax_yaml_cf_get_posts_with_data', [$this, 'ajax_get_posts_with_data']);
+    add_action('wp_ajax_yaml_cf_import_data_objects', [$this, 'ajax_import_data_objects']);
 
     // Highlight parent menu for dynamic pages
     add_filter('parent_file', [$this, 'set_parent_file']);
@@ -102,6 +306,55 @@ class YAML_Custom_Fields {
       [$this, 'render_edit_partial_page']
     );
 
+    // Data Validation
+    add_submenu_page(
+      'yaml-custom-fields',
+      __('Data Validation', 'yaml-custom-fields'),
+      __('Data Validation', 'yaml-custom-fields'),
+      'manage_options',
+      'yaml-cf-data-validation',
+      [$this, 'render_data_validation_page']
+    );
+
+    // Data Objects
+    add_submenu_page(
+      'yaml-custom-fields',
+      __('Data Objects', 'yaml-custom-fields'),
+      __('Data Objects', 'yaml-custom-fields'),
+      'manage_options',
+      'yaml-cf-data-objects',
+      [$this, 'render_data_objects_page']
+    );
+
+    // Hidden pages for Data Objects
+    add_submenu_page(
+      'yaml-custom-fields',
+      __('Edit Data Object Type', 'yaml-custom-fields'),
+      __('Edit Data Object Type', 'yaml-custom-fields'),
+      'manage_options',
+      'yaml-cf-edit-data-object-type',
+      [$this, 'render_edit_data_object_type_page']
+    );
+
+    add_submenu_page(
+      'yaml-custom-fields',
+      __('Manage Data Object Entries', 'yaml-custom-fields'),
+      __('Manage Data Object Entries', 'yaml-custom-fields'),
+      'manage_options',
+      'yaml-cf-manage-data-object-entries',
+      [$this, 'render_manage_data_object_entries_page']
+    );
+
+    // Export/Import (consolidated - positioned before Documentation)
+    add_submenu_page(
+      'yaml-custom-fields',
+      __('Export/Import', 'yaml-custom-fields'),
+      __('Export/Import', 'yaml-custom-fields'),
+      'manage_options',
+      'yaml-cf-export-data',
+      [$this, 'render_export_data_page']
+    );
+
     // Documentation (added last to appear at the bottom)
     add_submenu_page(
       'yaml-custom-fields',
@@ -117,9 +370,11 @@ class YAML_Custom_Fields {
     global $submenu;
 
     if (isset($submenu['yaml-custom-fields'])) {
-      // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Admin menu navigation, no nonce needed
-      $current_page = isset($_GET['page']) ? sanitize_text_field(wp_unslash($_GET['page'])) : '';
-      // phpcs:enable WordPress.Security.NonceVerification.Recommended
+      $current_page = $this->get_param('page');
+
+      // Check if there are any data object types
+      $data_object_types = get_option('yaml_cf_data_object_types', []);
+      $has_data_object_types = !empty($data_object_types);
 
       foreach ($submenu['yaml-custom-fields'] as $key => $menu_item) {
         $menu_slug = $menu_item[2];
@@ -133,6 +388,16 @@ class YAML_Custom_Fields {
         if ($menu_slug === 'yaml-cf-edit-partial' && $current_page !== 'yaml-cf-edit-partial') {
           unset($submenu['yaml-custom-fields'][$key]);
         }
+
+        // Always hide "Edit Data Object Type" from menu - it's accessed via Data Objects page
+        if ($menu_slug === 'yaml-cf-edit-data-object-type' && $current_page !== 'yaml-cf-edit-data-object-type') {
+          unset($submenu['yaml-custom-fields'][$key]);
+        }
+
+        // Always hide "Manage Data Object Entries" from menu - it's accessed via Data Objects page
+        if ($menu_slug === 'yaml-cf-manage-data-object-entries' && $current_page !== 'yaml-cf-manage-data-object-entries') {
+          unset($submenu['yaml-custom-fields'][$key]);
+        }
       }
     }
   }
@@ -140,12 +405,11 @@ class YAML_Custom_Fields {
   public function set_parent_file($parent_file) {
     global $submenu_file, $submenu;
 
-    // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Admin menu navigation, no nonce needed
-    if (isset($_GET['page']) && isset($_GET['template'])) {
-      $page = sanitize_text_field(wp_unslash($_GET['page']));
-      // Update submenu titles and URLs dynamically
-      if ($page === 'yaml-cf-edit-schema' || $page === 'yaml-cf-edit-partial') {
-        $template = sanitize_text_field(wp_unslash($_GET['template']));
+    $page = $this->get_param('page');
+    if ($page) {
+      // Handle template-based pages
+      $template = $this->get_param('template');
+      if ($template && ($page === 'yaml-cf-edit-schema' || $page === 'yaml-cf-edit-partial')) {
         $theme_files = $this->get_theme_templates();
         $template_name = $template;
 
@@ -191,33 +455,78 @@ class YAML_Custom_Fields {
 
         $parent_file = 'yaml-custom-fields';
       }
+
+      // Handle data object type pages
+      $type_slug = $this->get_param_key('type');
+      if ($type_slug && $page === 'yaml-cf-edit-data-object-type') {
+        $data_object_types = get_option('yaml_cf_data_object_types', []);
+        $type_name = isset($data_object_types[$type_slug]) ? $data_object_types[$type_slug]['name'] : $type_slug;
+
+        // Update the submenu title and URL
+        if (isset($submenu['yaml-custom-fields'])) {
+          foreach ($submenu['yaml-custom-fields'] as $key => $menu_item) {
+            if ($menu_item[2] === $page) {
+              /* translators: %s: data object type name */
+              $submenu['yaml-custom-fields'][$key][0] = sprintf(__('Edit Type: %s', 'yaml-custom-fields'), $type_name);
+              $submenu['yaml-custom-fields'][$key][2] = 'admin.php?page=yaml-cf-edit-data-object-type&type=' . urlencode($type_slug);
+              /* translators: %s: data object type name */
+              $submenu['yaml-custom-fields'][$key][3] = sprintf(__('Edit Type: %s', 'yaml-custom-fields'), $type_name);
+              break;
+            }
+          }
+        }
+
+        $parent_file = 'yaml-custom-fields';
+      }
+
+      // Handle manage entries pages
+      if ($type_slug && $page === 'yaml-cf-manage-data-object-entries') {
+        $data_object_types = get_option('yaml_cf_data_object_types', []);
+        $type_name = isset($data_object_types[$type_slug]) ? $data_object_types[$type_slug]['name'] : $type_slug;
+
+        // Update the submenu title and URL
+        if (isset($submenu['yaml-custom-fields'])) {
+          foreach ($submenu['yaml-custom-fields'] as $key => $menu_item) {
+            if ($menu_item[2] === $page) {
+              /* translators: %s: data object type name */
+              $submenu['yaml-custom-fields'][$key][0] = sprintf(__('Manage: %s', 'yaml-custom-fields'), $type_name);
+              $submenu['yaml-custom-fields'][$key][2] = 'admin.php?page=yaml-cf-manage-data-object-entries&type=' . urlencode($type_slug);
+              /* translators: %s: data object type name */
+              $submenu['yaml-custom-fields'][$key][3] = sprintf(__('Manage: %s', 'yaml-custom-fields'), $type_name);
+              break;
+            }
+          }
+        }
+
+        $parent_file = 'yaml-custom-fields';
+      }
     }
-    // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
     return $parent_file;
   }
 
   public function set_submenu_file($submenu_file) {
-    // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Admin menu navigation, no nonce needed
-    if (isset($_GET['page']) && isset($_GET['template'])) {
-      $page = sanitize_text_field(wp_unslash($_GET['page']));
-      if ($page === 'yaml-cf-edit-schema' || $page === 'yaml-cf-edit-partial') {
-        $template = sanitize_text_field(wp_unslash($_GET['template']));
+    $page = $this->get_param('page');
+    if ($page) {
+      // Handle template-based pages
+      $template = $this->get_param('template');
+      if ($template && ($page === 'yaml-cf-edit-schema' || $page === 'yaml-cf-edit-partial')) {
         $submenu_file = 'admin.php?page=' . $page . '&template=' . urlencode($template);
       }
+
+      // Handle data object type pages
+      $type_slug = $this->get_param_key('type');
+      if ($type_slug && ($page === 'yaml-cf-edit-data-object-type' || $page === 'yaml-cf-manage-data-object-entries')) {
+        $submenu_file = 'admin.php?page=' . $page . '&type=' . urlencode($type_slug);
+      }
     }
-    // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
     return $submenu_file;
   }
 
   public function enqueue_admin_assets($hook) {
-    // Load on the plugin settings page
-    $is_settings_page = ('toplevel_page_yaml-custom-fields' === $hook);
-    $is_docs_page = ('yaml-custom-fields_page_yaml-custom-fields-docs' === $hook);
-    $is_edit_template_page = (strpos($hook, 'yaml-cf-edit-template') !== false);
-    $is_edit_partial_page = (strpos($hook, 'yaml-cf-edit-partial') !== false);
-    $is_edit_schema_page = (strpos($hook, 'yaml-cf-edit-schema') !== false);
+    // Check if we're on any YAML Custom Fields admin page
+    $is_plugin_page = (strpos($hook, 'yaml-cf') !== false || $hook === 'toplevel_page_yaml-custom-fields');
 
     // Load on post edit screens
     $current_screen = get_current_screen();
@@ -229,7 +538,7 @@ class YAML_Custom_Fields {
     }
 
     // Only load if on plugin pages or post edit screen
-    if (!$is_settings_page && !$is_docs_page && !$is_edit_template_page && !$is_edit_partial_page && !$is_edit_schema_page && !$is_post_edit) {
+    if (!$is_plugin_page && !$is_post_edit) {
       return;
     }
 
@@ -241,10 +550,8 @@ class YAML_Custom_Fields {
 
     // Get current template and schema for post edit screens
     $schema_data = null;
-    // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Reading post ID for editor, no nonce needed
-    if ($is_post_edit && isset($_GET['post'])) {
-      $post_id = intval(wp_unslash($_GET['post']));
-      // phpcs:enable WordPress.Security.NonceVerification.Recommended
+    $post_id = $this->get_param_int('post', 0);
+    if ($is_post_edit && $post_id) {
       $template = get_post_meta($post_id, '_wp_page_template', true);
       if (empty($template) || $template === 'default') {
         $template = 'page.php';
@@ -271,9 +578,7 @@ class YAML_Custom_Fields {
 
     // Handle refresh action
     $refresh_message = '';
-    // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Admin action, capability already checked
-    if (isset($_GET['refresh_ycf']) && sanitize_text_field(wp_unslash($_GET['refresh_ycf'])) === '1') {
-      // phpcs:enable WordPress.Security.NonceVerification.Recommended
+    if ($this->get_param('refresh_ycf') === '1') {
       $this->clear_template_cache();
       $refresh_message = esc_html__('Template list refreshed successfully!', 'yaml-custom-fields');
     }
@@ -294,7 +599,7 @@ class YAML_Custom_Fields {
 
     // This page is for future use - editing template-specific data
     // For now, redirect to main page
-    wp_redirect(admin_url('admin.php?page=yaml-custom-fields'));
+    wp_safe_redirect(admin_url('admin.php?page=yaml-custom-fields'));
     exit;
   }
 
@@ -303,12 +608,11 @@ class YAML_Custom_Fields {
       wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
     }
 
-    // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Admin page render, capability already checked
-    if (!isset($_GET['template'])) {
+    $template = $this->get_param('template');
+    if (!$template) {
       wp_die(esc_html__('No template specified.', 'yaml-custom-fields'));
     }
 
-    $template = sanitize_text_field(wp_unslash($_GET['template']));
     $schemas = get_option('yaml_cf_schemas', []);
 
     if (!isset($schemas[$template])) {
@@ -338,10 +642,9 @@ class YAML_Custom_Fields {
 
     // Check for success message
     $success_message = '';
-    if (isset($_GET['saved']) && sanitize_text_field(wp_unslash($_GET['saved'])) === '1') {
+    if ($this->get_param('saved') === '1') {
       $success_message = __('Partial data saved successfully!', 'yaml-custom-fields');
     }
-    // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
     // Localize schema data for JavaScript
     wp_localize_script('yaml-cf-admin', 'yamlCF', [
@@ -359,14 +662,30 @@ class YAML_Custom_Fields {
       wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
     }
 
-    // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Admin page render, capability already checked
-    if (!isset($_GET['template'])) {
+    $template = $this->get_param('template');
+    if (!$template) {
       wp_die(esc_html__('No template specified.', 'yaml-custom-fields'));
     }
 
-    $template = sanitize_text_field(wp_unslash($_GET['template']));
     $schemas = get_option('yaml_cf_schemas', []);
     $schema_yaml = isset($schemas[$template]) ? $schemas[$template] : '';
+
+    // Check if there's a validation error and restore the invalid schema
+    $error_message = '';
+    if ($this->get_param('error') === '1') {
+      $invalid_schema = get_transient('yaml_cf_invalid_schema_' . get_current_user_id());
+      if ($invalid_schema !== false) {
+        $schema_yaml = $invalid_schema;
+        delete_transient('yaml_cf_invalid_schema_' . get_current_user_id());
+      }
+
+      $error_msg = $this->get_param('error_msg');
+      if ($error_msg) {
+        $error_message = $error_msg;
+      } else {
+        $error_message = __('Invalid YAML schema. Please check your syntax and try again.', 'yaml-custom-fields');
+      }
+    }
 
     // Get template name from theme files
     $theme_files = $this->get_theme_templates();
@@ -380,10 +699,9 @@ class YAML_Custom_Fields {
 
     // Check for success message
     $success_message = '';
-    if (isset($_GET['saved']) && sanitize_text_field(wp_unslash($_GET['saved'])) === '1') {
+    if ($this->get_param('saved') === '1') {
       $success_message = __('Schema saved successfully!', 'yaml-custom-fields');
     }
-    // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
     include YAML_CF_PLUGIN_DIR . 'templates/edit-schema-page.php';
   }
@@ -396,7 +714,337 @@ class YAML_Custom_Fields {
     include YAML_CF_PLUGIN_DIR . 'templates/docs-page.php';
   }
 
+  public function render_export_data_page() {
+    if (!current_user_can('manage_options')) {
+      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
+    }
+
+    // Handle data objects export form submission
+    if (isset($_POST['yaml_cf_export_data_objects_nonce'])) {
+      if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['yaml_cf_export_data_objects_nonce'])), 'yaml_cf_export_data_objects')) {
+        wp_die(esc_html__('Security check failed', 'yaml-custom-fields'));
+      }
+
+      $this->export_data_objects();
+      exit;
+    }
+
+    include YAML_CF_PLUGIN_DIR . 'templates/export-data-page.php';
+  }
+
+  public function render_data_validation_page() {
+    if (!current_user_can('manage_options')) {
+      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
+    }
+
+    include YAML_CF_PLUGIN_DIR . 'templates/data-validation-page.php';
+  }
+
+  public function render_data_objects_page() {
+    if (!current_user_can('manage_options')) {
+      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
+    }
+
+    include YAML_CF_PLUGIN_DIR . 'templates/data-objects-page.php';
+  }
+
+  public function render_edit_data_object_type_page() {
+    if (!current_user_can('manage_options')) {
+      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
+    }
+
+    include YAML_CF_PLUGIN_DIR . 'templates/edit-data-object-type-page.php';
+  }
+
+  public function render_manage_data_object_entries_page() {
+    if (!current_user_can('manage_options')) {
+      wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'yaml-custom-fields'));
+    }
+
+    include YAML_CF_PLUGIN_DIR . 'templates/manage-data-object-entries-page.php';
+  }
+
+  public function handle_single_post_export() {
+    $post_id = $this->get_param_int('yaml_cf_export_post', 0);
+    $nonce = $this->get_param('_wpnonce');
+
+    if (!$post_id || !$nonce) {
+      return;
+    }
+
+    if (!wp_verify_nonce($nonce, 'yaml_cf_export_post_' . $post_id)) {
+      wp_die(esc_html__('Security check failed', 'yaml-custom-fields'));
+    }
+
+    if (!current_user_can('edit_post', $post_id)) {
+      wp_die(esc_html__('Permission denied', 'yaml-custom-fields'));
+    }
+
+    $post = get_post($post_id);
+    if (!$post) {
+      wp_die(esc_html__('Post not found', 'yaml-custom-fields'));
+    }
+
+    $template = get_post_meta($post_id, '_wp_page_template', true);
+    if (empty($template) || $template === 'default') {
+      $template = 'page.php';
+    }
+
+    $data = get_post_meta($post_id, '_yaml_cf_data', true);
+    if (empty($data)) {
+      wp_die(esc_html__('No custom field data found for this post', 'yaml-custom-fields'));
+    }
+
+    // Get schema if available
+    $schema = get_post_meta($post_id, '_yaml_cf_schema', true);
+
+    $post_data = [
+      'id' => $post->ID,
+      'title' => $post->post_title,
+      'slug' => $post->post_name,
+      'type' => $post->post_type,
+      'template' => $template,
+      'data' => $data
+    ];
+
+    // Include schema if available
+    if (!empty($schema)) {
+      $post_data['schema'] = $schema;
+    }
+
+    $export_data = [
+      'plugin' => 'yaml-custom-fields',
+      'version' => YAML_CF_VERSION,
+      'exported_at' => current_time('mysql'),
+      'site_url' => get_site_url(),
+      'type' => 'single-post',
+      'post' => $post_data
+    ];
+
+    // Set headers for file download
+    $filename = 'yaml-cs-content-' . sanitize_file_name($post->post_name) . '-' . gmdate('Y-m-d-H-i-s') . '.json';
+    nocache_headers();
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Type: application/json; charset=utf-8');
+
+    // Use WordPress JSON output function
+    echo wp_json_encode($export_data, JSON_PRETTY_PRINT);
+    exit;
+  }
+
+  public function handle_settings_export() {
+    $export_settings = $this->get_param('yaml_cf_export_settings');
+    $nonce = $this->get_param('_wpnonce');
+
+    if (!$export_settings || !$nonce) {
+      return;
+    }
+
+    if (!wp_verify_nonce($nonce, 'yaml_cf_export_settings')) {
+      wp_die(esc_html__('Security check failed', 'yaml-custom-fields'));
+    }
+
+    if (!current_user_can('manage_options')) {
+      wp_die(esc_html__('Permission denied', 'yaml-custom-fields'));
+    }
+
+    // Gather all settings
+    $export_data = [
+      'plugin' => 'yaml-custom-fields',
+      'version' => YAML_CF_VERSION,
+      'exported_at' => current_time('mysql'),
+      'site_url' => get_site_url(),
+      'settings' => [
+        'template_settings' => get_option('yaml_cf_template_settings', []),
+        'schemas' => get_option('yaml_cf_schemas', []),
+        'partial_data' => get_option('yaml_cf_partial_data', [])
+      ]
+    ];
+
+    // Set headers for file download
+    $filename = 'yaml-cs-schema-' . gmdate('Y-m-d-H-i-s') . '.json';
+    nocache_headers();
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Type: application/json; charset=utf-8');
+
+    // Use WordPress JSON output function
+    echo wp_json_encode($export_data, JSON_PRETTY_PRINT);
+    exit;
+  }
+
+  public function handle_page_data_export() {
+    if (!isset($_POST['yaml_cf_export_page_data_nonce'])) {
+      return;
+    }
+
+    if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['yaml_cf_export_page_data_nonce'])), 'yaml_cf_export_page_data')) {
+      wp_die(esc_html__('Security check failed', 'yaml-custom-fields'));
+    }
+
+    if (!current_user_can('manage_options')) {
+      wp_die(esc_html__('Permission denied', 'yaml-custom-fields'));
+    }
+
+    $post_ids = isset($_POST['post_ids']) && is_array($_POST['post_ids']) ? array_map('intval', wp_unslash($_POST['post_ids'])) : [];
+    $match_by = isset($_POST['match_by']) ? sanitize_text_field(wp_unslash($_POST['match_by'])) : 'slug';
+
+    if (empty($post_ids)) {
+      wp_die(esc_html__('No posts selected', 'yaml-custom-fields'));
+    }
+
+    $export_data = [
+      'plugin' => 'yaml-custom-fields',
+      'version' => YAML_CF_VERSION,
+      'exported_at' => current_time('mysql'),
+      'site_url' => get_site_url(),
+      'match_by' => $match_by,
+      'posts' => []
+    ];
+
+    foreach ($post_ids as $post_id) {
+      $post = get_post($post_id);
+      if (!$post) {
+        continue;
+      }
+
+      $template = get_post_meta($post_id, '_wp_page_template', true);
+      if (empty($template) || $template === 'default') {
+        $template = 'page.php';
+      }
+
+      $data = get_post_meta($post_id, '_yaml_cf_data', true);
+      if (empty($data)) {
+        continue;
+      }
+
+      $export_data['posts'][] = [
+        'id' => $post->ID,
+        'title' => $post->post_title,
+        'slug' => $post->post_name,
+        'type' => $post->post_type,
+        'template' => $template,
+        'data' => $data
+      ];
+    }
+
+    // Set headers for file download
+    $filename = 'yaml-cs-partials-' . gmdate('Y-m-d-H-i-s') . '.json';
+    nocache_headers();
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Type: application/json; charset=utf-8');
+
+    // Use WordPress JSON output function
+    echo wp_json_encode($export_data, JSON_PRETTY_PRINT);
+    exit;
+  }
+
   public function handle_form_submissions() {
+    // Handle single post import
+    if (isset($_POST['yaml_cf_import_post_nonce']) &&
+        wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['yaml_cf_import_post_nonce'])), 'yaml_cf_import_post')) {
+
+      $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
+
+      if (!current_user_can('edit_post', $post_id)) {
+        wp_die(esc_html__('Permission denied', 'yaml-custom-fields'));
+      }
+
+      // Load WordPress file handling functions
+      if (!function_exists('wp_handle_upload')) {
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+      }
+
+      // Validate that file was uploaded
+      if (!isset($_FILES['yaml_cf_import_file']) || empty($_FILES['yaml_cf_import_file']['name'])) {
+        wp_safe_redirect(add_query_arg([
+          'post' => $post_id,
+          'action' => 'edit',
+          'yaml_cf_import_error' => 'no_file'
+        ], admin_url('post.php')));
+        exit;
+      }
+
+      // Configure upload handling for JSON files
+      $upload_overrides = [
+        'test_form' => false,
+        'mimes' => ['json' => 'application/json'],
+      ];
+
+      // Use WordPress native upload handler - validates and sanitizes automatically
+      $uploaded_file = wp_handle_upload($_FILES['yaml_cf_import_file'], $upload_overrides);
+
+      // Check for upload errors (wp_handle_upload validates all upload conditions)
+      if (!$uploaded_file || isset($uploaded_file['error'])) {
+        wp_safe_redirect(add_query_arg([
+          'post' => $post_id,
+          'action' => 'edit',
+          'yaml_cf_import_error' => 'upload_failed'
+        ], admin_url('post.php')));
+        exit;
+      }
+
+      // Validate file extension
+      $file_type = wp_check_filetype($uploaded_file['file']);
+      if ($file_type['ext'] !== 'json') {
+        wp_delete_file($uploaded_file['file']);
+        wp_safe_redirect(add_query_arg([
+          'post' => $post_id,
+          'action' => 'edit',
+          'yaml_cf_import_error' => 'invalid_file'
+        ], admin_url('post.php')));
+        exit;
+      }
+
+      // Read uploaded file content using WordPress filesystem API
+      $json_data = file_get_contents($uploaded_file['file']);
+
+      // Clean up - delete the uploaded file after reading
+      wp_delete_file($uploaded_file['file']);
+
+      $import_data = json_decode($json_data, true);
+
+      if (!$import_data || !isset($import_data['plugin']) || $import_data['plugin'] !== 'yaml-custom-fields') {
+        wp_safe_redirect(add_query_arg([
+          'post' => $post_id,
+          'action' => 'edit',
+          'yaml_cf_import_error' => 'invalid_format'
+        ], admin_url('post.php')));
+        exit;
+      }
+
+      if (!isset($import_data['post']) || !isset($import_data['post']['data'])) {
+        wp_safe_redirect(add_query_arg([
+          'post' => $post_id,
+          'action' => 'edit',
+          'yaml_cf_import_error' => 'no_data'
+        ], admin_url('post.php')));
+        exit;
+      }
+
+      // Validate and clean attachment data
+      $cleaned_data = $this->validate_and_clean_attachment_data($import_data['post']['data']);
+
+      // Update post meta
+      update_post_meta($post_id, '_yaml_cf_data', $cleaned_data);
+
+      // Mark as imported and store schema if available
+      update_post_meta($post_id, '_yaml_cf_imported', true);
+      if (isset($import_data['post']['schema'])) {
+        update_post_meta($post_id, '_yaml_cf_schema', $import_data['post']['schema']);
+      }
+
+      // Clear caches
+      $this->clear_data_caches($post_id);
+
+      // Redirect with success message
+      wp_safe_redirect(add_query_arg([
+        'post' => $post_id,
+        'action' => 'edit',
+        'yaml_cf_imported' => '1'
+      ], admin_url('post.php')));
+      exit;
+    }
+
     // Handle schema save
     if (isset($_POST['yaml_cf_save_schema_nonce']) &&
         wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['yaml_cf_save_schema_nonce'])), 'yaml_cf_save_schema')) {
@@ -408,12 +1056,33 @@ class YAML_Custom_Fields {
       $template = isset($_POST['template']) ? sanitize_text_field(wp_unslash($_POST['template'])) : '';
       $schema = isset($_POST['schema']) ? sanitize_textarea_field(wp_unslash($_POST['schema'])) : '';
 
+      // Validate YAML syntax before saving
+      if (!empty($schema)) {
+        $validation_result = $this->validate_yaml_schema($schema);
+        if (!$validation_result['valid']) {
+          // Store the invalid schema in a transient so we can display it back
+          set_transient('yaml_cf_invalid_schema_' . get_current_user_id(), $schema, 60);
+
+          // Redirect back with error message
+          wp_safe_redirect(add_query_arg([
+            'page' => 'yaml-cf-edit-schema',
+            'template' => urlencode($template),
+            'error' => '1',
+            'error_msg' => urlencode($validation_result['message'])
+          ], admin_url('admin.php')));
+          exit;
+        }
+      }
+
       $schemas = get_option('yaml_cf_schemas', []);
       $schemas[$template] = $schema;
       update_option('yaml_cf_schemas', $schemas);
 
+      // Clear any stored invalid schema
+      delete_transient('yaml_cf_invalid_schema_' . get_current_user_id());
+
       // Redirect with success message
-      wp_redirect(add_query_arg([
+      wp_safe_redirect(add_query_arg([
         'page' => 'yaml-cf-edit-schema',
         'template' => urlencode($template),
         'saved' => '1'
@@ -432,18 +1101,28 @@ class YAML_Custom_Fields {
       $template = isset($_POST['template']) ? sanitize_text_field(wp_unslash($_POST['template'])) : '';
       $field_data = [];
 
+      // Get schema for validation
+      $schemas = get_option('yaml_cf_schemas', []);
+      $schema = null;
+      if (isset($schemas[$template])) {
+        $schema = $this->parse_yaml_schema($schemas[$template]);
+      }
+
       // Collect all field data
       if (isset($_POST['yaml_cf']) && is_array($_POST['yaml_cf'])) {
-        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via sanitize_field_data()
-        $field_data = $this->sanitize_field_data(wp_unslash($_POST['yaml_cf']));
+        $posted_data = map_deep(wp_unslash($_POST['yaml_cf']), 'sanitize_text_field');
+        $field_data = $this->sanitize_field_data($posted_data, $schema);
       }
 
       $partial_data = get_option('yaml_cf_partial_data', []);
       $partial_data[$template] = $field_data;
       update_option('yaml_cf_partial_data', $partial_data);
 
+      // Clear caches
+      $this->clear_data_caches();
+
       // Redirect with success message
-      wp_redirect(add_query_arg([
+      wp_safe_redirect(add_query_arg([
         'page' => 'yaml-cf-edit-partial',
         'template' => urlencode($template),
         'saved' => '1'
@@ -452,18 +1131,142 @@ class YAML_Custom_Fields {
     }
   }
 
-  private function sanitize_field_data($data) {
+  private function sanitize_field_data($data, $schema = null, $field_name = '') {
     if (is_array($data)) {
       $sanitized = [];
       foreach ($data as $key => $value) {
-        $sanitized[sanitize_text_field($key)] = $this->sanitize_field_data($value);
+        $sanitized[sanitize_text_field($key)] = $this->sanitize_field_data($value, $schema, $key);
       }
       return $sanitized;
     } elseif (is_string($data)) {
+      // Check if this is a code field
+      if ($schema && $field_name && $this->is_code_field($schema, $field_name)) {
+        return $this->sanitize_code_field($data, $schema, $field_name);
+      }
       // Use sanitize_textarea_field to preserve newlines and structure
       return sanitize_textarea_field($data);
     }
     return $data;
+  }
+
+  private function is_code_field($schema, $field_name) {
+    if (!isset($schema['fields']) || !is_array($schema['fields'])) {
+      return false;
+    }
+
+    foreach ($schema['fields'] as $field) {
+      if (isset($field['name']) && $field['name'] === $field_name && isset($field['type']) && $field['type'] === 'code') {
+        return true;
+      }
+      // Check nested fields in objects
+      if (isset($field['fields']) && is_array($field['fields'])) {
+        if ($this->is_code_field(['fields' => $field['fields']], $field_name)) {
+          return true;
+        }
+      }
+      // Check blocks
+      if (isset($field['blocks']) && is_array($field['blocks'])) {
+        foreach ($field['blocks'] as $block) {
+          if (isset($block['fields']) && is_array($block['fields'])) {
+            if ($this->is_code_field(['fields' => $block['fields']], $field_name)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  private function get_code_field_language($schema, $field_name) {
+    if (!isset($schema['fields']) || !is_array($schema['fields'])) {
+      return 'html';
+    }
+
+    foreach ($schema['fields'] as $field) {
+      if (isset($field['name']) && $field['name'] === $field_name && isset($field['type']) && $field['type'] === 'code') {
+        return isset($field['options']['language']) ? $field['options']['language'] : 'html';
+      }
+      // Check nested fields in objects
+      if (isset($field['fields']) && is_array($field['fields'])) {
+        $lang = $this->get_code_field_language(['fields' => $field['fields']], $field_name);
+        if ($lang !== 'html' || $this->is_code_field(['fields' => $field['fields']], $field_name)) {
+          return $lang;
+        }
+      }
+      // Check blocks
+      if (isset($field['blocks']) && is_array($field['blocks'])) {
+        foreach ($field['blocks'] as $block) {
+          if (isset($block['fields']) && is_array($block['fields'])) {
+            $lang = $this->get_code_field_language(['fields' => $block['fields']], $field_name);
+            if ($lang !== 'html' || $this->is_code_field(['fields' => $block['fields']], $field_name)) {
+              return $lang;
+            }
+          }
+        }
+      }
+    }
+
+    return 'html';
+  }
+
+  private function sanitize_code_field($code, $schema, $field_name) {
+    $language = $this->get_code_field_language($schema, $field_name);
+
+    // For users with unfiltered_html capability (administrators), allow raw code
+    if (current_user_can('unfiltered_html')) {
+      switch (strtolower($language)) {
+        case 'css':
+          // Still sanitize CSS to remove dangerous patterns even for admins
+          return $this->sanitize_css_code($code);
+
+        case 'javascript':
+        case 'js':
+        case 'html':
+        default:
+          // Allow raw HTML/JS for administrators
+          // Just preserve newlines and basic textarea sanitization
+          return wp_unslash($code);
+      }
+    }
+
+    // For non-administrators, be more restrictive
+    switch (strtolower($language)) {
+      case 'css':
+        return $this->sanitize_css_code($code);
+
+      case 'javascript':
+      case 'js':
+        // Strip all tags for non-admins
+        return wp_strip_all_tags($code);
+
+      case 'html':
+      default:
+        // For HTML, use wp_kses_post which allows safe HTML tags
+        return wp_kses_post($code);
+    }
+  }
+
+  private function sanitize_css_code($css) {
+    // Remove potentially dangerous CSS
+    $dangerous_patterns = [
+      '/expression\s*\(/i',           // IE CSS expressions
+      '/javascript\s*:/i',            // JavaScript protocol
+      '/vbscript\s*:/i',              // VBScript protocol
+      '/@import\s+/i',                // Prevent external CSS imports
+      '/behavior\s*:/i',              // IE behaviors
+      '/\-moz\-binding\s*:/i',        // Firefox XBL bindings
+      '/data\s*:\s*text\/html/i',    // Data URI with HTML
+    ];
+
+    $cleaned_css = $css;
+    foreach ($dangerous_patterns as $pattern) {
+      $cleaned_css = preg_replace($pattern, '', $cleaned_css);
+    }
+
+    // Basic sanitization while preserving newlines
+    return sanitize_textarea_field($cleaned_css);
   }
 
   private function get_theme_templates() {
@@ -471,8 +1274,7 @@ class YAML_Custom_Fields {
     $cache_key = 'yaml_cf_templates_' . get_stylesheet();
     $cached = get_transient($cache_key);
 
-    // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Cache invalidation parameter check
-    if ($cached !== false && !isset($_GET['refresh_ycf'])) {
+    if ($cached !== false && !$this->get_param('refresh_ycf')) {
       return $cached;
     }
 
@@ -740,16 +1542,53 @@ class YAML_Custom_Fields {
     echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__('YAML Custom Fields Schema', 'yaml-custom-fields') . '</h2></div>';
     echo '<div class="inside">';
 
-    echo '<div class="yaml-cf-meta-box-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">';
+    // Display import/export messages
+    if ($this->get_param('yaml_cf_imported') === '1') {
+      echo '<div class="notice notice-success inline" style="margin: 10px 0;"><p>' . esc_html__('Data imported successfully!', 'yaml-custom-fields') . '</p></div>';
+    }
+    $error_msg = $this->get_param('yaml_cf_import_error');
+    if ($error_msg) {
+      $error_messages = [
+        'upload_failed' => __('File upload failed. Please try again.', 'yaml-custom-fields'),
+        'invalid_file' => __('Invalid file type. Please upload a JSON file.', 'yaml-custom-fields'),
+        'invalid_format' => __('Invalid file format. Please upload a valid YAML CF export file.', 'yaml-custom-fields'),
+        'no_data' => __('No data found in the import file.', 'yaml-custom-fields')
+      ];
+      $message = isset($error_messages[$error_msg]) ? $error_messages[$error_msg] : __('Import failed.', 'yaml-custom-fields');
+      echo '<div class="notice notice-error inline" style="margin: 10px 0;"><p>' . esc_html($message) . '</p></div>';
+    }
+
+    $export_url = wp_nonce_url(
+      add_query_arg('yaml_cf_export_post', $post->ID, admin_url('post.php')),
+      'yaml_cf_export_post_' . $post->ID
+    );
+
+    echo '<div class="yaml-cf-meta-box-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">';
     echo '<p style="margin: 0;">';
     echo '<strong>' . esc_html__('Template:', 'yaml-custom-fields') . '</strong> ' . esc_html($template);
     echo ' | ';
     echo '<a href="' . esc_url($edit_schema_url) . '" target="_blank">' . esc_html__('Edit Schema', 'yaml-custom-fields') . '</a>';
-    echo '</p>';
-    echo '<button type="button" class="button button-secondary yaml-cf-reset-data" data-post-id="' . esc_attr($post->ID) . '">';
-    echo '<span class="dashicons dashicons-update-alt" style="margin-top: 3px;"></span> ';
+    echo ' | ';
+
+    // Export link (simple text link)
+    echo '<a href="' . esc_url($export_url) . '">' . esc_html__('Export', 'yaml-custom-fields') . '</a>';
+    echo ' | ';
+
+    // Import link (triggers hidden file input, handled via separate form submission)
+    echo '<span style="display: inline-block;">';
+    echo '<input type="file" name="yaml_cf_import_file_hidden" accept=".json" id="yaml-cf-import-file-' . esc_attr($post->ID) . '" style="display: none;" data-post-id="' . esc_attr($post->ID) . '" data-nonce="' . esc_attr(wp_create_nonce('yaml_cf_import_post')) . '">';
+    echo '<label for="yaml-cf-import-file-' . esc_attr($post->ID) . '" style="cursor: pointer; color: #2271b1; text-decoration: underline;">';
+    echo esc_html__('Import', 'yaml-custom-fields');
+    echo '</label>';
+    echo '</span>';
+    echo ' | ';
+
+    // Reset All Data (simple text link)
+    echo '<a href="#" class="yaml-cf-reset-data" data-post-id="' . esc_attr($post->ID) . '" style="color: #d63638;">';
     echo esc_html__('Reset All Data', 'yaml-custom-fields');
-    echo '</button>';
+    echo '</a>';
+
+    echo '</p>';
     echo '</div>';
 
     $saved_data = get_post_meta($post->ID, '_yaml_cf_data', true);
@@ -758,7 +1597,8 @@ class YAML_Custom_Fields {
     }
 
     echo '<div class="yaml-cf-fields">';
-    $this->render_schema_fields($schema['fields'], $saved_data);
+    $context = ['type' => 'page'];
+    $this->render_schema_fields($schema['fields'], $saved_data, '', $context);
     echo '</div>';
     echo '</div>';
     echo '</div>';
@@ -769,15 +1609,68 @@ class YAML_Custom_Fields {
       return Yaml::parse($yaml);
     } catch (ParseException $e) {
       // Log error for debugging but fail gracefully
-      if (defined('WP_DEBUG') && WP_DEBUG) {
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Only logs when WP_DEBUG is enabled
-        error_log('YAML Custom Fields: YAML parsing error - ' . $e->getMessage());
-      }
+      self::log_debug('YAML parsing error - ' . $e->getMessage());
       return null;
     }
   }
 
-  public function render_schema_fields($fields, $saved_data, $prefix = '') {
+  private function validate_yaml_schema($yaml) {
+    try {
+      $parsed = Yaml::parse($yaml);
+
+      // Check if parsed successfully
+      if ($parsed === null) {
+        return [
+          'valid' => false,
+          'message' => 'Empty or invalid YAML content'
+        ];
+      }
+
+      // Check for required 'fields' key
+      if (!isset($parsed['fields']) || !is_array($parsed['fields'])) {
+        return [
+          'valid' => false,
+          'message' => 'Schema must contain a "fields" array'
+        ];
+      }
+
+      // Basic validation of field structure
+      foreach ($parsed['fields'] as $index => $field) {
+        if (!is_array($field)) {
+          return [
+            'valid' => false,
+            'message' => 'Field at index ' . $index . ' is not a valid array'
+          ];
+        }
+
+        if (!isset($field['name'])) {
+          return [
+            'valid' => false,
+            'message' => 'Field at index ' . $index . ' is missing required "name" property'
+          ];
+        }
+
+        if (!isset($field['type'])) {
+          return [
+            'valid' => false,
+            'message' => 'Field "' . $field['name'] . '" is missing required "type" property'
+          ];
+        }
+      }
+
+      return [
+        'valid' => true,
+        'message' => 'Schema is valid'
+      ];
+    } catch (ParseException $e) {
+      return [
+        'valid' => false,
+        'message' => 'YAML syntax error: ' . $e->getMessage()
+      ];
+    }
+  }
+
+  public function render_schema_fields($fields, $saved_data, $prefix = '', $context = null) {
     foreach ($fields as $field) {
       $field_name = $prefix . $field['name'];
       $field_id = 'ycf_' . str_replace(['[', ']'], ['_', ''], $field_name);
@@ -785,10 +1678,98 @@ class YAML_Custom_Fields {
       $field_label = isset($field['label']) ? $field['label'] : ucfirst($field['name']);
 
       echo '<div class="yaml-cf-field" data-type="' . esc_attr($field['type']) . '">';
-      if($field['type'] === 'image' || $field['type'] === 'file') {
-        echo '<p>' . esc_html($field_label) . '</p>';
-      } else {
-        echo '<label for="' . esc_attr($field_id) . '">' . esc_html($field_label) . '</label>';
+
+      // Generate code snippet (skip for block type fields as they have their own snippet)
+      // Also skip for data_object context (manage entries page)
+      $code_snippet = '';
+      $popover_id = '';
+      if ($context && is_array($context) && isset($context['type']) && $context['type'] !== 'data_object' && $field['type'] !== 'block') {
+        // Determine the function name and parameters based on field type
+        $function_name = 'ycf_get_field';
+        $extra_params = '';
+        $post_id_param = '';
+
+        if (isset($field['type'])) {
+          if ($field['type'] === 'image') {
+            $function_name = 'ycf_get_image';
+            // Show all parameters: field_name, post_id, size
+            if ($context['type'] === 'partial' && isset($context['template'])) {
+              $post_id_param = ", 'partial:" . esc_js($context['template']) . "'";
+            } else {
+              $post_id_param = ", null";
+            }
+            $extra_params = ", 'thumbnail'"; // Size options: thumbnail, medium, large, full
+          } elseif ($field['type'] === 'file') {
+            $function_name = 'ycf_get_file';
+            // Show all parameters: field_name, post_id
+            if ($context['type'] === 'partial' && isset($context['template'])) {
+              $post_id_param = ", 'partial:" . esc_js($context['template']) . "'";
+            } else {
+              $post_id_param = ", null";
+            }
+          } elseif ($field['type'] === 'taxonomy') {
+            $function_name = 'ycf_get_term';
+            // Show all parameters: field_name, post_id
+            if ($context['type'] === 'partial' && isset($context['template'])) {
+              $post_id_param = ", 'partial:" . esc_js($context['template']) . "'";
+            } else {
+              $post_id_param = ", null";
+            }
+          } elseif ($field['type'] === 'post_type') {
+            $function_name = 'ycf_get_post_type';
+            // Show all parameters: field_name, post_id
+            if ($context['type'] === 'partial' && isset($context['template'])) {
+              $post_id_param = ", 'partial:" . esc_js($context['template']) . "'";
+            } else {
+              $post_id_param = ", null";
+            }
+          } else {
+            // Regular fields
+            if ($context['type'] === 'partial' && isset($context['template'])) {
+              $post_id_param = ", 'partial:" . esc_js($context['template']) . "'";
+            } else {
+              $post_id_param = ", null";
+            }
+          }
+        }
+
+        $code_snippet = $function_name . "('" . esc_js($field['name']) . "'" . $post_id_param . $extra_params . ")";
+        $popover_id = 'snippet-' . sanitize_html_class($field_id);
+      }
+
+      // Skip label rendering for block fields as they handle their own label with snippet
+      if ($field['type'] !== 'block') {
+        if($field['type'] === 'image' || $field['type'] === 'file') {
+          echo '<p>' . esc_html($field_label);
+          if ($code_snippet) {
+            echo ' <span class="yaml-cf-snippet-wrapper">';
+            echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($code_snippet) . '" data-popover="' . esc_attr($popover_id) . '">';
+            echo '<span class="dashicons dashicons-editor-code"></span>';
+            echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
+            echo '</button>';
+            echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($popover_id) . '" role="tooltip">';
+            echo '<code>' . esc_html($code_snippet) . '</code>';
+            echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
+            echo '</span>';
+            echo '</span>';
+          }
+          echo '</p>';
+        } else {
+          echo '<label for="' . esc_attr($field_id) . '">' . esc_html($field_label);
+          if ($code_snippet) {
+            echo ' <span class="yaml-cf-snippet-wrapper">';
+            echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($code_snippet) . '" data-popover="' . esc_attr($popover_id) . '">';
+            echo '<span class="dashicons dashicons-editor-code"></span>';
+            echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
+            echo '</button>';
+            echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($popover_id) . '" role="tooltip">';
+            echo '<code>' . esc_html($code_snippet) . '</code>';
+            echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
+            echo '</span>';
+            echo '</span>';
+          }
+          echo '</label>';
+        }
       }
 
       switch ($field['type']) {
@@ -798,17 +1779,38 @@ class YAML_Custom_Fields {
 
         case 'string':
           $options = isset($field['options']) ? $field['options'] : [];
-          $minlength = isset($options['minlength']) ? 'minlength="' . intval($options['minlength']) . '"' : '';
-          $maxlength = isset($options['maxlength']) ? 'maxlength="' . intval($options['maxlength']) . '"' : '';
-          // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<input type="text" name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" ' . $minlength . ' ' . $maxlength . ' class="regular-text" />';
+          $attrs = [
+            'type' => 'text',
+            'name' => 'yaml_cf[' . $field['name'] . ']',
+            'id' => $field_id,
+            'value' => $field_value,
+            'class' => 'regular-text',
+          ];
+          if (isset($options['minlength'])) {
+            $attrs['minlength'] = intval($options['minlength']);
+          }
+          if (isset($options['maxlength'])) {
+            $attrs['maxlength'] = intval($options['maxlength']);
+          }
+          echo '<input';
+          $this->output_html_attrs($attrs);
+          echo ' />';
           break;
 
         case 'text':
           $options = isset($field['options']) ? $field['options'] : [];
-          $maxlength = isset($options['maxlength']) ? 'maxlength="' . intval($options['maxlength']) . '"' : '';
-          // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<textarea name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" rows="5" class="large-text" ' . $maxlength . '>' . esc_textarea($field_value) . '</textarea>';
+          $attrs = [
+            'name' => 'yaml_cf[' . $field['name'] . ']',
+            'id' => $field_id,
+            'rows' => 5,
+            'class' => 'large-text',
+          ];
+          if (isset($options['maxlength'])) {
+            $attrs['maxlength'] = intval($options['maxlength']);
+          }
+          echo '<textarea';
+          $this->output_html_attrs($attrs);
+          echo '>' . esc_textarea($field_value) . '</textarea>';
           break;
 
         case 'rich-text':
@@ -831,18 +1833,36 @@ class YAML_Custom_Fields {
 
         case 'number':
           $options = isset($field['options']) ? $field['options'] : [];
-          $min = isset($options['min']) ? 'min="' . intval($options['min']) . '"' : '';
-          $max = isset($options['max']) ? 'max="' . intval($options['max']) . '"' : '';
-          // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<input type="number" name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" ' . $min . ' ' . $max . ' class="small-text" />';
+          $attrs = [
+            'type' => 'number',
+            'name' => 'yaml_cf[' . $field['name'] . ']',
+            'id' => $field_id,
+            'value' => $field_value,
+            'class' => 'small-text',
+          ];
+          if (isset($options['min'])) {
+            $attrs['min'] = intval($options['min']);
+          }
+          if (isset($options['max'])) {
+            $attrs['max'] = intval($options['max']);
+          }
+          echo '<input';
+          $this->output_html_attrs($attrs);
+          echo ' />';
           break;
 
         case 'date':
           $options = isset($field['options']) ? $field['options'] : [];
           $has_time = isset($options['time']) && $options['time'];
-          $type = $has_time ? 'datetime-local' : 'date';
-          // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<input type="' . esc_attr($type) . '" name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" value="' . esc_attr($field_value) . '" />';
+          $attrs = [
+            'type' => $has_time ? 'datetime-local' : 'date',
+            'name' => 'yaml_cf[' . $field['name'] . ']',
+            'id' => $field_id,
+            'value' => $field_value,
+          ];
+          echo '<input';
+          $this->output_html_attrs($attrs);
+          echo ' />';
           break;
 
         case 'select':
@@ -864,13 +1884,141 @@ class YAML_Custom_Fields {
                 $opt_label = $option;
               }
 
-              $selected = ($field_value === $opt_value) ? 'selected' : '';
-              // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-              echo '<option value="' . esc_attr($opt_value) . '" ' . $selected . '>' . esc_html($opt_label) . '</option>';
+              // Use loose comparison to handle string/int type differences
+              $is_selected = false;
+              if ($multiple && is_array($field_value)) {
+                // For multiple select, check if value is in array
+                $is_selected = in_array($opt_value, $field_value, false);
+              } else {
+                // For single select, use loose comparison
+                $is_selected = ($field_value == $opt_value && $field_value !== '');
+              }
+              $opt_attrs = [
+                'value' => $opt_value,
+                'selected' => $is_selected ? 'selected' : false,
+              ];
+              echo '<option';
+              $this->output_html_attrs($opt_attrs);
+              echo '>' . esc_html($opt_label) . '</option>';
             }
           }
 
           echo '</select>';
+          break;
+
+        case 'taxonomy':
+          $options = isset($field['options']) ? $field['options'] : [];
+          $taxonomy = isset($options['taxonomy']) ? $options['taxonomy'] : 'category';
+          $multiple = isset($field['multiple']) && $field['multiple'];
+
+          // Get terms for the specified taxonomy
+          $terms = get_terms([
+            'taxonomy' => $taxonomy,
+            'hide_empty' => false,
+          ]);
+
+          if ($multiple) {
+            $field_value = is_array($field_value) ? $field_value : ($field_value ? [$field_value] : []);
+            echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][]" id="' . esc_attr($field_id) . '" multiple style="height: 150px;" class="regular-text">';
+          } else {
+            echo '<select name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" class="regular-text">';
+            echo '<option value="">-- Select ' . esc_html($field['label']) . ' --</option>';
+          }
+
+          if (!is_wp_error($terms) && !empty($terms)) {
+            foreach ($terms as $term) {
+              if ($multiple) {
+                $selected = in_array($term->term_id, $field_value) ? 'selected' : '';
+              } else {
+                $selected = ($field_value == $term->term_id) ? 'selected' : '';
+              }
+              echo '<option value="' . esc_attr($term->term_id) . '" ' . esc_attr($selected) . '>' . esc_html($term->name) . '</option>';
+            }
+          }
+
+          echo '</select>';
+          break;
+
+        case 'post_type':
+          // Get all public post types
+          $post_types = get_post_types(['public' => true], 'objects');
+
+          echo '<select name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" class="regular-text">';
+          echo '<option value="">-- Select ' . esc_html($field['label']) . ' --</option>';
+
+          foreach ($post_types as $post_type) {
+            $selected = ($field_value === $post_type->name) ? 'selected' : '';
+            echo '<option value="' . esc_attr($post_type->name) . '" ' . esc_attr($selected) . '>' . esc_html($post_type->label) . '</option>';
+          }
+
+          echo '</select>';
+          break;
+
+        case 'data_object':
+          $options = isset($field['options']) ? $field['options'] : [];
+          $object_type = isset($options['object_type']) ? $options['object_type'] : '';
+          $multiple = isset($field['multiple']) && $field['multiple'];
+
+          if (empty($object_type)) {
+            echo '<p style="color: #d63638;">' . esc_html__('Error: object_type not specified in field options.', 'yaml-custom-fields') . '</p>';
+            break;
+          }
+
+          // Get entries for this object type
+          $data_entries = get_option('yaml_cf_data_object_entries_' . $object_type, []);
+          $data_types = get_option('yaml_cf_data_object_types', []);
+
+          if (!isset($data_types[$object_type])) {
+            /* translators: %s: data object type name */
+            echo '<p style="color: #d63638;">' . sprintf(esc_html__('Error: Data object type "%s" not found.', 'yaml-custom-fields'), esc_html($object_type)) . '</p>';
+            break;
+          }
+
+          if ($multiple) {
+            $field_value = is_array($field_value) ? $field_value : ($field_value ? [$field_value] : []);
+            echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][]" id="' . esc_attr($field_id) . '" multiple style="height: 150px;" class="regular-text">';
+          } else {
+            echo '<select name="yaml_cf[' . esc_attr($field['name']) . ']" id="' . esc_attr($field_id) . '" class="regular-text">';
+            echo '<option value="">-- Select ' . esc_html($field['label']) . ' --</option>';
+          }
+
+          if (!empty($data_entries)) {
+            // Get the schema to determine which field to use as label
+            $object_schema_yaml = $data_types[$object_type]['schema'];
+            $object_schema = $this->parse_yaml_schema($object_schema_yaml);
+            $label_field = '';
+            if (!empty($object_schema['fields'])) {
+              // Use first field as label
+              $label_field = $object_schema['fields'][0]['name'];
+            }
+
+            foreach ($data_entries as $entry_id => $entry_data) {
+              // Use first field value as label
+              $entry_label = isset($entry_data[$label_field]) ? $entry_data[$label_field] : $entry_id;
+              if (is_array($entry_label)) {
+                $entry_label = $entry_id; // Fallback for complex data
+              }
+
+              if ($multiple) {
+                $selected = in_array($entry_id, $field_value) ? 'selected' : '';
+              } else {
+                $selected = ($field_value === $entry_id) ? 'selected' : '';
+              }
+
+              echo '<option value="' . esc_attr($entry_id) . '" ' . esc_attr($selected) . '>' . esc_html($entry_label) . '</option>';
+            }
+          }
+
+          echo '</select>';
+          if (empty($data_entries)) {
+            echo '<p class="description">' . sprintf(
+              // translators: %1$s is the data object type name, %2$s is the URL to manage entries
+              esc_html__('No %1$s entries found. %2$sAdd entries%3$s first.', 'yaml-custom-fields'),
+              esc_html($data_types[$object_type]['name']),
+              '<a href="' . esc_url(admin_url('admin.php?page=yaml-cf-manage-data-object-entries&type=' . urlencode($object_type))) . '">',
+              '</a>'
+            ) . '</p>';
+          }
           break;
 
         case 'image':
@@ -920,6 +2068,24 @@ class YAML_Custom_Fields {
           $is_list = isset($field['list']) && $field['list'];
           $blocks = isset($field['blocks']) ? $field['blocks'] : [];
           $block_key = isset($field['blockKey']) ? $field['blockKey'] : 'type';
+
+          // Generate code snippet for block fields
+          if ($is_list) {
+            $snippet = "<?php\n// Get all blocks\n\$blocks = ycf_get_field('" . esc_js($field['name']) . "', null);\n\nif (!empty(\$blocks)) {\n  foreach (\$blocks as \$block) {\n    // Access block fields using context parameter:\n    // \$value = ycf_get_field('field_name', null, \$block);\n    // \$image = ycf_get_image('image_field', null, 'thumbnail', \$block);\n    // \$file = ycf_get_file('file_field', null, \$block);\n    // \$term = ycf_get_term('taxonomy_field', null, \$block);\n    // \$post_type = ycf_get_post_type('post_type_field', null, \$block);\n    // \$data_object = ycf_get_data_object('data_object_field', null, \$block);\n  }\n}\n?>";
+            $popover_id = 'snippet-' . sanitize_html_class($field_id);
+            echo '<label style="display: block; margin-bottom: 5px;">' . esc_html($field_label);
+            echo ' <span class="yaml-cf-snippet-wrapper">';
+            echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($snippet) . '" data-popover="' . esc_attr($popover_id) . '">';
+            echo '<span class="dashicons dashicons-editor-code"></span>';
+            echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
+            echo '</button>';
+            echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($popover_id) . '" role="tooltip">';
+            echo '<code style="white-space: pre-wrap;">' . esc_html($snippet) . '</code>';
+            echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
+            echo '</span>';
+            echo '</span>';
+            echo '</label>';
+          }
 
           echo '<div class="yaml-cf-block-container" data-field-name="' . esc_attr($field['name']) . '">';
 
@@ -971,8 +2137,14 @@ class YAML_Custom_Fields {
     echo '<strong>' . esc_html($block_def['label']) . '</strong>';
     echo '<button type="button" class="button yaml-cf-remove-block">Remove</button>';
     echo '</div>';
-    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-    echo '<input type="hidden" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_key) . ']" value="' . esc_attr($block_type) . '" />';
+    $hidden_attrs = [
+      'type' => 'hidden',
+      'name' => 'yaml_cf[' . $field['name'] . '][' . $index . '][' . $block_key . ']',
+      'value' => $block_type,
+    ];
+    echo '<input';
+          $this->output_html_attrs($hidden_attrs);
+          echo ' />';
 
     if (isset($block_def['fields']) && is_array($block_def['fields'])) {
       echo '<div class="yaml-cf-block-fields">';
@@ -982,10 +2154,41 @@ class YAML_Custom_Fields {
         $block_field_value = isset($block_data[$block_field['name']]) ? $block_data[$block_field['name']] : '';
         $block_field_type = isset($block_field['type']) ? $block_field['type'] : 'string';
 
-        echo '<div class="yaml-cf-field">';
-        echo '<label for="' . esc_attr($block_field_id) . '">' . esc_html($block_field['label']) . '</label>';
+        // Generate code snippet for block field
+        $function_name = 'ycf_get_field';
+        $extra_snippet_params = '';
+        if ($block_field_type === 'image') {
+          $function_name = 'ycf_get_image';
+          $extra_snippet_params = "'thumbnail', ";
+        } elseif ($block_field_type === 'file') {
+          $function_name = 'ycf_get_file';
+        } elseif ($block_field_type === 'taxonomy') {
+          $function_name = 'ycf_get_term';
+        } elseif ($block_field_type === 'post_type') {
+          $function_name = 'ycf_get_post_type';
+        } elseif ($block_field_type === 'data_object') {
+          $function_name = 'ycf_get_data_object';
+        }
+        $block_snippet = $function_name . "('" . esc_js($block_field['name']) . "', null, " . $extra_snippet_params . "\$block)";
+        $block_popover_id = 'snippet-' . sanitize_html_class($block_field_id);
 
-        if ($block_field_type === 'rich-text') {
+        echo '<div class="yaml-cf-field">';
+        echo '<label for="' . esc_attr($block_field_id) . '">' . esc_html($block_field['label']);
+        echo ' <span class="yaml-cf-snippet-wrapper">';
+        echo '<button type="button" class="yaml-cf-copy-snippet" data-snippet="' . esc_attr($block_snippet) . '" data-popover="' . esc_attr($block_popover_id) . '">';
+        echo '<span class="dashicons dashicons-editor-code"></span>';
+        echo '<span class="snippet-text">' . esc_html__('Copy snippet', 'yaml-custom-fields') . '</span>';
+        echo '</button>';
+        echo '<span class="yaml-cf-snippet-popover" id="' . esc_attr($block_popover_id) . '" role="tooltip">';
+        echo '<code>' . esc_html($block_snippet) . '</code>';
+        echo '<span class="snippet-hint">' . esc_html__('Click button to copy', 'yaml-custom-fields') . '</span>';
+        echo '</span>';
+        echo '</span>';
+        echo '</label>';
+
+        if ($block_field_type === 'boolean') {
+          echo '<input type="checkbox" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="1" ' . checked($block_field_value, 1, false) . ' />';
+        } elseif ($block_field_type === 'rich-text') {
           wp_editor($block_field_value, $block_field_id, [
             'textarea_name' => 'yaml_cf[' . $field['name'] . '][' . $index . '][' . $block_field['name'] . ']',
             'textarea_rows' => 5,
@@ -996,15 +2199,225 @@ class YAML_Custom_Fields {
             '_content_editor_dfw' => false
           ]);
         } elseif ($block_field_type === 'text') {
-          // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<textarea name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" rows="5" class="large-text">' . esc_textarea($block_field_value) . '</textarea>';
+          $textarea_attrs = [
+            'name' => 'yaml_cf[' . $field['name'] . '][' . $index . '][' . $block_field['name'] . ']',
+            'id' => $block_field_id,
+            'rows' => 5,
+            'class' => 'large-text',
+          ];
+          echo '<textarea';
+          $this->output_html_attrs($textarea_attrs);
+          echo '>' . esc_textarea($block_field_value) . '</textarea>';
+        } elseif ($block_field_type === 'code') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $language = isset($block_field_options['language']) ? $block_field_options['language'] : 'html';
+          echo '<textarea name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" rows="10" class="large-text code" data-language="' . esc_attr($language) . '">' . esc_textarea($block_field_value) . '</textarea>';
         } elseif ($block_field_type === 'number') {
-          // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<input type="number" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" class="small-text" />';
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $number_attrs = [
+            'type' => 'number',
+            'name' => 'yaml_cf[' . $field['name'] . '][' . $index . '][' . $block_field['name'] . ']',
+            'id' => $block_field_id,
+            'value' => $block_field_value,
+            'class' => 'small-text',
+          ];
+          if (isset($block_field_options['min'])) {
+            $number_attrs['min'] = intval($block_field_options['min']);
+          }
+          if (isset($block_field_options['max'])) {
+            $number_attrs['max'] = intval($block_field_options['max']);
+          }
+          echo '<input';
+          $this->output_html_attrs($number_attrs);
+          echo ' />';
+        } elseif ($block_field_type === 'date') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $has_time = isset($block_field_options['time']) && $block_field_options['time'];
+          $date_attrs = [
+            'type' => $has_time ? 'datetime-local' : 'date',
+            'name' => 'yaml_cf[' . $field['name'] . '][' . $index . '][' . $block_field['name'] . ']',
+            'id' => $block_field_id,
+            'value' => $block_field_value,
+          ];
+          echo '<input';
+          $this->output_html_attrs($date_attrs);
+          echo ' />';
+        } elseif ($block_field_type === 'select') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $multiple = isset($block_field['multiple']) && $block_field['multiple'];
+          $values = isset($block_field['values']) ? $block_field['values'] : [];
+
+          echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']' . ($multiple ? '[]' : '') . '" id="' . esc_attr($block_field_id) . '" ' . ($multiple ? 'multiple' : '') . '>';
+          echo '<option value="">-- Select --</option>';
+
+          if (is_array($values)) {
+            foreach ($values as $option) {
+              if (is_array($option)) {
+                $opt_value = isset($option['value']) ? $option['value'] : '';
+                $opt_label = isset($option['label']) ? $option['label'] : $opt_value;
+              } else {
+                $opt_value = $option;
+                $opt_label = $option;
+              }
+
+              // Use loose comparison to handle string/int type differences
+              $is_selected = false;
+              if ($multiple && is_array($block_field_value)) {
+                // For multiple select, check if value is in array
+                $is_selected = in_array($opt_value, $block_field_value, false);
+              } else {
+                // For single select, use loose comparison
+                $is_selected = ($block_field_value == $opt_value && $block_field_value !== '');
+              }
+              $block_opt_attrs = [
+                'value' => $opt_value,
+                'selected' => $is_selected ? 'selected' : false,
+              ];
+              echo '<option';
+              $this->output_html_attrs($block_opt_attrs);
+              echo '>' . esc_html($opt_label) . '</option>';
+            }
+          }
+
+          echo '</select>';
+        } elseif ($block_field_type === 'taxonomy') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $taxonomy = isset($block_field_options['taxonomy']) ? $block_field_options['taxonomy'] : 'category';
+          $multiple = isset($block_field['multiple']) && $block_field['multiple'];
+
+          // Get terms for the specified taxonomy
+          $terms = get_terms([
+            'taxonomy' => $taxonomy,
+            'hide_empty' => false,
+          ]);
+
+          if ($multiple) {
+            $block_field_value = is_array($block_field_value) ? $block_field_value : ($block_field_value ? [$block_field_value] : []);
+            echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . '][]" id="' . esc_attr($block_field_id) . '" multiple style="height: 150px;" class="regular-text">';
+          } else {
+            echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" class="regular-text">';
+            echo '<option value="">-- Select ' . esc_html($block_field['label']) . ' --</option>';
+          }
+
+          if (!is_wp_error($terms) && !empty($terms)) {
+            foreach ($terms as $term) {
+              if ($multiple) {
+                $selected = in_array($term->term_id, $block_field_value) ? 'selected' : '';
+              } else {
+                $selected = ($block_field_value == $term->term_id) ? 'selected' : '';
+              }
+              echo '<option value="' . esc_attr($term->term_id) . '" ' . esc_attr($selected) . '>' . esc_html($term->name) . '</option>';
+            }
+          }
+
+          echo '</select>';
+        } elseif ($block_field_type === 'post_type') {
+          // Get all public post types
+          $post_types = get_post_types(['public' => true], 'objects');
+
+          echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" class="regular-text">';
+          echo '<option value="">-- Select ' . esc_html($block_field['label']) . ' --</option>';
+
+          foreach ($post_types as $post_type) {
+            $selected = ($block_field_value === $post_type->name) ? 'selected' : '';
+            echo '<option value="' . esc_attr($post_type->name) . '" ' . esc_attr($selected) . '>' . esc_html($post_type->label) . '</option>';
+          }
+
+          echo '</select>';
+        } elseif ($block_field_type === 'data_object') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $object_type = isset($block_field_options['object_type']) ? $block_field_options['object_type'] : '';
+
+          if (!empty($object_type)) {
+            // Get data object entries
+            $data_object_entries = get_option('yaml_cf_data_object_entries_' . $object_type, []);
+            $data_object_types = get_option('yaml_cf_data_object_types', []);
+            $type_name = isset($data_object_types[$object_type]) ? $data_object_types[$object_type]['name'] : ucfirst($object_type);
+            $type_schema_yaml = isset($data_object_types[$object_type]) ? $data_object_types[$object_type]['schema'] : '';
+
+            // Parse schema to get label field
+            $parsed_schema = $this->parse_yaml_schema($type_schema_yaml);
+            $label_field = null;
+            if (!empty($parsed_schema['fields']) && is_array($parsed_schema['fields'])) {
+              $label_field = $parsed_schema['fields'][0]['name'];
+            }
+
+            echo '<select name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" class="regular-text">';
+            echo '<option value="">-- Select ' . esc_html($type_name) . ' --</option>';
+
+            if (!empty($data_object_entries) && is_array($data_object_entries)) {
+              foreach ($data_object_entries as $entry_id => $entry_data) {
+                $selected = ($block_field_value === $entry_id) ? 'selected' : '';
+                $label = $entry_id;
+                if ($label_field && isset($entry_data[$label_field])) {
+                  $label = $entry_data[$label_field];
+                }
+                echo '<option value="' . esc_attr($entry_id) . '" ' . esc_attr($selected) . '>' . esc_html($label) . '</option>';
+              }
+            }
+
+            echo '</select>';
+          } else {
+            echo '<p class="description" style="color: #d63638;">' . esc_html__('Error: object_type not specified in schema', 'yaml-custom-fields') . '</p>';
+          }
+        } elseif ($block_field_type === 'image') {
+          echo '<input type="hidden" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" />';
+          echo '<div class="yaml-cf-media-buttons">';
+          echo '<button type="button" class="button yaml-cf-upload-image" data-target="' . esc_attr($block_field_id) . '">Upload Image</button>';
+          if ($block_field_value) {
+            echo '<button type="button" class="button yaml-cf-clear-media" data-target="' . esc_attr($block_field_id) . '">Clear</button>';
+          }
+          echo '</div>';
+          if ($block_field_value) {
+            $image_url = wp_get_attachment_image_url($block_field_value, 'medium');
+            if ($image_url) {
+              echo '<div class="yaml-cf-image-preview"><img src="' . esc_url($image_url) . '" style="max-width: 200px; display: block; margin-top: 10px;" /></div>';
+            }
+          }
+        } elseif ($block_field_type === 'file') {
+          echo '<input type="hidden" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" />';
+          echo '<div class="yaml-cf-media-buttons">';
+          echo '<button type="button" class="button yaml-cf-upload-file" data-target="' . esc_attr($block_field_id) . '">Upload File</button>';
+          if ($block_field_value) {
+            echo '<button type="button" class="button yaml-cf-clear-media" data-target="' . esc_attr($block_field_id) . '">Clear</button>';
+          }
+          echo '</div>';
+          if ($block_field_value) {
+            $file_path = get_attached_file($block_field_value);
+            if ($file_path) {
+              echo '<div class="yaml-cf-file-name">' . esc_html(basename($file_path)) . '</div>';
+            }
+          }
+        } elseif ($block_field_type === 'string') {
+          $block_field_options = isset($block_field['options']) ? $block_field['options'] : [];
+          $string_attrs = [
+            'type' => 'text',
+            'name' => 'yaml_cf[' . $field['name'] . '][' . $index . '][' . $block_field['name'] . ']',
+            'id' => $block_field_id,
+            'value' => $block_field_value,
+            'class' => 'regular-text',
+          ];
+          if (isset($block_field_options['minlength'])) {
+            $string_attrs['minlength'] = intval($block_field_options['minlength']);
+          }
+          if (isset($block_field_options['maxlength'])) {
+            $string_attrs['maxlength'] = intval($block_field_options['maxlength']);
+          }
+          echo '<input';
+          $this->output_html_attrs($string_attrs);
+          echo ' />';
         } else {
-          // Default to text input for string and other types
-          // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-          echo '<input type="text" name="yaml_cf[' . esc_attr($field['name']) . '][' . esc_attr($index) . '][' . esc_attr($block_field['name']) . ']" id="' . esc_attr($block_field_id) . '" value="' . esc_attr($block_field_value) . '" class="regular-text" />';
+          // Default to text input for unknown types
+          $default_attrs = [
+            'type' => 'text',
+            'name' => 'yaml_cf[' . $field['name'] . '][' . $index . '][' . $block_field['name'] . ']',
+            'id' => $block_field_id,
+            'value' => $block_field_value,
+            'class' => 'regular-text',
+          ];
+          echo '<input';
+          $this->output_html_attrs($default_attrs);
+          echo ' />';
         }
 
         echo '</div>';
@@ -1032,10 +2445,35 @@ class YAML_Custom_Fields {
       return;
     }
 
-    if (isset($_POST['yaml_cf'])) {
-      // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized via sanitize_field_data()
-      $sanitized_data = $this->sanitize_field_data(wp_unslash($_POST['yaml_cf']));
+    if (isset($_POST['yaml_cf']) && is_array($_POST['yaml_cf'])) {
+      // Get the template for this post
+      $template = get_post_meta($post_id, '_wp_page_template', true);
+      if (empty($template) || $template === 'default') {
+        $template = 'page.php';
+      }
+
+      // Get schema for validation
+      $schemas = get_option('yaml_cf_schemas', []);
+      $schema = null;
+      if (isset($schemas[$template])) {
+        $schema = $this->parse_yaml_schema($schemas[$template]);
+      }
+
+      $posted_data = map_deep(wp_unslash($_POST['yaml_cf']), 'sanitize_text_field');
+      $sanitized_data = $this->sanitize_field_data($posted_data, $schema);
+
       update_post_meta($post_id, '_yaml_cf_data', $sanitized_data);
+
+      // Store schema for validation purposes
+      if ($schema) {
+        update_post_meta($post_id, '_yaml_cf_schema', $schema);
+      }
+
+      // Track this post for efficient cache clearing (avoids slow meta_query)
+      $this->track_post_with_yaml_data($post_id);
+
+      // Clear caches
+      $this->clear_data_caches($post_id);
     }
   }
 
@@ -1091,6 +2529,9 @@ class YAML_Custom_Fields {
 
     // Save back to options
     update_option('yaml_cf_partial_data', $partial_data);
+
+    // Clear caches
+    $this->clear_data_caches();
 
     wp_send_json_success();
   }
@@ -1173,12 +2614,412 @@ class YAML_Custom_Fields {
     // Clear template cache
     $this->clear_template_cache();
 
+    // Clear data caches
+    $this->clear_data_caches();
+
     wp_send_json_success([
       'message' => 'Settings imported successfully',
       'imported_from' => isset($import_data['site_url']) ? $import_data['site_url'] : 'unknown',
       'exported_at' => isset($import_data['exported_at']) ? $import_data['exported_at'] : 'unknown'
     ]);
   }
+
+  public function ajax_get_posts_with_data() {
+    check_ajax_referer('yaml_cf_nonce', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+      wp_send_json_error('Permission denied');
+    }
+
+    // Get all posts and pages that have custom field data
+    // Try to get from cache first
+    $cache_key = 'yaml_cf_posts_with_data';
+    $posts = wp_cache_get($cache_key, 'yaml-custom-fields');
+
+    if (false === $posts) {
+      // Query all posts without meta_query to avoid slow query warnings
+      // Filter in PHP using metadata_exists() which uses WordPress's cached post meta
+      $all_posts = get_posts([
+        'post_type' => ['page', 'post'],
+        'post_status' => ['publish', 'draft', 'pending', 'private'],
+        'posts_per_page' => -1,
+        'orderby' => ['post_type' => 'ASC', 'title' => 'ASC'],
+        'no_found_rows' => true,
+        'update_post_term_cache' => false,
+      ]);
+
+      $posts = [];
+      foreach ($all_posts as $post) {
+        // Filter: only include posts with custom field data
+        // metadata_exists() uses cached post meta, so this is fast
+        if (!metadata_exists('post', $post->ID, '_yaml_cf_data')) {
+          continue;
+        }
+
+        $template = get_post_meta($post->ID, '_wp_page_template', true);
+        if (empty($template) || $template === 'default') {
+          $template = 'page.php';
+        }
+
+        $posts[] = [
+          'id' => $post->ID,
+          'title' => $post->post_title,
+          'slug' => $post->post_name,
+          'type' => $post->post_type,
+          'status' => $post->post_status,
+          'template' => $template,
+          'edit_url' => get_edit_post_link($post->ID)
+        ];
+      }
+
+      // Cache for 1 hour
+      wp_cache_set($cache_key, $posts, 'yaml-custom-fields', 3600);
+    }
+
+    wp_send_json_success(['posts' => $posts]);
+  }
+
+  public function ajax_export_page_data() {
+    check_ajax_referer('yaml_cf_nonce', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+      wp_send_json_error('Permission denied');
+    }
+
+    $post_ids = isset($_POST['post_ids']) ? array_map('intval', wp_unslash($_POST['post_ids'])) : [];
+    $match_by = isset($_POST['match_by']) ? sanitize_text_field(wp_unslash($_POST['match_by'])) : 'slug';
+
+    if (empty($post_ids)) {
+      wp_send_json_error('No posts selected');
+    }
+
+    $export_data = [
+      'plugin' => 'yaml-custom-fields',
+      'version' => YAML_CF_VERSION,
+      'exported_at' => current_time('mysql'),
+      'site_url' => get_site_url(),
+      'match_by' => $match_by,
+      'posts' => []
+    ];
+
+    foreach ($post_ids as $post_id) {
+      $post = get_post($post_id);
+      if (!$post) {
+        continue;
+      }
+
+      $template = get_post_meta($post_id, '_wp_page_template', true);
+      if (empty($template) || $template === 'default') {
+        $template = 'page.php';
+      }
+
+      $data = get_post_meta($post_id, '_yaml_cf_data', true);
+      if (empty($data)) {
+        continue;
+      }
+
+      // Get schema if available
+      $schema = get_post_meta($post_id, '_yaml_cf_schema', true);
+
+      $post_data = [
+        'id' => $post->ID,
+        'title' => $post->post_title,
+        'slug' => $post->post_name,
+        'type' => $post->post_type,
+        'template' => $template,
+        'data' => $data
+      ];
+
+      // Include schema if available
+      if (!empty($schema)) {
+        $post_data['schema'] = $schema;
+      }
+
+      $export_data['posts'][] = $post_data;
+    }
+
+    wp_send_json_success($export_data);
+  }
+
+  public function ajax_import_page_data() {
+    check_ajax_referer('yaml_cf_nonce', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+      wp_send_json_error('Permission denied');
+    }
+
+    if (!isset($_POST['data'])) {
+      wp_send_json_error('No data provided');
+    }
+
+    $import_data = json_decode(sanitize_textarea_field(wp_unslash($_POST['data'])), true);
+
+    // Validate import data
+    if (!$import_data || !isset($import_data['plugin']) || $import_data['plugin'] !== 'yaml-custom-fields') {
+      wp_send_json_error('Invalid import file format');
+    }
+
+    if (!isset($import_data['posts']) || !is_array($import_data['posts'])) {
+      wp_send_json_error('No posts found in import file');
+    }
+
+    $match_by = isset($import_data['match_by']) ? $import_data['match_by'] : 'slug';
+    $imported = 0;
+    $skipped = 0;
+    $errors = [];
+
+    foreach ($import_data['posts'] as $post_data) {
+      $target_post = null;
+
+      // Find the target post based on match_by preference
+      if ($match_by === 'id') {
+        $target_post = get_post($post_data['id']);
+      } else {
+        // Match by slug
+        $args = [
+          'name' => $post_data['slug'],
+          'post_type' => $post_data['type'],
+          'post_status' => 'any',
+          'posts_per_page' => 1
+        ];
+        $posts = get_posts($args);
+        if (!empty($posts)) {
+          $target_post = $posts[0];
+        }
+      }
+
+      if (!$target_post) {
+        $skipped++;
+        $errors[] = sprintf('Post not found: %s (slug: %s, id: %d)', $post_data['title'], $post_data['slug'], $post_data['id']);
+        continue;
+      }
+
+      // Validate attachments (images/files) and clean up missing ones
+      $cleaned_data = $this->validate_and_clean_attachment_data($post_data['data']);
+
+      // Update the post meta
+      update_post_meta($target_post->ID, '_yaml_cf_data', $cleaned_data);
+
+      // Mark as imported and store schema if available
+      update_post_meta($target_post->ID, '_yaml_cf_imported', true);
+      if (isset($post_data['schema'])) {
+        update_post_meta($target_post->ID, '_yaml_cf_schema', $post_data['schema']);
+      }
+
+      $imported++;
+    }
+
+    // Clear caches after import
+    $this->clear_data_caches();
+
+    wp_send_json_success([
+      'message' => sprintf('Import complete. %d imported, %d skipped.', $imported, $skipped),
+      'imported' => $imported,
+      'skipped' => $skipped,
+      'errors' => $errors,
+      'imported_from' => isset($import_data['site_url']) ? $import_data['site_url'] : 'unknown',
+      'exported_at' => isset($import_data['exported_at']) ? $import_data['exported_at'] : 'unknown'
+    ]);
+  }
+
+  private function validate_and_clean_attachment_data($data) {
+    if (!is_array($data)) {
+      return $data;
+    }
+
+    foreach ($data as $key => $value) {
+      if (is_array($value)) {
+        // Recursively clean nested arrays
+        $data[$key] = $this->validate_and_clean_attachment_data($value);
+      } elseif (is_numeric($value) && intval($value) > 0) {
+        // Check if this might be an attachment ID
+        $attachment = get_post(intval($value));
+        if ($attachment && $attachment->post_type === 'attachment') {
+          // Valid attachment, keep it
+          continue;
+        } elseif ($attachment) {
+          // It's a valid post ID but not an attachment, keep it
+          continue;
+        } else {
+          // Attachment doesn't exist, set to empty
+          $data[$key] = '';
+        }
+      }
+    }
+
+    return $data;
+  }
+
+  /**
+   * Clear all plugin caches
+   * Call this whenever custom field data changes
+   *
+   * @param int|null $post_id Optional. Specific post ID to clear cache for. If null, clears all.
+   */
+  private function clear_data_caches($post_id = null) {
+    // Clear validation page cache
+    wp_cache_delete('yaml_cf_validation_posts', 'yaml-custom-fields');
+
+    // Clear export page cache
+    wp_cache_delete('yaml_cf_posts_with_data', 'yaml-custom-fields');
+
+    // Clear WordPress post meta cache
+    // This ensures that get_post_meta() calls return fresh data
+    if ($post_id) {
+      // Clear cache for specific post
+      wp_cache_delete($post_id, 'post_meta');
+      clean_post_cache($post_id);
+    } else {
+      // Clear cache for all posts with custom field data
+      // Use a tracking option to avoid slow meta_query
+      $tracked_post_ids = get_option('yaml_cf_tracked_posts', []);
+
+      // If we have tracked posts, use those
+      if (!empty($tracked_post_ids)) {
+        foreach ($tracked_post_ids as $pid) {
+          wp_cache_delete($pid, 'post_meta');
+          clean_post_cache($pid);
+        }
+      } else {
+        // Fallback: Query all posts and filter in PHP (no meta_query)
+        // This only happens if tracking option is empty
+        $all_posts = get_posts([
+          'post_type' => 'any',
+          'post_status' => 'any',
+          'posts_per_page' => -1,
+          'fields' => 'ids',
+          'no_found_rows' => true,
+          'update_post_meta_cache' => false,
+          'update_post_term_cache' => false,
+        ]);
+
+        foreach ($all_posts as $pid) {
+          // Only clear cache if post has custom field data
+          if (metadata_exists('post', $pid, '_yaml_cf_data')) {
+            wp_cache_delete($pid, 'post_meta');
+            clean_post_cache($pid);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Export all data object types and their entries
+   */
+  public function export_data_objects() {
+    $data_object_types = get_option('yaml_cf_data_object_types', []);
+
+    $export_data = [
+      'plugin' => 'yaml-custom-fields',
+      'type' => 'data_objects',
+      'version' => YAML_CF_VERSION,
+      'site_url' => get_site_url(),
+      'exported_at' => current_time('mysql'),
+      'types' => []
+    ];
+
+    foreach ($data_object_types as $type_slug => $type_data) {
+      $entries = get_option('yaml_cf_data_object_entries_' . $type_slug, []);
+
+      // Clean attachment data in entries
+      $cleaned_entries = [];
+      foreach ($entries as $entry_id => $entry_data) {
+        $cleaned_entries[$entry_id] = $this->validate_and_clean_attachment_data($entry_data);
+      }
+
+      $export_data['types'][$type_slug] = [
+        'name' => $type_data['name'],
+        'schema' => $type_data['schema'],
+        'entries' => $cleaned_entries
+      ];
+    }
+
+    // Set headers for download
+    $filename = 'yaml-cf-data-objects-' . sanitize_file_name(wp_parse_url(get_site_url(), PHP_URL_HOST)) . '-' . gmdate('Y-m-d-His') . '.json';
+    nocache_headers();
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Type: application/json; charset=utf-8');
+
+    echo wp_json_encode($export_data, JSON_PRETTY_PRINT);
+  }
+
+  /**
+   * Import data object types and entries via AJAX
+   */
+  public function ajax_import_data_objects() {
+    check_ajax_referer('yaml_cf_nonce', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+      wp_send_json_error('Permission denied');
+    }
+
+    if (!isset($_POST['data'])) {
+      wp_send_json_error('No data provided');
+    }
+
+    $import_data = json_decode(sanitize_textarea_field(wp_unslash($_POST['data'])), true);
+
+    // Validate import data
+    if (!$import_data || !isset($import_data['plugin']) || $import_data['plugin'] !== 'yaml-custom-fields') {
+      wp_send_json_error('Invalid import file format');
+    }
+
+    if (!isset($import_data['type']) || $import_data['type'] !== 'data_objects') {
+      wp_send_json_error('Invalid import file type. Expected data_objects export file.');
+    }
+
+    if (!isset($import_data['types']) || !is_array($import_data['types'])) {
+      wp_send_json_error('No data object types found in import file');
+    }
+
+    $types_imported = 0;
+    $entries_imported = 0;
+    $errors = [];
+
+    // Get existing types
+    $existing_types = get_option('yaml_cf_data_object_types', []);
+
+    foreach ($import_data['types'] as $type_slug => $type_data) {
+      // Validate required fields
+      if (!isset($type_data['name']) || !isset($type_data['schema'])) {
+        $errors[] = sprintf('Invalid type data for: %s', $type_slug);
+        continue;
+      }
+
+      // Import/update the type
+      $existing_types[$type_slug] = [
+        'name' => $type_data['name'],
+        'schema' => $type_data['schema']
+      ];
+
+      // Import entries
+      if (isset($type_data['entries']) && is_array($type_data['entries'])) {
+        $cleaned_entries = [];
+        foreach ($type_data['entries'] as $entry_id => $entry_data) {
+          // Clean attachment data
+          $cleaned_entries[$entry_id] = $this->validate_and_clean_attachment_data($entry_data);
+          $entries_imported++;
+        }
+
+        update_option('yaml_cf_data_object_entries_' . $type_slug, $cleaned_entries);
+      }
+
+      $types_imported++;
+    }
+
+    // Save updated types
+    update_option('yaml_cf_data_object_types', $existing_types);
+
+    wp_send_json_success([
+      'message' => sprintf('Import complete. %d types imported with %d total entries.', $types_imported, $entries_imported),
+      'types_imported' => $types_imported,
+      'entries_imported' => $entries_imported,
+      'errors' => $errors,
+      'exported_at' => isset($import_data['exported_at']) ? $import_data['exported_at'] : 'unknown'
+    ]);
+  }
+
 }
 
 function yaml_cf_init() {
@@ -1191,15 +3032,34 @@ add_action('plugins_loaded', 'yaml_cf_init');
  * Get a specific field value from YAML Custom Fields data
  *
  * @param string $field_name The name of the field to retrieve
- * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param int|string|null $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param array|null $context_data Optional. Array data to search in (useful for nested blocks). Defaults to null.
  * @return mixed The field value, or null if not found
  *
- * Usage in templates:
- * - For page/post: $hero = yaml_cf_get_field('hero');
- * - For specific post: $hero = yaml_cf_get_field('hero', 123);
- * - For partial: $logo = yaml_cf_get_field('logo', 'partial:header.php');
+ * Usage Examples:
+ *
+ * Basic Usage (Current Page):
+ *   $title = yaml_cf_get_field('hero_title', null);
+ *
+ * Specific Post:
+ *   $title = yaml_cf_get_field('hero_title', 123);
+ *
+ * Partial Template:
+ *   $logo = yaml_cf_get_field('logo', 'partial:header.php');
+ *
+ * Block Fields (with context):
+ *   $blocks = yaml_cf_get_field('features', null);
+ *   foreach ($blocks as $block) {
+ *     $title = yaml_cf_get_field('title', null, $block);
+ *     $description = yaml_cf_get_field('description', null, $block);
+ *   }
  */
-function yaml_cf_get_field($field_name, $post_id = null) {
+function yaml_cf_get_field($field_name, $post_id = null, $context_data = null) {
+  // If context data is provided, search within that array
+  if (is_array($context_data)) {
+    return isset($context_data[$field_name]) ? $context_data[$field_name] : null;
+  }
+
   // Handle partials
   if (is_string($post_id) && strpos($post_id, 'partial:') === 0) {
     $partial_file = str_replace('partial:', '', $post_id);
@@ -1280,15 +3140,19 @@ function yaml_cf_has_field($field_name, $post_id = null) {
 if (!function_exists('ycf_get_field')) {
   /**
    * Alias for yaml_cf_get_field()
+   *
+   * @deprecated Use yaml_cf_get_field() instead
    */
-  function ycf_get_field($field_name, $post_id = null) {
-    return yaml_cf_get_field($field_name, $post_id);
+  function ycf_get_field($field_name, $post_id = null, $context_data = null) {
+    return yaml_cf_get_field($field_name, $post_id, $context_data);
   }
 }
 
 if (!function_exists('ycf_get_fields')) {
   /**
    * Alias for yaml_cf_get_fields()
+   *
+   * @deprecated Use yaml_cf_get_fields() instead
    */
   function ycf_get_fields($post_id = null) {
     return yaml_cf_get_fields($post_id);
@@ -1298,6 +3162,8 @@ if (!function_exists('ycf_get_fields')) {
 if (!function_exists('ycf_has_field')) {
   /**
    * Alias for yaml_cf_has_field()
+   *
+   * @deprecated Use yaml_cf_has_field() instead
    */
   function ycf_has_field($field_name, $post_id = null) {
     return yaml_cf_has_field($field_name, $post_id);
@@ -1309,12 +3175,39 @@ if (!function_exists('ycf_has_field')) {
  * Returns an array with image information
  *
  * @param string $field_name The name of the image field
- * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param int|string|null $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
  * @param string $size Optional. Image size (thumbnail, medium, large, full). Defaults to 'full'.
- * @return array|null Array with 'id', 'url', 'alt', 'width', 'height' keys or null if not found
+ * @param array|null $context_data Optional. Array data to search in (useful for nested blocks). Defaults to null.
+ * @return array|null Array with 'id', 'url', 'alt', 'title', 'caption', 'description', 'width', 'height' keys or null if not found
+ *
+ * Usage Examples:
+ *
+ * Basic Usage (Current Page):
+ *   $hero = yaml_cf_get_image('hero_image', null, 'large');
+ *   if ($hero) {
+ *     echo '<img src="' . esc_url($hero['url']) . '" alt="' . esc_attr($hero['alt']) . '" />';
+ *   }
+ *
+ * With Different Sizes:
+ *   $thumb = yaml_cf_get_image('featured_image', null, 'thumbnail');
+ *   $medium = yaml_cf_get_image('featured_image', null, 'medium');
+ *   $large = yaml_cf_get_image('featured_image', null, 'large');
+ *   $full = yaml_cf_get_image('featured_image', null, 'full');
+ *
+ * Block Fields (with context):
+ *   $blocks = yaml_cf_get_field('team_members', null);
+ *   foreach ($blocks as $block) {
+ *     $photo = yaml_cf_get_image('photo', null, 'thumbnail', $block);
+ *     if ($photo) {
+ *       echo '<img src="' . esc_url($photo['url']) . '" alt="' . esc_attr($photo['alt']) . '" />';
+ *     }
+ *   }
+ *
+ * Partial Template:
+ *   $logo = yaml_cf_get_image('site_logo', 'partial:header.php', 'medium');
  */
-function ycf_get_image($field_name, $post_id = null, $size = 'full') {
-  $attachment_id = ycf_get_field($field_name, $post_id);
+function yaml_cf_get_image($field_name, $post_id = null, $size = 'full', $context_data = null) {
+  $attachment_id = yaml_cf_get_field($field_name, $post_id, $context_data);
 
   if (!$attachment_id || !is_numeric($attachment_id)) {
     return null;
@@ -1344,16 +3237,53 @@ function ycf_get_image($field_name, $post_id = null, $size = 'full') {
   return $image_data;
 }
 
+if (!function_exists('ycf_get_image')) {
+  /**
+   * Alias for yaml_cf_get_image()
+   *
+   * @deprecated Use yaml_cf_get_image() instead
+   */
+  function ycf_get_image($field_name, $post_id = null, $size = 'full', $context_data = null) {
+    return yaml_cf_get_image($field_name, $post_id, $size, $context_data);
+  }
+}
+
 /**
  * Get file data for a file field
  * Returns an array with file information
  *
  * @param string $field_name The name of the file field
- * @param int|string $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
- * @return array|null Array with 'id', 'url', 'filename', 'filesize', 'mime_type' keys or null if not found
+ * @param int|string|null $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param array|null $context_data Optional. Array data to search in (useful for nested blocks). Defaults to null.
+ * @return array|null Array with 'id', 'url', 'path', 'filename', 'filesize', 'mime_type', 'title' keys or null if not found
+ *
+ * Usage Examples:
+ *
+ * Basic Usage (Current Page):
+ *   $pdf = yaml_cf_get_file('brochure', null);
+ *   if ($pdf) {
+ *     echo '<a href="' . esc_url($pdf['url']) . '" download>' . esc_html($pdf['filename']) . '</a>';
+ *     echo '<span>(' . size_format($pdf['filesize']) . ')</span>';
+ *   }
+ *
+ * Block Fields (with context):
+ *   $blocks = yaml_cf_get_field('downloads', null);
+ *   foreach ($blocks as $block) {
+ *     $file = yaml_cf_get_file('document', null, $block);
+ *     $title = yaml_cf_get_field('title', null, $block);
+ *     if ($file) {
+ *       echo '<div class="download">';
+ *       echo '<h3>' . esc_html($title) . '</h3>';
+ *       echo '<a href="' . esc_url($file['url']) . '">' . esc_html($file['filename']) . '</a>';
+ *       echo '</div>';
+ *     }
+ *   }
+ *
+ * Partial Template:
+ *   $terms = yaml_cf_get_file('terms_pdf', 'partial:footer.php');
  */
-function ycf_get_file($field_name, $post_id = null) {
-  $attachment_id = ycf_get_field($field_name, $post_id);
+function yaml_cf_get_file($field_name, $post_id = null, $context_data = null) {
+  $attachment_id = yaml_cf_get_field($field_name, $post_id, $context_data);
 
   if (!$attachment_id || !is_numeric($attachment_id)) {
     return null;
@@ -1377,6 +3307,254 @@ function ycf_get_file($field_name, $post_id = null) {
   ];
 }
 
+if (!function_exists('ycf_get_file')) {
+  /**
+   * Alias for yaml_cf_get_file()
+   *
+   * @deprecated Use yaml_cf_get_file() instead
+   */
+  function ycf_get_file($field_name, $post_id = null, $context_data = null) {
+    return yaml_cf_get_file($field_name, $post_id, $context_data);
+  }
+}
+
+/**
+ * Get term/taxonomy data for a taxonomy field
+ * Returns term object(s) or an array of term objects
+ *
+ * @param string $field_name The name of the taxonomy field
+ * @param int|string|null $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param array|null $context_data Optional. Array data to search in (useful for nested blocks). Defaults to null.
+ * @return WP_Term|WP_Term[]|null Single term object, array of term objects, or null if not found
+ *
+ * Usage Examples:
+ *
+ * Basic Usage (Single Category):
+ *   $category = yaml_cf_get_term('post_category', null);
+ *   if ($category) {
+ *     echo '<a href="' . get_term_link($category) . '">' . esc_html($category->name) . '</a>';
+ *   }
+ *
+ * Multiple Categories:
+ *   $categories = yaml_cf_get_term('post_categories', null);
+ *   if ($categories && is_array($categories)) {
+ *     foreach ($categories as $category) {
+ *       echo '<span>' . esc_html($category->name) . '</span>';
+ *     }
+ *   }
+ *
+ * Block Fields (with context):
+ *   $blocks = yaml_cf_get_field('articles', null);
+ *   foreach ($blocks as $block) {
+ *     $category = yaml_cf_get_term('category', null, $block);
+ *     if ($category) {
+ *       echo '<span class="cat">' . esc_html($category->name) . '</span>';
+ *     }
+ *   }
+ */
+function yaml_cf_get_term($field_name, $post_id = null, $context_data = null) {
+  $term_ids = yaml_cf_get_field($field_name, $post_id, $context_data);
+
+  if (!$term_ids) {
+    return null;
+  }
+
+  // Handle single term ID
+  if (is_numeric($term_ids)) {
+    $term = get_term($term_ids);
+    return (!is_wp_error($term) && $term) ? $term : null;
+  }
+
+  // Handle multiple term IDs
+  if (is_array($term_ids)) {
+    $terms = [];
+    foreach ($term_ids as $term_id) {
+      if (is_numeric($term_id)) {
+        $term = get_term($term_id);
+        if (!is_wp_error($term) && $term) {
+          $terms[] = $term;
+        }
+      }
+    }
+    return !empty($terms) ? $terms : null;
+  }
+
+  return null;
+}
+
+if (!function_exists('ycf_get_term')) {
+  /**
+   * Alias for yaml_cf_get_term()
+   *
+   * @deprecated Use yaml_cf_get_term() instead
+   */
+  function ycf_get_term($field_name, $post_id = null, $context_data = null) {
+    return yaml_cf_get_term($field_name, $post_id, $context_data);
+  }
+}
+
+/**
+ * Get post type object for a post_type field
+ * Returns WP_Post_Type object
+ *
+ * @param string $field_name The name of the post_type field
+ * @param int|string|null $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param array|null $context_data Optional. Array data to search in (useful for nested blocks). Defaults to null.
+ * @return WP_Post_Type|null Post type object or null if not found
+ *
+ * Usage Examples:
+ *
+ * Basic Usage (Current Page):
+ *   $post_type = yaml_cf_get_post_type('content_type', null);
+ *   if ($post_type) {
+ *     echo '<h2>' . esc_html($post_type->label) . '</h2>';
+ *     echo '<p>Slug: ' . esc_html($post_type->name) . '</p>';
+ *   }
+ *
+ * Block Fields (with context):
+ *   $blocks = yaml_cf_get_field('content_blocks', null);
+ *   foreach ($blocks as $block) {
+ *     $post_type = yaml_cf_get_post_type('type', null, $block);
+ *     if ($post_type) {
+ *       echo '<span class="type">' . esc_html($post_type->label) . '</span>';
+ *     }
+ *   }
+ *
+ * Partial Template:
+ *   $post_type = yaml_cf_get_post_type('archive_type', 'partial:header.php');
+ */
+function yaml_cf_get_post_type($field_name, $post_id = null, $context_data = null) {
+  $post_type_slug = yaml_cf_get_field($field_name, $post_id, $context_data);
+
+  if (!$post_type_slug || !is_string($post_type_slug)) {
+    return null;
+  }
+
+  $post_type_object = get_post_type_object($post_type_slug);
+  return $post_type_object ? $post_type_object : null;
+}
+
+if (!function_exists('ycf_get_post_type')) {
+  /**
+   * Alias for yaml_cf_get_post_type()
+   *
+   * @deprecated Use yaml_cf_get_post_type() instead
+   */
+  function ycf_get_post_type($field_name, $post_id = null, $context_data = null) {
+    return yaml_cf_get_post_type($field_name, $post_id, $context_data);
+  }
+}
+
+/**
+ * Get data object entry for a data_object field
+ * Returns array with entry data
+ *
+ * @param string $field_name The name of the data_object field
+ * @param int|string|null $post_id Optional. Post ID or 'partial:filename' for partials. Defaults to current post.
+ * @param array|null $context_data Optional. Array data to search in (useful for nested blocks). Defaults to null.
+ * @return array|null Array with entry data or null if not found
+ *
+ * Usage Examples:
+ *
+ * Basic Usage (Current Page):
+ *   $university = yaml_cf_get_data_object('university', null);
+ *   if ($university) {
+ *     echo '<h2>' . esc_html($university['name']) . '</h2>';
+ *     echo '<p>' . esc_html($university['description']) . '</p>';
+ *     $logo = $university['logo']; // Image ID
+ *   }
+ *
+ * Block Fields (with context):
+ *   $blocks = yaml_cf_get_field('event_blocks', null);
+ *   foreach ($blocks as $block) {
+ *     $university = yaml_cf_get_data_object('university', null, $block);
+ *     if ($university) {
+ *       echo '<p>Host: ' . esc_html($university['name']) . '</p>';
+ *     }
+ *   }
+ *
+ * Partial Template:
+ *   $featured_company = yaml_cf_get_data_object('company', 'partial:header.php');
+ */
+function yaml_cf_get_data_object($field_name, $post_id = null, $context_data = null) {
+  $entry_id = yaml_cf_get_field($field_name, $post_id, $context_data);
+
+  if (!$entry_id || !is_string($entry_id)) {
+    return null;
+  }
+
+  // We need to know which object type this entry belongs to
+  // The field should have stored just the entry_id, but we need to search all types
+  // This is not ideal - better to store object_type:entry_id or have a way to know the type
+
+  // For now, search all object types for this entry_id
+  $data_object_types = get_option('yaml_cf_data_object_types', []);
+
+  foreach ($data_object_types as $type_slug => $type_data) {
+    $entries = get_option('yaml_cf_data_object_entries_' . $type_slug, []);
+    if (isset($entries[$entry_id])) {
+      return $entries[$entry_id];
+    }
+  }
+
+  return null;
+}
+
+if (!function_exists('ycf_get_data_object')) {
+  /**
+   * Alias for yaml_cf_get_data_object()
+   *
+   * @deprecated Use yaml_cf_get_data_object() instead
+   */
+  function ycf_get_data_object($field_name, $post_id = null, $context_data = null) {
+    return yaml_cf_get_data_object($field_name, $post_id, $context_data);
+  }
+}
+
+/**
+ * Get all data object entries of a specific type
+ *
+ * @param string $object_type The slug of the data object type (e.g., 'universities')
+ * @return array Array of entries with entry_id as keys and entry data as values
+ *
+ * Usage Examples:
+ *
+ * Get all universities:
+ *   $universities = yaml_cf_get_data_objects('universities');
+ *   foreach ($universities as $entry_id => $university) {
+ *     echo '<h3>' . esc_html($university['name']) . '</h3>';
+ *   }
+ *
+ * Filter and display:
+ *   $companies = yaml_cf_get_data_objects('companies');
+ *   if (!empty($companies)) {
+ *     foreach ($companies as $id => $company) {
+ *       echo '<div class="company">';
+ *       echo '<h4>' . esc_html($company['name']) . '</h4>';
+ *       echo '</div>';
+ *     }
+ *   }
+ */
+function yaml_cf_get_data_objects($object_type) {
+  if (empty($object_type) || !is_string($object_type)) {
+    return [];
+  }
+
+  $entries = get_option('yaml_cf_data_object_entries_' . $object_type, []);
+  return is_array($entries) ? $entries : [];
+}
+
+if (!function_exists('ycf_get_data_objects')) {
+  /**
+   * Alias for yaml_cf_get_data_objects()
+   *
+   * @deprecated Use yaml_cf_get_data_objects() instead
+   */
+  function ycf_get_data_objects($object_type) {
+    return yaml_cf_get_data_objects($object_type);
+  }
+}
+
 register_uninstall_hook(__FILE__, 'yaml_cf_uninstall');
 
 function yaml_cf_uninstall() {
@@ -1386,6 +3564,15 @@ function yaml_cf_uninstall() {
 
   // Delete all post meta for this plugin across all posts
   delete_post_meta_by_key('_yaml_cf_data');
+
+  // Delete data object types and their entries
+  $data_object_types = get_option('yaml_cf_data_object_types', []);
+  if (!empty($data_object_types)) {
+    foreach ($data_object_types as $type_slug => $type_data) {
+      delete_option('yaml_cf_data_object_entries_' . $type_slug);
+    }
+  }
+  delete_option('yaml_cf_data_object_types');
 
   // Clear template cache
   delete_transient('yaml_cf_templates_' . get_stylesheet());

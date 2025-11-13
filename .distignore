@@ -1,0 +1,31 @@
+# Version control
+.git
+.gitignore
+.distignore
+
+# macOS
+.DS_Store
+._*
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Development
+node_modules
+.phpcs.xml
+.eslintrc
+composer.json
+composer.lock
+package.json
+package-lock.json
+
+# Documentation (if using GitHub README instead of WordPress readme.txt)
+# README.md
+
+# CI/CD
+.github
+
+# Tests
+tests
+phpunit.xml

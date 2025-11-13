@@ -8,10 +8,11 @@
   margin: 20px 0;
 }
 
-.yaml-cf-admin-container .button {
+.wp-core-ui .yaml-cf-admin-container .button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  vertical-align: middle;
 }
 
 /* Header with Logo */
@@ -66,7 +67,7 @@
 /* Table Styles */
 .wp-list-table .dashicons-yes-alt {
   vertical-align: middle;
-  margin-top: 5px;
+  /* margin-top: 5px; */
   margin-left: 8px;
 }
 
@@ -275,6 +276,15 @@
   background: #f5f5f5;
 }
 
+/* Page header */
+.yaml-cf-meta-box-header a {
+  display: inline-block;
+}
+
+.yaml-cf-meta-box-header label {
+  vertical-align: top;
+}
+
 /* Image and File Upload */
 .yaml-cf-media-buttons {
   display: flex;
@@ -306,7 +316,7 @@
 .yaml-cf-image-preview img {
   border: 1px solid #ddd;
   padding: 5px;
-  background: #fff;
+  background: #efedec;
 }
 
 .yaml-cf-file-name {
@@ -543,9 +553,8 @@
   line-height: 1.6;
 }
 
-/*
 .yaml-cf-docs-content h2 {
-  color: #fdf3f7;
+  color: #1d2327;
   font-size: 28px;
   font-weight: 600;
   margin-top: 40px;
@@ -559,7 +568,7 @@
 }
 
 .yaml-cf-docs-content h3 {
-  color: #fdf3f7;
+  color: #1d2327;
   font-size: 22px;
   font-weight: 600;
   margin-top: 30px;
@@ -568,7 +577,7 @@
 
 .yaml-cf-docs-content p {
   margin-bottom: 15px;
-  color: #fcf3fa;
+  color: #1d2327;
 }
 
 .yaml-cf-docs-content ul {
@@ -578,7 +587,7 @@
 
 .yaml-cf-docs-content li {
   margin-bottom: 8px;
-  color: #fcf3fa;
+  color: #1d2327;
 }
 
 .yaml-cf-docs-content a {
@@ -593,8 +602,8 @@
 }
 
 .yaml-cf-docs-content strong {
-  font-weight: 500;
-  color: #fdf3f7;
+  font-weight: 600;
+  color: #1d2327;
 }
 
 .yaml-cf-docs-content blockquote {
@@ -604,7 +613,7 @@
   background: #f6f7f7;
   font-style: italic;
   color: #50575e;
-} */
+}
 
 @media screen and (max-width: 600px) {
   .wp-table-wrap {
@@ -615,6 +624,163 @@
     white-space: nowrap;
     width: fit-content;
   }
+}
+
+/* Code Snippet Wrapper */
+.yaml-cf-snippet-wrapper {
+  display: inline-block;
+  position: relative;
+  margin-left: 8px;
+}
+
+/* Code Snippet Copy Button */
+.yaml-cf-copy-snippet {
+  background: #f0f0f1;
+  border: 1px solid #c3c4c7;
+  border-radius: 3px;
+  padding: 3px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+  vertical-align: middle;
+  font-size: 12px;
+  font-weight: 500;
+  color: #2c3338;
+}
+
+.yaml-cf-copy-snippet:hover {
+  background: #2271b1;
+  border-color: #2271b1;
+  color: #fff;
+}
+
+.yaml-cf-copy-snippet .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  line-height: 1;
+}
+
+.yaml-cf-copy-snippet:hover .dashicons {
+  color: #fff;
+}
+
+.yaml-cf-copy-snippet .snippet-text {
+  line-height: 1;
+}
+
+.yaml-cf-copy-snippet.copied {
+  background: #46b450;
+  border-color: #46b450;
+  color: #fff;
+}
+
+.yaml-cf-copy-snippet.copied .dashicons {
+  color: #fff;
+}
+
+/* Code Snippet Hover Popover */
+.yaml-cf-snippet-popover {
+  position: absolute;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  z-index: 10000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  min-width: 200px;
+  max-width: 450px;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  line-height: 1.6;
+  pointer-events: none;
+}
+
+.yaml-cf-snippet-popover.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.yaml-cf-snippet-popover::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  margin-left: -6px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid #1e1e1e;
+}
+
+.yaml-cf-snippet-popover code {
+  display: block;
+  color: #9cdcfe;
+  background: transparent;
+  padding: 0;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  user-select: all;
+  cursor: text;
+}
+
+.yaml-cf-snippet-popover .snippet-hint {
+  font-size: 11px;
+  color: #808080;
+  margin-top: 8px;
+  font-style: italic;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  user-select: none;
+}
+
+/* Code Snippet Tooltip (for after copy) */
+.yaml-cf-snippet-tooltip {
+  position: absolute;
+  background: #46b450;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 10001;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  animation: tooltipFadeIn 0.2s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.yaml-cf-snippet-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  margin-left: -5px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid #46b450;
 }
 
 /* Responsive */
@@ -687,5 +853,22 @@
   .yaml-cf-block-type-select {
     max-width: 100%;
     width: 100%;
+  }
+
+  /* Code snippet adjustments for mobile */
+  .yaml-cf-copy-snippet .snippet-text {
+    display: none;
+  }
+
+  .yaml-cf-snippet-popover {
+    max-width: calc(100vw - 40px);
+    left: 10px;
+    right: 10px;
+    transform: none;
+  }
+
+  .yaml-cf-snippet-popover::before {
+    left: 20px;
+    margin-left: 0;
   }
 }
