@@ -1283,34 +1283,20 @@ class YAML_Custom_Fields {
     // Get all template files
     $template_files = $theme->get_files('php', -1); // -1 for unlimited depth
 
-    // WordPress template hierarchy - only main templates, not partials
+    // WordPress template hierarchy - only templates tied to specific posts/pages
     $valid_template_patterns = [
-      'index.php',
-      'front-page.php',
-      'home.php',
       'page.php',
       'single.php',
-      'archive.php',
-      'category.php',
-      'tag.php',
-      'taxonomy.php',
-      'author.php',
-      'date.php',
-      'search.php',
       'attachment.php',
-      '404.php',
       // Specific templates with prefixes
       'page-*.php',
       'single-*.php',
-      'archive-*.php',
-      'category-*.php',
-      'tag-*.php',
-      'taxonomy-*.php',
-      'author-*.php'
     ];
 
     // Partial patterns (automatic detection)
+    // These are templates with global data (not post-specific)
     $partial_patterns = [
+      // Traditional partials
       'header.php',
       'footer.php',
       'sidebar.php',
@@ -1320,7 +1306,24 @@ class YAML_Custom_Fields {
       'content.php',
       'content-*.php',
       'comments.php',
-      'searchform.php'
+      'searchform.php',
+      // Archive/listing templates (global data)
+      'index.php',
+      'front-page.php',
+      'home.php',
+      'archive.php',
+      'archive-*.php',
+      'category.php',
+      'category-*.php',
+      'tag.php',
+      'tag-*.php',
+      'taxonomy.php',
+      'taxonomy-*.php',
+      'author.php',
+      'author-*.php',
+      'date.php',
+      'search.php',
+      '404.php',
     ];
 
     foreach ($template_files as $file => $path) {

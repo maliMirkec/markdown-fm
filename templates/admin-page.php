@@ -34,8 +34,8 @@ if (!defined('ABSPATH')) {
     </p>
     </div>
 
-    <h2><?php esc_html_e('Page Templates', 'yaml-custom-fields'); ?></h2>
-    <p><?php esc_html_e('Configure YAML schemas for page templates. Data for these templates is stored per post/page.', 'yaml-custom-fields'); ?></p>
+    <h2><?php esc_html_e('Page & Post Templates', 'yaml-custom-fields'); ?></h2>
+    <p><?php esc_html_e('Configure YAML schemas for individual pages and posts. Data is stored per post/page and editable in the post editor.', 'yaml-custom-fields'); ?></p>
 
     <?php if (empty($templates)) : ?>
     <p><?php esc_html_e('No templates found in the current theme.', 'yaml-custom-fields'); ?></p>
@@ -89,8 +89,8 @@ if (!defined('ABSPATH')) {
     </div>
     <?php endif; ?>
 
-    <h2 style="margin-top: 40px;"><?php esc_html_e('Template Partials', 'yaml-custom-fields'); ?></h2>
-    <p><?php esc_html_e('Configure YAML schemas for template partials (header, footer, sidebar, etc.). Data for partials is stored globally and can be managed below.', 'yaml-custom-fields'); ?></p>
+    <h2 style="margin-top: 40px;"><?php esc_html_e('Template Partials & Archives', 'yaml-custom-fields'); ?></h2>
+    <p><?php esc_html_e('Configure YAML schemas for template partials (header, footer, sidebar, etc.) and archive pages (archive-events.php, category.php, etc.). Data is stored globally and can be managed below.', 'yaml-custom-fields'); ?></p>
 
     <?php if (empty($partials)) : ?>
     <p><?php esc_html_e('No partials found in the current theme.', 'yaml-custom-fields'); ?></p>
@@ -99,7 +99,7 @@ if (!defined('ABSPATH')) {
       <table class="wp-list-table widefat striped">
         <thead>
             <tr>
-                <th><?php esc_html_e('Partial Name', 'yaml-custom-fields'); ?></th>
+                <th><?php esc_html_e('Template Name', 'yaml-custom-fields'); ?></th>
                 <th><?php esc_html_e('File', 'yaml-custom-fields'); ?></th>
                 <th><?php esc_html_e('Enable YAML', 'yaml-custom-fields'); ?></th>
                 <th><?php esc_html_e('Schema', 'yaml-custom-fields'); ?></th>
