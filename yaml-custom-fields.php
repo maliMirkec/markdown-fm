@@ -15,20 +15,20 @@ if (!defined('ABSPATH')) {
   exit;
 }
 
-// Load Composer autoloader
-if (file_exists(__DIR__ . '/vendor/autoload.php')) {
-  require_once __DIR__ . '/vendor/autoload.php';
+// Load scoped Composer dependencies to avoid conflicts with other plugins
+if (file_exists(__DIR__ . '/build/vendor/scoper-autoload.php')) {
+  require_once __DIR__ . '/build/vendor/scoper-autoload.php';
 } else {
   add_action('admin_notices', function() {
     echo '<div class="notice notice-error"><p>';
-    echo '<strong>YAML Custom Fields:</strong> Please run <code>composer install</code> in the plugin directory to install dependencies.';
+    echo '<strong>YAML Custom Fields:</strong> Dependencies not found. Please run <code>./build-scoped.sh</code> in the plugin directory to build scoped dependencies.';
     echo '</p></div>';
   });
   return;
 }
 
-use Symfony\Component\Yaml\Yaml;
-use Symfony\Component\Yaml\Exception\ParseException;
+use YamlCF\Vendor\Symfony\Component\Yaml\Yaml;
+use YamlCF\Vendor\Symfony\Component\Yaml\Exception\ParseException;
 
 define('YAML_CF_VERSION', '1.1.0');
 define('YAML_CF_PLUGIN_DIR', plugin_dir_path(__FILE__));

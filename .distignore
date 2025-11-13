@@ -2,6 +2,7 @@
 .git
 .gitignore
 .distignore
+.gitattributes
 
 # macOS
 .DS_Store
@@ -11,21 +12,41 @@
 Thumbs.db
 desktop.ini
 
-# Development
+# Development files (not needed in distribution)
 node_modules
 .phpcs.xml
 .eslintrc
 composer.json
 composer.lock
+composer.phar
 package.json
 package-lock.json
 
-# Documentation (if using GitHub README instead of WordPress readme.txt)
+# Build tooling (users don't need these)
+vendor/
+scoper.inc.php
+build-scoped.sh
+BUILD.md
+RELEASE.md
+package-for-wporg.sh
+build/composer.json
+
+# Documentation (GitHub only)
 # README.md
 
 # CI/CD
 .github
+.claude
 
 # Tests
 tests
 phpunit.xml
+
+# Screenshots and assets for wp.org
+# These are usually uploaded separately to the assets folder
+*.png
+*.jpg
+*.gif
+banner-*.png
+icon-*.png
+screenshot-*.png

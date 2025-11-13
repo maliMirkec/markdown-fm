@@ -8,6 +8,9 @@
     "symfony/yaml": "^5.4",
     "symfony/deprecation-contracts": "^2.1"
   },
+  "require-dev": {
+    "humbug/php-scoper": "^0.18"
+  },
   "autoload": {
     "psr-4": {
       "YamlCF\\": "src/"
