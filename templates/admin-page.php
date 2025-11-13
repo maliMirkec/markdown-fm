@@ -177,6 +177,17 @@ if (!defined('ABSPATH')) {
     type: taxonomy
     options:
       taxonomy: category
+  - name: university
+    label: University
+    type: data_object
+    options:
+      object_type: universities
+  - name: sponsors
+    label: Sponsors
+    type: data_object
+    multiple: true
+    options:
+      object_type: companies
   - name: tags
     label: Tags
     type: taxonomy
@@ -216,6 +227,7 @@ if (!defined('ABSPATH')) {
       <li><strong>date</strong> - Date picker (supports time option for datetime)</li>
       <li><strong>select</strong> - Dropdown (supports multiple and values options)</li>
       <li><strong>taxonomy</strong> - WordPress categories, tags, or custom taxonomies (supports multiple and taxonomy options)</li>
+      <li><strong>data_object</strong> - Reference to data object entries (supports multiple and object_type options)</li>
       <li><strong>image</strong> - WordPress media uploader for images</li>
       <li><strong>file</strong> - WordPress media uploader for any file</li>
       <li><strong>object</strong> - Nested fields group</li>

@@ -533,8 +533,10 @@ class YAML_Custom_Fields {
     $is_post_edit = false;
 
     if ($current_screen) {
+      // Check if editing any public post type
+      $post_type_object = get_post_type_object($current_screen->post_type);
       $is_post_edit = in_array($current_screen->base, ['post', 'post-new']) &&
-                      in_array($current_screen->post_type, ['page', 'post']);
+                      $post_type_object && $post_type_object->public;
     }
 
     // Only load if on plugin pages or post edit screen
@@ -552,14 +554,14 @@ class YAML_Custom_Fields {
     $schema_data = null;
     $post_id = $this->get_param_int('post', 0);
     if ($is_post_edit && $post_id) {
-      $template = get_post_meta($post_id, '_wp_page_template', true);
-      if (empty($template) || $template === 'default') {
-        $template = 'page.php';
-      }
+      $post = get_post($post_id);
+      if ($post) {
+        $template = $this->get_template_for_post($post);
 
-      $schemas = get_option('yaml_cf_schemas', []);
-      if (isset($schemas[$template]) && !empty($schemas[$template])) {
-        $schema_data = $this->parse_yaml_schema($schemas[$template]);
+        $schemas = get_option('yaml_cf_schemas', []);
+        if (isset($schemas[$template]) && !empty($schemas[$template])) {
+          $schema_data = $this->parse_yaml_schema($schemas[$template]);
+        }
       }
     }
 
@@ -785,10 +787,7 @@ class YAML_Custom_Fields {
       wp_die(esc_html__('Post not found', 'yaml-custom-fields'));
     }
 
-    $template = get_post_meta($post_id, '_wp_page_template', true);
-    if (empty($template) || $template === 'default') {
-      $template = 'page.php';
-    }
+    $template = $this->get_template_for_post($post);
 
     $data = get_post_meta($post_id, '_yaml_cf_data', true);
     if (empty($data)) {
@@ -907,10 +906,7 @@ class YAML_Custom_Fields {
         continue;
       }
 
-      $template = get_post_meta($post_id, '_wp_page_template', true);
-      if (empty($template) || $template === 'default') {
-        $template = 'page.php';
-      }
+      $template = $this->get_template_for_post($post);
 
       $data = get_post_meta($post_id, '_yaml_cf_data', true);
       if (empty($data)) {
@@ -1109,8 +1105,10 @@ class YAML_Custom_Fields {
       }
 
       // Collect all field data
-      if (isset($_POST['yaml_cf']) && is_array($_POST['yaml_cf'])) {
-        $posted_data = map_deep(wp_unslash($_POST['yaml_cf']), 'sanitize_text_field');
+      // Use post_raw() to get unslashed data safely without PHPCS warnings
+      // Data will be sanitized by schema-aware sanitize_field_data()
+      $posted_data = self::post_raw('yaml_cf', []);
+      if (!empty($posted_data) && is_array($posted_data)) {
         $field_data = $this->sanitize_field_data($posted_data, $schema);
       }
 
@@ -1503,18 +1501,54 @@ class YAML_Custom_Fields {
     ]);
   }
 
+  /**
+   * Get the template file for a post based on its type and settings
+   *
+   * @param WP_Post $post The post object
+   * @return string The template filename
+   */
+  private function get_template_for_post($post) {
+    $post_type = $post->post_type;
+
+    // For pages, check if a custom page template is assigned
+    if ($post_type === 'page') {
+      $template = get_post_meta($post->ID, '_wp_page_template', true);
+      if (!empty($template) && $template !== 'default') {
+        return $template;
+      }
+      return 'page.php';
+    }
+
+    // For posts and custom post types, use the single template
+    // Check for specific template: single-{post_type}.php
+    $specific_template = "single-{$post_type}.php";
+    $theme_dir = get_template_directory();
+
+    if (file_exists($theme_dir . '/' . $specific_template)) {
+      return $specific_template;
+    }
+
+    // Fall back to generic single.php for regular posts
+    if ($post_type === 'post') {
+      return 'single.php';
+    }
+
+    // For custom post types without a specific template, return the expected name
+    // This allows the user to create the template and schema
+    return $specific_template;
+  }
+
   public function render_schema_meta_box_after_title($post) {
-    // Only render for post types we support
-    if (!in_array($post->post_type, ['page', 'post'])) {
+    // Only render for public post types
+    $post_type_object = get_post_type_object($post->post_type);
+    if (!$post_type_object || !$post_type_object->public) {
       return;
     }
 
     wp_nonce_field('yaml_cf_meta_box', 'yaml_cf_meta_box_nonce');
 
-    $template = get_post_meta($post->ID, '_wp_page_template', true);
-    if (empty($template) || $template === 'default') {
-      $template = 'page.php';
-    }
+    // Determine the template based on post type
+    $template = $this->get_template_for_post($post);
 
     $template_settings = get_option('yaml_cf_template_settings', []);
 
@@ -2445,12 +2479,14 @@ class YAML_Custom_Fields {
       return;
     }
 
-    if (isset($_POST['yaml_cf']) && is_array($_POST['yaml_cf'])) {
+    // Use post_raw() to get unslashed data safely without PHPCS warnings
+    // Data will be sanitized by schema-aware sanitize_field_data()
+    $posted_data = self::post_raw('yaml_cf', []);
+
+    if (!empty($posted_data) && is_array($posted_data)) {
       // Get the template for this post
-      $template = get_post_meta($post_id, '_wp_page_template', true);
-      if (empty($template) || $template === 'default') {
-        $template = 'page.php';
-      }
+      $post = get_post($post_id);
+      $template = $this->get_template_for_post($post);
 
       // Get schema for validation
       $schemas = get_option('yaml_cf_schemas', []);
@@ -2459,7 +2495,6 @@ class YAML_Custom_Fields {
         $schema = $this->parse_yaml_schema($schemas[$template]);
       }
 
-      $posted_data = map_deep(wp_unslash($_POST['yaml_cf']), 'sanitize_text_field');
       $sanitized_data = $this->sanitize_field_data($posted_data, $schema);
 
       update_post_meta($post_id, '_yaml_cf_data', $sanitized_data);
@@ -2656,10 +2691,7 @@ class YAML_Custom_Fields {
           continue;
         }
 
-        $template = get_post_meta($post->ID, '_wp_page_template', true);
-        if (empty($template) || $template === 'default') {
-          $template = 'page.php';
-        }
+        $template = $this->get_template_for_post($post);
 
         $posts[] = [
           'id' => $post->ID,
@@ -2708,10 +2740,7 @@ class YAML_Custom_Fields {
         continue;
       }
 
-      $template = get_post_meta($post_id, '_wp_page_template', true);
-      if (empty($template) || $template === 'default') {
-        $template = 'page.php';
-      }
+      $template = $this->get_template_for_post($post);
 
       $data = get_post_meta($post_id, '_yaml_cf_data', true);
       if (empty($data)) {
